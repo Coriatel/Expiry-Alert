@@ -10,12 +10,12 @@ import {
   deleteReagentsBulk,
 } from '@/lib/tauri';
 import type { Reagent } from '@/types';
-import { formatDate, getDaysUntilExpiry } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 export function Archive() {
   const { t } = useTranslation();
   const { archivedReagents, setArchivedReagents } = useStore();
-  const [selectedIds, setSelectedIds] = useState<number[]>(]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     loadArchivedReagents();

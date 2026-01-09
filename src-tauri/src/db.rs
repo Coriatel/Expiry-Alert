@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use chrono::{NaiveDate, Utc};
+use chrono::Utc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reagent {
