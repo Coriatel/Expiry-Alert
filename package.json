@@ -1,38 +1,28 @@
 {
-  "name": "reagent-expiry-tracker",
+  "name": "expiry-alert-monorepo",
   "version": "1.0.0",
-  "description": "Desktop app for tracking reagent expiration in blood banks",
-  "type": "module",
+  "description": "Reagent Expiry Tracker - Desktop & Mobile Apps",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@tanstack/react-table": "^8.11.6",
-    "date-fns": "^3.0.6",
-    "i18next": "^23.7.16",
-    "react-i18next": "^14.0.0",
-    "zustand": "^4.4.7",
-    "clsx": "^2.1.0",
-    "lucide-react": "^0.303.0",
-    "@tauri-apps/api": "^1.5.3"
+    "dev:desktop": "npm run dev --workspace=@expiry-alert/desktop",
+    "build:desktop": "npm run build --workspace=@expiry-alert/desktop",
+    "tauri:dev": "npm run tauri:dev --workspace=@expiry-alert/desktop",
+    "tauri:build": "npm run tauri:build --workspace=@expiry-alert/desktop",
+    "dev:mobile": "npm run start --workspace=@expiry-alert/mobile",
+    "android": "npm run android --workspace=@expiry-alert/mobile",
+    "ios": "npm run ios --workspace=@expiry-alert/mobile",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.9",
-    "@types/node": "^20.10.0",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
-    "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.11",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1"
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   }
 }

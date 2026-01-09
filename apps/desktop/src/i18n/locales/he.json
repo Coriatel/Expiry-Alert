@@ -1,0 +1,85 @@
+{
+  "app": {
+    "title": "מעקב תפוגת ריאגנטים"
+  },
+  "nav": {
+    "dashboard": "לוח בקרה",
+    "archive": "ארכיון",
+    "settings": "הגדרות"
+  },
+  "dashboard": {
+    "title": "ריאגנטים פעילים",
+    "generalNotes": "הערות כלליות",
+    "addNote": "הוסף הערה",
+    "viewAllNotes": "הצג את כל ההערות",
+    "noNotes": "אין הערות עדיין",
+    "addReagent": "הוסף ריאגנט",
+    "addMultiple": "הוסף מספר ריאגנטים",
+    "noReagents": "לא נמצאו ריאגנטים"
+  },
+  "table": {
+    "name": "שם",
+    "category": "קטגוריה",
+    "expiryDate": "תאריך תפוגה",
+    "daysUntilExpiry": "ימים עד תפוגה",
+    "lotNumber": "מספר עוצבה",
+    "receivedDate": "תאריך קבלה",
+    "notes": "הערות",
+    "actions": "פעולות",
+    "selectAll": "בחר הכל",
+    "selected": "{{count}} נבחרו"
+  },
+  "category": {
+    "reagents": "ריאגנטים",
+    "beads": "כדוריות"
+  },
+  "status": {
+    "expired": "פג תוקף",
+    "expiresToday": "פג תוקף היום",
+    "expiresIn": "פג תוקף בעוד {{days}} ימים",
+    "expiresInOneDay": "פג תוקף בעוד יום אחד"
+  },
+  "actions": {
+    "edit": "ערוך",
+    "delete": "מחק",
+    "archive": "העבר לארכיון",
+    "restore": "שחזר",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "confirm": "אישור",
+    "close": "סגור",
+    "bulkDelete": "מחק את הנבחרים",
+    "bulkArchive": "העבר לארכיון"
+  },
+  "form": {
+    "name": "שם",
+    "category": "קטגוריה",
+    "expiryDate": "תאריך תפוגה",
+    "lotNumber": "מספר עוצבה (אופציונלי)",
+    "receivedDate": "תאריך קבלה (אופציונלי)",
+    "notes": "הערות (אופציונלי)",
+    "required": "שדה חובה"
+  },
+  "archive": {
+    "title": "ריאגנטים בארכיון",
+    "empty": "אין ריאגנטים בארכיון"
+  },
+  "notifications": {
+    "title": "פג תוקף בקרוב!",
+    "message": "{{count}} ריאגנט/ים פגי תוקף בקרוב",
+    "remindTomorrow": "הזכר לי מחר",
+    "remindIn3Days": "הזכר לי בעוד 3 ימים",
+    "dismiss": "אל תזכיר לי יותר"
+  },
+  "settings": {
+    "title": "הגדרות התראות",
+    "enabled": "הפעל התראות",
+    "remindInDays": "הזכר לי {{days}} ימים לפני תפוגה"
+  },
+  "confirm": {
+    "delete": "האם אתה בטוח שברצונך למחוק ריאגנט זה?",
+    "deleteMultiple": "האם אתה בטוח שברצונך למחוק {{count}} ריאגנטים?",
+    "archive": "האם אתה בטוח שברצונך להעביר ריאגנט זה לארכיון?",
+    "archiveMultiple": "האם אתה בטוח שברצונך להעביר {{count}} ריאגנטים לארכיון?"
+  }
+}
