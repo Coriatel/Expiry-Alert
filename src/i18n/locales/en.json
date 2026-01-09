@@ -1,0 +1,85 @@
+{
+  "app": {
+    "title": "Reagent Expiry Tracker"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "archive": "Archive",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Active Reagents",
+    "generalNotes": "General Notes",
+    "addNote": "Add Note",
+    "viewAllNotes": "View All Notes",
+    "noNotes": "No notes yet",
+    "addReagent": "Add Reagent",
+    "addMultiple": "Add Multiple",
+    "noReagents": "No reagents found"
+  },
+  "table": {
+    "name": "Name",
+    "category": "Category",
+    "expiryDate": "Expiry Date",
+    "daysUntilExpiry": "Days Until Expiry",
+    "lotNumber": "LOT Number",
+    "receivedDate": "Received Date",
+    "notes": "Notes",
+    "actions": "Actions",
+    "selectAll": "Select All",
+    "selected": "{{count}} selected"
+  },
+  "category": {
+    "reagents": "Reagents",
+    "beads": "Beads"
+  },
+  "status": {
+    "expired": "Expired",
+    "expiresToday": "Expires Today",
+    "expiresIn": "Expires in {{days}} days",
+    "expiresInOneDay": "Expires in 1 day"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "archive": "Archive",
+    "restore": "Restore",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "bulkDelete": "Delete Selected",
+    "bulkArchive": "Archive Selected"
+  },
+  "form": {
+    "name": "Name",
+    "category": "Category",
+    "expiryDate": "Expiry Date",
+    "lotNumber": "LOT Number (Optional)",
+    "receivedDate": "Received Date (Optional)",
+    "notes": "Notes (Optional)",
+    "required": "Required field"
+  },
+  "archive": {
+    "title": "Archived Reagents",
+    "empty": "No archived reagents"
+  },
+  "notifications": {
+    "title": "Expiring Soon!",
+    "message": "{{count}} reagent(s) are expiring soon",
+    "remindTomorrow": "Remind Tomorrow",
+    "remindIn3Days": "Remind in 3 Days",
+    "dismiss": "Don't Remind Again"
+  },
+  "settings": {
+    "title": "Notification Settings",
+    "enabled": "Enable Notifications",
+    "remindInDays": "Remind me {{days}} days before expiry"
+  },
+  "confirm": {
+    "delete": "Are you sure you want to delete this reagent?",
+    "deleteMultiple": "Are you sure you want to delete {{count}} reagents?",
+    "archive": "Are you sure you want to archive this reagent?",
+    "archiveMultiple": "Are you sure you want to archive {{count}} reagents?"
+  }
+}
