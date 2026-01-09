@@ -21,12 +21,11 @@ import {
   snoozeNotification,
   dismissNotification,
 } from '@/lib/tauri';
-import type { Reagent, ReagentFormData } from '@/types';
+import type { ReagentFormData } from '@/types';
 
 export function Dashboard() {
   const { t } = useTranslation();
   const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
 
   const {
     reagents,
@@ -231,7 +230,7 @@ export function Dashboard() {
       {/* Reagents Table */}
       <ReagentTable
         reagents={reagents}
-        onEdit={setEditingReagent}
+        onEdit={() => {}}
         onDelete={handleDelete}
         onArchive={handleArchive}
         selectedIds={selectedReagentIds}

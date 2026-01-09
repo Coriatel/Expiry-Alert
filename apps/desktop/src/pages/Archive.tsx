@@ -9,7 +9,6 @@ import {
   deleteReagent,
   deleteReagentsBulk,
 } from '@/lib/tauri';
-import type { Reagent } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 export function Archive() {

@@ -23,7 +23,7 @@
     "clsx": "^2.1.0",
     "lucide-react": "^0.303.0",
     "@tauri-apps/api": "^1.5.3",
-    "@expiry-alert/shared": "workspace:*"
+    "@expiry-alert/shared": "*"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.9",
