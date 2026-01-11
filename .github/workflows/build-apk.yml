@@ -28,12 +28,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
         run: npm install
 
       - name: Build Android APK
+        working-directory: apps/mobile
         run: |
-          cd apps/mobile
           npx expo prebuild --platform android --clean
           cd android
           chmod +x gradlew
@@ -43,9 +47,10 @@ jobs:
 
       - name: List build outputs
         if: always()
+        working-directory: apps/mobile
         run: |
           echo "Checking for APK files..."
-          find apps/mobile/android -name "*.apk" -type f || echo "No APK files found"
+          find android -name "*.apk" -type f || echo "No APK files found"
 
       - name: Upload Android APK
         if: success()
