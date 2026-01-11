@@ -9,6 +9,12 @@ build/
 
 # Tauri build
 src-tauri/target/
+apps/desktop/src-tauri/target/
+
+# Expo/React Native
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
 
 # Database
 *.db
