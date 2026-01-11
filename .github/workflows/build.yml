@@ -54,7 +54,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -62,14 +61,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install root dependencies
-        run: npm install
-
-      - name: Install mobile dependencies
+      - name: Install mobile dependencies only
         working-directory: apps/mobile
         run: |
-          npm install
-          npm install expo-sqlite@~13.4.0
+          npm install --legacy-peer-deps
+          # Ensure expo-sqlite is properly installed
+          rm -rf node_modules/expo-sqlite
+          npm install expo-sqlite@~13.4.0 --legacy-peer-deps
+
+      - name: Install shared package
+        run: |
+          cd packages/shared
+          npm install --legacy-peer-deps
+
+      - name: Link shared package
+        working-directory: apps/mobile
+        run: |
+          mkdir -p node_modules/@expiry-alert
+          ln -sf ../../../packages/shared node_modules/@expiry-alert/shared
 
       - name: Build Android APK
         working-directory: apps/mobile
