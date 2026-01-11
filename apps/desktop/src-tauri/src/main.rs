@@ -4,30 +4,37 @@
 mod db;
 
 use tauri::Manager;
-use db::{Database, Reagent, GeneralNote, NotificationSettings};
+use db::{Database, Reagent, GeneralNote, NotificationSettings, ReagentInput};
 use std::sync::Mutex;
 
 struct AppState {
     db: Mutex<Database>,
 }
 
+/// Helper macro for safe mutex lock with proper error handling
+macro_rules! lock_db {
+    ($state:expr) => {
+        $state.db.lock().map_err(|e| format!("Database lock error: {}", e))?
+    };
+}
+
 #[tauri::command]
 fn get_all_reagents(state: tauri::State<AppState>) -> Result<Vec<Reagent>, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_all_reagents()
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_active_reagents(state: tauri::State<AppState>) -> Result<Vec<Reagent>, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_active_reagents()
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_archived_reagents(state: tauri::State<AppState>) -> Result<Vec<Reagent>, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_archived_reagents()
         .map_err(|e| e.to_string())
 }
@@ -42,7 +49,7 @@ fn add_reagent(
     received_date: Option<String>,
     notes: Option<String>,
 ) -> Result<i64, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .add_reagent(name, category, expiry_date, lot_number, received_date, notes)
         .map_err(|e| e.to_string())
 }
@@ -52,25 +59,36 @@ fn add_reagents_bulk(
     state: tauri::State<AppState>,
     reagents: Vec<serde_json::Value>,
 ) -> Result<Vec<i64>, String> {
-    let db = state.db.lock().unwrap();
-    let mut ids = Vec::new();
+    // Convert JSON values to ReagentInput structs
+    let inputs: Vec<ReagentInput> = reagents
+        .iter()
+        .filter_map(|reagent| {
+            let name = reagent["name"].as_str()?.to_string();
+            let expiry_date = reagent["expiryDate"].as_str()?.to_string();
 
-    for reagent in reagents {
-        let name = reagent["name"].as_str().unwrap_or("").to_string();
-        let category = reagent["category"].as_str().unwrap_or("").to_string();
-        let expiry_date = reagent["expiryDate"].as_str().unwrap_or("").to_string();
-        let lot_number = reagent["lotNumber"].as_str().map(|s| s.to_string());
-        let received_date = reagent["receivedDate"].as_str().map(|s| s.to_string());
-        let notes = reagent["notes"].as_str().map(|s| s.to_string());
+            // Skip entries with empty required fields
+            if name.trim().is_empty() || expiry_date.trim().is_empty() {
+                return None;
+            }
 
-        if !name.is_empty() && !expiry_date.is_empty() {
-            let id = db.add_reagent(name, category, expiry_date, lot_number, received_date, notes)
-                .map_err(|e| e.to_string())?;
-            ids.push(id);
-        }
+            Some(ReagentInput {
+                name,
+                category: reagent["category"].as_str().unwrap_or("reagents").to_string(),
+                expiry_date,
+                lot_number: reagent["lotNumber"].as_str().filter(|s| !s.is_empty()).map(|s| s.to_string()),
+                received_date: reagent["receivedDate"].as_str().filter(|s| !s.is_empty()).map(|s| s.to_string()),
+                notes: reagent["notes"].as_str().filter(|s| !s.is_empty()).map(|s| s.to_string()),
+            })
+        })
+        .collect();
+
+    if inputs.is_empty() {
+        return Err("No valid reagents to add".to_string());
     }
 
-    Ok(ids)
+    lock_db!(state)
+        .add_reagents_bulk(inputs)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -84,74 +102,79 @@ fn update_reagent(
     received_date: Option<String>,
     notes: Option<String>,
 ) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .update_reagent(id, name, category, expiry_date, lot_number, received_date, notes)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn delete_reagent(state: tauri::State<AppState>, id: i64) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .delete_reagent(id)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn delete_reagents_bulk(state: tauri::State<AppState>, ids: Vec<i64>) -> Result<(), String> {
-    let db = state.db.lock().unwrap();
-    for id in ids {
-        db.delete_reagent(id).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    lock_db!(state)
+        .delete_reagents_bulk(&ids)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn archive_reagent(state: tauri::State<AppState>, id: i64) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .archive_reagent(id)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn archive_reagents_bulk(state: tauri::State<AppState>, ids: Vec<i64>) -> Result<(), String> {
-    let db = state.db.lock().unwrap();
-    for id in ids {
-        db.archive_reagent(id).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    lock_db!(state)
+        .archive_reagents_bulk(&ids)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn restore_reagent(state: tauri::State<AppState>, id: i64) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .restore_reagent(id)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_general_notes(state: tauri::State<AppState>) -> Result<Vec<GeneralNote>, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_general_notes()
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn add_general_note(state: tauri::State<AppState>, content: String) -> Result<i64, String> {
-    state.db.lock().unwrap()
-        .add_general_note(content)
+    // Validate content
+    let content = content.trim();
+    if content.is_empty() {
+        return Err("Note content cannot be empty".to_string());
+    }
+    if content.len() > 10000 {
+        return Err("Note content too long (max 10000 characters)".to_string());
+    }
+
+    lock_db!(state)
+        .add_general_note(content.to_string())
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn delete_general_note(state: tauri::State<AppState>, id: i64) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .delete_general_note(id)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_notification_settings(state: tauri::State<AppState>) -> Result<NotificationSettings, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_notification_settings()
         .map_err(|e| e.to_string())
 }
@@ -162,7 +185,12 @@ fn update_notification_settings(
     enabled: bool,
     remind_in_days: i32,
 ) -> Result<(), String> {
-    state.db.lock().unwrap()
+    // Validate remind_in_days range
+    if remind_in_days < 1 || remind_in_days > 365 {
+        return Err("Remind in days must be between 1 and 365".to_string());
+    }
+
+    lock_db!(state)
         .update_notification_settings(enabled, remind_in_days)
         .map_err(|e| e.to_string())
 }
@@ -173,21 +201,21 @@ fn snooze_notification(
     reagent_id: i64,
     days: i32,
 ) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .snooze_notification(reagent_id, days)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn dismiss_notification(state: tauri::State<AppState>, reagent_id: i64) -> Result<(), String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .dismiss_notification(reagent_id)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn get_expiring_reagents(state: tauri::State<AppState>) -> Result<Vec<Reagent>, String> {
-    state.db.lock().unwrap()
+    lock_db!(state)
         .get_expiring_reagents()
         .map_err(|e| e.to_string())
 }

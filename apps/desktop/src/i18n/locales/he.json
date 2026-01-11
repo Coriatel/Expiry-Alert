@@ -45,20 +45,28 @@
     "archive": "העבר לארכיון",
     "restore": "שחזר",
     "save": "שמור",
+    "saving": "שומר...",
     "cancel": "ביטול",
     "confirm": "אישור",
     "close": "סגור",
+    "processing": "מעבד...",
     "bulkDelete": "מחק את הנבחרים",
     "bulkArchive": "העבר לארכיון"
   },
   "form": {
     "name": "שם",
+    "namePlaceholder": "הכנס שם ריאגנט",
     "category": "קטגוריה",
     "expiryDate": "תאריך תפוגה",
-    "lotNumber": "מספר עוצבה (אופציונלי)",
-    "receivedDate": "תאריך קבלה (אופציונלי)",
-    "notes": "הערות (אופציונלי)",
+    "lotNumber": "מספר עוצבה",
+    "lotNumberPlaceholder": "הכנס מספר עוצבה",
+    "receivedDate": "תאריך קבלה",
+    "notes": "הערות",
+    "notesPlaceholder": "הכנס הערות",
     "required": "שדה חובה"
+  },
+  "dialog": {
+    "editReagent": "עריכת ריאגנט"
   },
   "archive": {
     "title": "ריאגנטים בארכיון",
@@ -78,8 +86,41 @@
   },
   "confirm": {
     "delete": "האם אתה בטוח שברצונך למחוק ריאגנט זה?",
+    "deleteTitle": "מחיקת ריאגנט",
+    "deleteMessage": "האם אתה בטוח שברצונך למחוק את \"{{name}}\"? פעולה זו אינה ניתנת לביטול.",
     "deleteMultiple": "האם אתה בטוח שברצונך למחוק {{count}} ריאגנטים?",
+    "deleteMultipleTitle": "מחיקת מספר ריאגנטים",
+    "deleteMultipleMessage": "האם אתה בטוח שברצונך למחוק {{count}} ריאגנטים? פעולה זו אינה ניתנת לביטול.",
     "archive": "האם אתה בטוח שברצונך להעביר ריאגנט זה לארכיון?",
     "archiveMultiple": "האם אתה בטוח שברצונך להעביר {{count}} ריאגנטים לארכיון?"
+  },
+  "success": {
+    "reagentAdded": "הריאגנט נוסף בהצלחה",
+    "reagentsAdded": "{{count}} ריאגנטים נוספו בהצלחה",
+    "reagentUpdated": "הריאגנט עודכן בהצלחה",
+    "reagentDeleted": "הריאגנט נמחק בהצלחה",
+    "reagentsDeleted": "{{count}} ריאגנטים נמחקו בהצלחה",
+    "reagentArchived": "הריאגנט הועבר לארכיון בהצלחה",
+    "reagentsArchived": "{{count}} ריאגנטים הועברו לארכיון בהצלחה",
+    "reagentRestored": "הריאגנט שוחזר בהצלחה",
+    "noteAdded": "ההערה נוספה בהצלחה",
+    "noteDeleted": "ההערה נמחקה בהצלחה",
+    "notificationSnoozed": "ההתראה נדחתה"
+  },
+  "errors": {
+    "loadFailed": "שגיאה בטעינת הנתונים. נא לנסות שוב.",
+    "addFailed": "שגיאה בהוספת הריאגנט. נא לנסות שוב.",
+    "updateFailed": "שגיאה בעדכון הריאגנט. נא לנסות שוב.",
+    "deleteFailed": "שגיאה במחיקת הריאגנט. נא לנסות שוב.",
+    "archiveFailed": "שגיאה בהעברה לארכיון. נא לנסות שוב.",
+    "restoreFailed": "שגיאה בשחזור הריאגנט. נא לנסות שוב.",
+    "addNoteFailed": "שגיאה בהוספת ההערה. נא לנסות שוב.",
+    "deleteNoteFailed": "שגיאה במחיקת ההערה. נא לנסות שוב.",
+    "snoozeFailed": "שגיאה בדחיית ההתראה. נא לנסות שוב."
+  },
+  "validation": {
+    "nameRequired": "שם הוא שדה חובה",
+    "expiryDateRequired": "תאריך תפוגה הוא שדה חובה",
+    "invalidDate": "פורמט תאריך לא תקין"
   }
 }
