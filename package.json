@@ -16,6 +16,8 @@
     "android": "npm run android --workspace=@expiry-alert/mobile",
     "ios": "npm run ios --workspace=@expiry-alert/mobile",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:shared": "npm run test --workspace=@expiry-alert/shared",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules"
   },
   "devDependencies": {
