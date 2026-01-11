@@ -28,19 +28,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install dependencies in mobile workspace
+      - name: Temporarily remove workspace config
+        run: |
+          # Backup root package.json and remove workspace config
+          cp package.json package.json.backup
+          echo '{"name":"temp","private":true}' > package.json
+
+      - name: Install dependencies in mobile app
         working-directory: apps/mobile
         run: |
-          # Install directly without workspace hoisting
+          # Clean install without workspace
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
 
-      - name: Verify expo-sqlite installation
+      - name: Verify expo-sqlite
         working-directory: apps/mobile
         run: |
-          echo "Checking expo-sqlite installation..."
-          ls -la node_modules/expo-sqlite/ || echo "expo-sqlite not in local node_modules"
-          ls -la ../../node_modules/expo-sqlite/ || echo "expo-sqlite not in root node_modules"
+          ls -la node_modules/expo-sqlite/build/ | head -20
 
       - name: Build Android APK
         working-directory: apps/mobile
