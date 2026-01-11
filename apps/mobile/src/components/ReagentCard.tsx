@@ -1,16 +1,26 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card, Text, IconButton, Chip } from 'react-native-paper';
+import { useTranslation } from 'react-i18next';
 import type { Reagent } from '@expiry-alert/shared';
 import { getDaysUntilExpiry, getExpiryStatus, formatDate } from '@expiry-alert/shared';
 
 interface ReagentCardProps {
   reagent: Reagent;
-  onArchive: () => void;
-  onDelete: () => void;
+  onArchive?: () => void;
+  onDelete?: () => void;
+  onRestore?: () => void;
+  showRestore?: boolean;
 }
 
-export default function ReagentCard({ reagent, onArchive, onDelete }: ReagentCardProps) {
+export default function ReagentCard({
+  reagent,
+  onArchive,
+  onDelete,
+  onRestore,
+  showRestore = false,
+}: ReagentCardProps) {
+  const { t, i18n } = useTranslation();
   const days = getDaysUntilExpiry(reagent.expiry_date);
   const status = getExpiryStatus(reagent.expiry_date);
 
@@ -28,11 +38,13 @@ export default function ReagentCard({ reagent, onArchive, onDelete }: ReagentCar
   };
 
   const getStatusText = () => {
-    if (days < 0) return `Expired ${Math.abs(days)} days ago`;
-    if (days === 0) return 'Expires today';
-    if (days === 1) return 'Expires tomorrow';
-    return `Expires in ${days} days`;
+    if (days < 0) return t('status.expiredDaysAgo', { days: Math.abs(days) });
+    if (days === 0) return t('status.expiresToday');
+    if (days === 1) return t('status.expiresTomorrow');
+    return t('status.expiresIn', { days });
   };
+
+  const locale = i18n.language === 'he' ? 'he-IL' : 'en-US';
 
   return (
     <Card style={[styles.card, { borderLeftColor: getStatusColor(), borderLeftWidth: 4 }]}>
@@ -51,26 +63,30 @@ export default function ReagentCard({ reagent, onArchive, onDelete }: ReagentCar
             </Chip>
           </View>
           <View style={styles.actions}>
-            <IconButton icon="archive" size={20} onPress={onArchive} />
-            <IconButton icon="delete" size={20} onPress={onDelete} />
+            {showRestore && onRestore ? (
+              <IconButton icon="restore" size={20} onPress={onRestore} />
+            ) : (
+              onArchive && <IconButton icon="archive" size={20} onPress={onArchive} />
+            )}
+            {onDelete && <IconButton icon="delete" size={20} onPress={onDelete} />}
           </View>
         </View>
 
         <View style={styles.details}>
           <Text variant="bodySmall" style={styles.detailText}>
-            Category: {reagent.category}
+            {t('form.category')}: {t(`category.${reagent.category}`)}
           </Text>
           <Text variant="bodySmall" style={styles.detailText}>
-            Expiry: {formatDate(reagent.expiry_date)}
+            {t('form.expiryDate')}: {formatDate(reagent.expiry_date, locale)}
           </Text>
           {reagent.lot_number && (
             <Text variant="bodySmall" style={styles.detailText}>
-              LOT: {reagent.lot_number}
+              {t('table.lotNumber')}: {reagent.lot_number}
             </Text>
           )}
           {reagent.notes && (
             <Text variant="bodySmall" style={[styles.detailText, styles.notes]}>
-              Notes: {reagent.notes}
+              {t('table.notes')}: {reagent.notes}
             </Text>
           )}
         </View>

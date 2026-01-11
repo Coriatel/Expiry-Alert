@@ -51,7 +51,8 @@
     "close": "סגור",
     "processing": "מעבד...",
     "bulkDelete": "מחק את הנבחרים",
-    "bulkArchive": "העבר לארכיון"
+    "bulkArchive": "העבר לארכיון",
+    "retry": "נסה שוב"
   },
   "form": {
     "name": "שם",
@@ -116,7 +117,10 @@
     "restoreFailed": "שגיאה בשחזור הריאגנט. נא לנסות שוב.",
     "addNoteFailed": "שגיאה בהוספת ההערה. נא לנסות שוב.",
     "deleteNoteFailed": "שגיאה במחיקת ההערה. נא לנסות שוב.",
-    "snoozeFailed": "שגיאה בדחיית ההתראה. נא לנסות שוב."
+    "snoozeFailed": "שגיאה בדחיית ההתראה. נא לנסות שוב.",
+    "somethingWentWrong": "משהו השתבש",
+    "unexpectedError": "אירעה שגיאה בלתי צפויה. נא לנסות שוב.",
+    "technicalDetails": "פרטים טכניים"
   },
   "validation": {
     "nameRequired": "שם הוא שדה חובה",

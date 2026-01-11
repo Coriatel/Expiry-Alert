@@ -5,6 +5,7 @@ import { Dashboard } from '@/pages/Dashboard';
 import { Archive } from '@/pages/Archive';
 import { Button } from '@/components/ui/Button';
 import { ToastProvider } from '@/components/ui/Toast';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Page = 'dashboard' | 'archive';
 
@@ -24,6 +25,7 @@ function App() {
   };
 
   return (
+    <ErrorBoundary>
     <ToastProvider>
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -67,6 +69,7 @@ function App() {
       <main>{currentPage === 'dashboard' ? <Dashboard /> : <Archive />}</main>
     </div>
     </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -51,7 +51,8 @@
     "close": "Close",
     "processing": "Processing...",
     "bulkDelete": "Delete Selected",
-    "bulkArchive": "Archive Selected"
+    "bulkArchive": "Archive Selected",
+    "retry": "Try again"
   },
   "form": {
     "name": "Name",
@@ -116,7 +117,10 @@
     "restoreFailed": "Failed to restore reagent. Please try again.",
     "addNoteFailed": "Failed to add note. Please try again.",
     "deleteNoteFailed": "Failed to delete note. Please try again.",
-    "snoozeFailed": "Failed to snooze notification. Please try again."
+    "snoozeFailed": "Failed to snooze notification. Please try again.",
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "technicalDetails": "Technical details"
   },
   "validation": {
     "nameRequired": "Name is required",
