@@ -4,6 +4,8 @@ import { Archive as ArchiveIcon, LayoutDashboard, Globe } from 'lucide-react';
 import { Dashboard } from '@/pages/Dashboard';
 import { Archive } from '@/pages/Archive';
 import { Button } from '@/components/ui/Button';
+import { ToastProvider } from '@/components/ui/Toast';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 type Page = 'dashboard' | 'archive';
 
@@ -23,6 +25,8 @@ function App() {
   };
 
   return (
+    <ErrorBoundary>
+    <ToastProvider>
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
@@ -64,6 +68,8 @@ function App() {
       {/* Main Content */}
       <main>{currentPage === 'dashboard' ? <Dashboard /> : <Archive />}</main>
     </div>
+    </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

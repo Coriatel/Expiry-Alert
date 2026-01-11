@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ReagentTable } from '@/components/ReagentTable';
 import { BulkAddForm } from '@/components/BulkAddForm';
+import { EditReagentDialog } from '@/components/EditReagentDialog';
 import { GeneralNotes } from '@/components/GeneralNotes';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { useStore } from '@/store/store';
+import { useToast } from '@/components/ui/Toast';
 import {
   getActiveReagents,
   addReagentsBulk,
+  updateReagent,
   deleteReagent,
   deleteReagentsBulk,
   archiveReagent,
@@ -21,11 +25,29 @@ import {
   snoozeNotification,
   dismissNotification,
 } from '@/lib/tauri';
-import type { ReagentFormData } from '@/types';
+import type { Reagent, ReagentFormData } from '@/types';
+
+interface ConfirmState {
+  open: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  variant: 'danger' | 'warning' | 'default';
+}
 
 export function Dashboard() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [showBulkAdd, setShowBulkAdd] = useState(false);
+  const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'default',
+  });
 
   const {
     reagents,
@@ -48,8 +70,9 @@ export function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
+      setIsLoading(true);
       const [reagentsData, notesData, expiringData] = await Promise.all([
         getActiveReagents(),
         getGeneralNotes(),
@@ -60,8 +83,11 @@ export function Dashboard() {
       setExpiringReagents(expiringData);
     } catch (error) {
       console.error('Failed to load data:', error);
+      showToast(t('errors.loadFailed'), 'error');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [setReagents, setGeneralNotes, setExpiringReagents, showToast, t]);
 
   const loadExpiringReagents = async () => {
     try {
@@ -74,60 +100,98 @@ export function Dashboard() {
 
   const handleBulkAdd = async (reagentsData: ReagentFormData[]) => {
     try {
+      setIsLoading(true);
       await addReagentsBulk(reagentsData);
       setShowBulkAdd(false);
-      loadData();
+      await loadData();
+      showToast(t('success.reagentsAdded', { count: reagentsData.length }), 'success');
     } catch (error) {
       console.error('Failed to add reagents:', error);
+      showToast(
+        error instanceof Error ? error.message : t('errors.addFailed'),
+        'error'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm(t('confirm.delete'))) {
-      try {
-        await deleteReagent(id);
-        loadData();
-        clearSelection();
-      } catch (error) {
-        console.error('Failed to delete reagent:', error);
-      }
-    }
+  const handleEdit = (reagent: Reagent) => {
+    setEditingReagent(reagent);
   };
 
-  const handleBulkDelete = async () => {
-    if (
-      selectedReagentIds.length > 0 &&
-      confirm(t('confirm.deleteMultiple', { count: selectedReagentIds.length }))
-    ) {
-      try {
-        await deleteReagentsBulk(selectedReagentIds);
-        loadData();
-        clearSelection();
-      } catch (error) {
-        console.error('Failed to delete reagents:', error);
-      }
-    }
+  const handleEditSave = async (id: number, data: ReagentFormData) => {
+    await updateReagent(id, data);
+    await loadData();
+    showToast(t('success.reagentUpdated'), 'success');
+  };
+
+  const handleDelete = (id: number) => {
+    const reagent = reagents.find((r) => r.id === id);
+    setConfirmState({
+      open: true,
+      title: t('confirm.deleteTitle'),
+      message: t('confirm.deleteMessage', { name: reagent?.name || '' }),
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteReagent(id);
+          await loadData();
+          clearSelection();
+          showToast(t('success.reagentDeleted'), 'success');
+        } catch (error) {
+          console.error('Failed to delete reagent:', error);
+          showToast(t('errors.deleteFailed'), 'error');
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedReagentIds.length === 0) return;
+
+    setConfirmState({
+      open: true,
+      title: t('confirm.deleteMultipleTitle'),
+      message: t('confirm.deleteMultipleMessage', { count: selectedReagentIds.length }),
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteReagentsBulk(selectedReagentIds);
+          await loadData();
+          clearSelection();
+          showToast(t('success.reagentsDeleted', { count: selectedReagentIds.length }), 'success');
+        } catch (error) {
+          console.error('Failed to delete reagents:', error);
+          showToast(t('errors.deleteFailed'), 'error');
+        }
+      },
+    });
   };
 
   const handleArchive = async (id: number) => {
     try {
       await archiveReagent(id);
-      loadData();
+      await loadData();
       clearSelection();
+      showToast(t('success.reagentArchived'), 'success');
     } catch (error) {
       console.error('Failed to archive reagent:', error);
+      showToast(t('errors.archiveFailed'), 'error');
     }
   };
 
   const handleBulkArchive = async () => {
-    if (selectedReagentIds.length > 0) {
-      try {
-        await archiveReagentsBulk(selectedReagentIds);
-        loadData();
-        clearSelection();
-      } catch (error) {
-        console.error('Failed to archive reagents:', error);
-      }
+    if (selectedReagentIds.length === 0) return;
+
+    try {
+      await archiveReagentsBulk(selectedReagentIds);
+      await loadData();
+      clearSelection();
+      showToast(t('success.reagentsArchived', { count: selectedReagentIds.length }), 'success');
+    } catch (error) {
+      console.error('Failed to archive reagents:', error);
+      showToast(t('errors.archiveFailed'), 'error');
     }
   };
 
@@ -136,8 +200,13 @@ export function Dashboard() {
       await addGeneralNote(content);
       const notes = await getGeneralNotes();
       setGeneralNotes(notes);
+      showToast(t('success.noteAdded'), 'success');
     } catch (error) {
       console.error('Failed to add note:', error);
+      showToast(
+        error instanceof Error ? error.message : t('errors.addNoteFailed'),
+        'error'
+      );
     }
   };
 
@@ -146,8 +215,10 @@ export function Dashboard() {
       await deleteGeneralNote(id);
       const notes = await getGeneralNotes();
       setGeneralNotes(notes);
+      showToast(t('success.noteDeleted'), 'success');
     } catch (error) {
       console.error('Failed to delete note:', error);
+      showToast(t('errors.deleteNoteFailed'), 'error');
     }
   };
 
@@ -155,8 +226,10 @@ export function Dashboard() {
     try {
       await snoozeNotification(reagentId, days);
       loadExpiringReagents();
+      showToast(t('success.notificationSnoozed'), 'success');
     } catch (error) {
       console.error('Failed to snooze notification:', error);
+      showToast(t('errors.snoozeFailed'), 'error');
     }
   };
 
@@ -177,6 +250,10 @@ export function Dashboard() {
     }
   };
 
+  const closeConfirmDialog = () => {
+    setConfirmState((prev) => ({ ...prev, open: false }));
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Notification Banner */}
@@ -192,11 +269,11 @@ export function Dashboard() {
         <div className="flex gap-2">
           {selectedReagentIds.length > 0 && (
             <>
-              <Button variant="outline" onClick={handleBulkArchive}>
+              <Button variant="outline" onClick={handleBulkArchive} disabled={isLoading}>
                 <Archive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t('actions.bulkArchive')} ({selectedReagentIds.length})
               </Button>
-              <Button variant="destructive" onClick={handleBulkDelete}>
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={isLoading}>
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t('actions.bulkDelete')} ({selectedReagentIds.length})
               </Button>
@@ -216,7 +293,7 @@ export function Dashboard() {
 
       {/* Add Button */}
       {!showBulkAdd && (
-        <Button onClick={() => setShowBulkAdd(true)}>
+        <Button onClick={() => setShowBulkAdd(true)} disabled={isLoading}>
           <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           {t('dashboard.addMultiple')}
         </Button>
@@ -230,12 +307,30 @@ export function Dashboard() {
       {/* Reagents Table */}
       <ReagentTable
         reagents={reagents}
-        onEdit={() => {}}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onArchive={handleArchive}
         selectedIds={selectedReagentIds}
         onToggleSelect={toggleReagentSelection}
         onSelectAll={handleSelectAll}
+      />
+
+      {/* Edit Dialog */}
+      <EditReagentDialog
+        reagent={editingReagent}
+        open={editingReagent !== null}
+        onClose={() => setEditingReagent(null)}
+        onSave={handleEditSave}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmState.open}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        variant={confirmState.variant}
       />
     </div>
   );

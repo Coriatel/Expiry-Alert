@@ -1,16 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
-import { FAB, Card, Text, Chip } from 'react-native-paper';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { FAB, Card, Text, Chip, Portal, Modal, TextInput, Button, SegmentedButtons } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import type { Reagent } from '@expiry-alert/shared';
-import { getDaysUntilExpiry, getExpiryStatus } from '@expiry-alert/shared';
+import { getDaysUntilExpiry } from '@expiry-alert/shared';
 import database from '../services/database';
 import ReagentCard from '../components/ReagentCard';
+
+interface AddReagentForm {
+  name: string;
+  category: 'reagents' | 'beads';
+  expiryDate: string;
+  lotNumber: string;
+  notes: string;
+}
+
+const initialForm: AddReagentForm = {
+  name: '',
+  category: 'reagents',
+  expiryDate: '',
+  lotNumber: '',
+  notes: '',
+};
 
 export default function DashboardScreen() {
   const { t } = useTranslation();
   const [reagents, setReagents] = useState<Reagent[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [form, setForm] = useState<AddReagentForm>(initialForm);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     initDatabase();
@@ -18,21 +38,25 @@ export default function DashboardScreen() {
 
   const initDatabase = async () => {
     try {
+      setLoading(true);
       await database.init();
       await loadReagents();
     } catch (error) {
       console.error('Failed to initialize database:', error);
+      Alert.alert(t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadReagents = async () => {
+  const loadReagents = useCallback(async () => {
     try {
       const data = await database.getActiveReagents();
       setReagents(data);
     } catch (error) {
       console.error('Failed to load reagents:', error);
     }
-  };
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -46,15 +70,57 @@ export default function DashboardScreen() {
       await loadReagents();
     } catch (error) {
       console.error('Failed to archive reagent:', error);
+      Alert.alert(t('errors.archiveFailed'));
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number, name: string) => {
+    Alert.alert(
+      t('confirm.deleteTitle'),
+      t('confirm.deleteMessage', { name }),
+      [
+        { text: t('actions.cancel'), style: 'cancel' },
+        {
+          text: t('actions.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await database.deleteReagent(id);
+              await loadReagents();
+            } catch (error) {
+              console.error('Failed to delete reagent:', error);
+              Alert.alert(t('errors.deleteFailed'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAddReagent = async () => {
+    if (!form.name.trim() || !form.expiryDate.trim()) {
+      Alert.alert(t('form.required'));
+      return;
+    }
+
+    setSaving(true);
     try {
-      await database.deleteReagent(id);
+      await database.addReagent(
+        form.name.trim(),
+        form.category,
+        form.expiryDate,
+        form.lotNumber.trim() || undefined,
+        undefined, // receivedDate
+        form.notes.trim() || undefined
+      );
       await loadReagents();
+      setShowAddModal(false);
+      setForm(initialForm);
     } catch (error) {
-      console.error('Failed to delete reagent:', error);
+      console.error('Failed to add reagent:', error);
+      Alert.alert(t('errors.addFailed'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -79,23 +145,31 @@ export default function DashboardScreen() {
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
           <Chip icon="alert-circle" style={[styles.chip, styles.expiredChip]}>
-            {expiredCount} Expired
+            {expiredCount} {t('dashboard.expired')}
           </Chip>
           <Chip icon="alert" style={[styles.chip, styles.urgentChip]}>
-            {expiringSoonCount} Urgent
+            {expiringSoonCount} {t('dashboard.urgent')}
           </Chip>
           <Chip icon="clock-alert" style={[styles.chip, styles.warningChip]}>
-            {expiringWeekCount} This Week
+            {expiringWeekCount} {t('dashboard.thisWeek')}
           </Chip>
         </View>
 
         {/* Reagents List */}
         <View style={styles.listContainer}>
-          {reagents.length === 0 ? (
+          {loading ? (
             <Card style={styles.emptyCard}>
               <Card.Content>
                 <Text variant="bodyLarge" style={styles.emptyText}>
-                  No active reagents. Tap + to add one.
+                  {t('dashboard.noReagents')}
+                </Text>
+              </Card.Content>
+            </Card>
+          ) : reagents.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content>
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  {t('dashboard.noReagents')}
                 </Text>
               </Card.Content>
             </Card>
@@ -105,7 +179,7 @@ export default function DashboardScreen() {
                 key={reagent.id}
                 reagent={reagent}
                 onArchive={() => handleArchive(reagent.id)}
-                onDelete={() => handleDelete(reagent.id)}
+                onDelete={() => handleDelete(reagent.id, reagent.name)}
               />
             ))
           )}
@@ -115,11 +189,91 @@ export default function DashboardScreen() {
       <FAB
         icon="plus"
         style={styles.fab}
-        onPress={() => {
-          // TODO: Navigate to add screen
-          console.log('Add reagent');
-        }}
+        onPress={() => setShowAddModal(true)}
       />
+
+      {/* Add Reagent Modal */}
+      <Portal>
+        <Modal
+          visible={showAddModal}
+          onDismiss={() => setShowAddModal(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <Text variant="headlineSmall" style={styles.modalTitle}>
+            {t('dashboard.addReagent')}
+          </Text>
+
+          <TextInput
+            label={t('form.name')}
+            value={form.name}
+            onChangeText={(text) => setForm({ ...form, name: text })}
+            style={styles.input}
+            mode="outlined"
+          />
+
+          <Text variant="labelMedium" style={styles.label}>
+            {t('form.category')}
+          </Text>
+          <SegmentedButtons
+            value={form.category}
+            onValueChange={(value) => setForm({ ...form, category: value as 'reagents' | 'beads' })}
+            buttons={[
+              { value: 'reagents', label: t('category.reagents') },
+              { value: 'beads', label: t('category.beads') },
+            ]}
+            style={styles.segmentedButtons}
+          />
+
+          <TextInput
+            label={t('form.expiryDate')}
+            value={form.expiryDate}
+            onChangeText={(text) => setForm({ ...form, expiryDate: text })}
+            placeholder="YYYY-MM-DD"
+            style={styles.input}
+            mode="outlined"
+          />
+
+          <TextInput
+            label={t('form.lotNumber')}
+            value={form.lotNumber}
+            onChangeText={(text) => setForm({ ...form, lotNumber: text })}
+            style={styles.input}
+            mode="outlined"
+          />
+
+          <TextInput
+            label={t('form.notes')}
+            value={form.notes}
+            onChangeText={(text) => setForm({ ...form, notes: text })}
+            multiline
+            numberOfLines={3}
+            style={styles.input}
+            mode="outlined"
+          />
+
+          <View style={styles.modalButtons}>
+            <Button
+              mode="outlined"
+              onPress={() => {
+                setShowAddModal(false);
+                setForm(initialForm);
+              }}
+              style={styles.modalButton}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleAddReagent}
+              loading={saving}
+              disabled={saving}
+              style={styles.modalButton}
+            >
+              {t('actions.add')}
+            </Button>
+          </View>
+        </Modal>
+      </Portal>
     </View>
   );
 }
@@ -163,5 +317,34 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#2196F3',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 20,
+    borderRadius: 8,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 12,
+  },
+  label: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  segmentedButtons: {
+    marginBottom: 12,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  modalButton: {
+    marginLeft: 8,
   },
 });
