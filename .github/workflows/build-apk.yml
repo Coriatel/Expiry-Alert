@@ -28,12 +28,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install root dependencies
-        run: npm install
-
-      - name: Install mobile dependencies
+      - name: Install dependencies in mobile workspace
         working-directory: apps/mobile
-        run: npm install
+        run: |
+          # Install directly without workspace hoisting
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
+
+      - name: Verify expo-sqlite installation
+        working-directory: apps/mobile
+        run: |
+          echo "Checking expo-sqlite installation..."
+          ls -la node_modules/expo-sqlite/ || echo "expo-sqlite not in local node_modules"
+          ls -la ../../node_modules/expo-sqlite/ || echo "expo-sqlite not in root node_modules"
 
       - name: Build Android APK
         working-directory: apps/mobile
@@ -44,6 +51,7 @@ jobs:
           ./gradlew assembleRelease --no-daemon --stacktrace
         env:
           EXPO_NO_DOTENV: '1'
+          NODE_ENV: 'production'
 
       - name: List build outputs
         if: always()
