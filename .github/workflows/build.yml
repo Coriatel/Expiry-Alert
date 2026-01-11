@@ -61,20 +61,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install mobile dependencies only
-        working-directory: apps/mobile
+      - name: Remove workspaces config to prevent hoisting
         run: |
-          npm install --legacy-peer-deps
-          # Ensure expo-sqlite is properly installed
-          rm -rf node_modules/expo-sqlite
-          npm install expo-sqlite@~13.4.0 --legacy-peer-deps
+          # Create a minimal package.json without workspaces
+          echo '{"name": "expiry-alert-root", "private": true}' > package.json
+          # Remove root node_modules if exists
+          rm -rf node_modules
 
       - name: Install shared package
-        run: |
-          cd packages/shared
-          npm install --legacy-peer-deps
+        working-directory: packages/shared
+        run: npm install
 
-      - name: Link shared package
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: |
+          npm install
+          # Verify expo-sqlite is installed correctly
+          ls -la node_modules/expo-sqlite/build/ || echo "expo-sqlite build not found"
+
+      - name: Link shared package to mobile
         working-directory: apps/mobile
         run: |
           mkdir -p node_modules/@expiry-alert
