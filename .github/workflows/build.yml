@@ -40,6 +40,7 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
           retention-days: 30
+          if-no-files-found: warn
 
   build-mobile-android:
     name: Build Android APK
@@ -61,34 +62,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Install dependencies
         run: npm install
 
-      - name: Configure EAS (if needed)
+      - name: Build Android APK
         run: |
           cd apps/mobile
-          eas build:configure --platform android --non-interactive || true
-        continue-on-error: true
-
-      - name: Build Android APK (local)
-        run: |
-          cd apps/mobile
-          npx expo prebuild --platform android
+          npx expo prebuild --platform android --clean
           cd android
+          chmod +x gradlew
           ./gradlew assembleRelease
-        continue-on-error: true
 
       - name: Upload Android APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 30
+          if-no-files-found: error
