@@ -54,7 +54,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -62,19 +61,45 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install root dependencies
+      - name: Prepare isolated mobile build
+        run: |
+          # Remove root package.json workspaces to prevent hoisting
+          echo '{"name": "root", "private": true}' > package.json
+          # Ensure no root node_modules exists
+          rm -rf node_modules
+
+      - name: Install shared package
+        working-directory: packages/shared
         run: npm install
 
       - name: Install mobile dependencies
         working-directory: apps/mobile
+        run: npm install
+
+      - name: Link shared package to mobile
+        working-directory: apps/mobile
         run: |
-          npm install
-          npm install expo-sqlite@~13.4.0
+          mkdir -p node_modules/@expiry-alert
+          ln -sf ../../../packages/shared node_modules/@expiry-alert/shared
+
+      - name: Clean root node_modules before build
+        run: |
+          # CRITICAL: Remove any expo-sqlite from root to force local resolution
+          rm -rf node_modules
+          echo "Root node_modules removed"
+          ls -la node_modules 2>/dev/null || echo "Confirmed: no root node_modules"
 
       - name: Build Android APK
         working-directory: apps/mobile
         run: |
+          # Verify expo-sqlite exists in mobile
+          echo "=== Checking expo-sqlite in mobile ==="
+          ls -la node_modules/expo-sqlite/build/
+
+          # Run expo prebuild
           npx expo prebuild --platform android --clean
+
+          # Build APK
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
