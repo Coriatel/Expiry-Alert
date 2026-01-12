@@ -31,14 +31,20 @@ jobs:
         run: |
           # Remove root package.json entirely
           rm -f package.json package-lock.json
-          # Remove any root node_modules
           rm -rf node_modules
-          # Create empty package.json to prevent npm errors
           echo '{}' > package.json
 
       - name: Install shared package dependencies
         working-directory: packages/shared
         run: npm install
+
+      - name: Prepare mobile package.json
+        working-directory: apps/mobile
+        run: |
+          # Remove @expiry-alert/shared from dependencies (it's a local package)
+          cat package.json | sed 's/"@expiry-alert\/shared": "\*",//' > package.json.tmp
+          mv package.json.tmp package.json
+          cat package.json
 
       - name: Install mobile dependencies
         working-directory: apps/mobile
@@ -46,22 +52,25 @@ jobs:
           rm -rf node_modules package-lock.json
           npm install
 
-      - name: Setup shared package link
+      - name: Setup shared package
         working-directory: apps/mobile
         run: |
           mkdir -p node_modules/@expiry-alert
           cp -r ../../packages/shared node_modules/@expiry-alert/
 
-      - name: Verify expo-sqlite before build
+      - name: Verify dependencies
         working-directory: apps/mobile
         run: |
-          echo "=== Mobile node_modules/expo-sqlite ==="
-          ls -la node_modules/expo-sqlite/build/ || echo "NOT FOUND IN MOBILE"
+          echo "=== expo-sqlite ==="
+          ls -la node_modules/expo-sqlite/build/ || echo "NOT FOUND"
           echo ""
-          echo "=== Root node_modules check ==="
-          ls -la ../../node_modules/expo-sqlite/build/ 2>/dev/null || echo "No root expo-sqlite (GOOD)"
+          echo "=== @expiry-alert/shared ==="
+          ls -la node_modules/@expiry-alert/shared/ || echo "NOT FOUND"
+          echo ""
+          echo "=== Root check ==="
+          ls ../../node_modules 2>/dev/null && echo "WARNING: root node_modules exists" || echo "OK: no root node_modules"
 
-      - name: Final cleanup of root before expo
+      - name: Final root cleanup
         run: |
           rm -rf node_modules
           rm -f package.json package-lock.json
@@ -69,9 +78,7 @@ jobs:
       - name: Build Android APK
         working-directory: apps/mobile
         run: |
-          # Force Node to only look in local node_modules
           export NODE_PATH="$(pwd)/node_modules"
-
           npx expo prebuild --platform android --clean
           cd android
           chmod +x gradlew
