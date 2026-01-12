@@ -20,7 +20,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -28,41 +27,55 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Temporarily remove workspace config
+      - name: Completely isolate mobile build
         run: |
-          # Backup root package.json and remove workspace config
-          cp package.json package.json.backup
-          echo '{"name":"temp","private":true}' > package.json
+          # Remove root package.json entirely
+          rm -f package.json package-lock.json
+          # Remove any root node_modules
+          rm -rf node_modules
+          # Create empty package.json to prevent npm errors
+          echo '{}' > package.json
 
-      - name: Install dependencies in mobile app
+      - name: Install shared package dependencies
+        working-directory: packages/shared
+        run: npm install
+
+      - name: Install mobile dependencies
         working-directory: apps/mobile
         run: |
-          # Clean install without workspace
           rm -rf node_modules package-lock.json
-          npm install --legacy-peer-deps
+          npm install
 
-      - name: Verify expo-sqlite
+      - name: Setup shared package link
         working-directory: apps/mobile
         run: |
-          ls -la node_modules/expo-sqlite/build/ | head -20
+          mkdir -p node_modules/@expiry-alert
+          cp -r ../../packages/shared node_modules/@expiry-alert/
+
+      - name: Verify expo-sqlite before build
+        working-directory: apps/mobile
+        run: |
+          echo "=== Mobile node_modules/expo-sqlite ==="
+          ls -la node_modules/expo-sqlite/build/ || echo "NOT FOUND IN MOBILE"
+          echo ""
+          echo "=== Root node_modules check ==="
+          ls -la ../../node_modules/expo-sqlite/build/ 2>/dev/null || echo "No root expo-sqlite (GOOD)"
+
+      - name: Final cleanup of root before expo
+        run: |
+          rm -rf node_modules
+          rm -f package.json package-lock.json
 
       - name: Build Android APK
         working-directory: apps/mobile
         run: |
+          # Force Node to only look in local node_modules
+          export NODE_PATH="$(pwd)/node_modules"
+
           npx expo prebuild --platform android --clean
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
-        env:
-          EXPO_NO_DOTENV: '1'
-          NODE_ENV: 'production'
-
-      - name: List build outputs
-        if: always()
-        working-directory: apps/mobile
-        run: |
-          echo "Checking for APK files..."
-          find android -name "*.apk" -type f || echo "No APK files found"
 
       - name: Upload Android APK
         if: success()
