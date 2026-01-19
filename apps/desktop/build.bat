@@ -60,7 +60,7 @@ echo ✓ Frontend built successfully
 echo.
 echo [5/5] Building Tauri application...
 echo This may take 10-15 minutes on first build...
-call npm run tauri build
+call npm run tauri:build
 if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Tauri build failed
     pause

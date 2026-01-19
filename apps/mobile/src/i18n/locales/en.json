@@ -79,7 +79,9 @@
     "message": "{{count}} reagent(s) are expiring soon",
     "remindTomorrow": "Remind Tomorrow",
     "remindIn3Days": "Remind in 3 Days",
-    "dismiss": "Don't Remind Again"
+    "dismiss": "Don't Remind Again",
+    "reagentExpiringTitle": "Reagent expiring soon",
+    "reagentExpiringBody": "{{name}} expires in {{days}} day(s) ({{date}})"
   },
   "settings": {
     "title": "Settings",
@@ -117,6 +119,7 @@
     "deleteFailed": "Failed to delete reagent",
     "archiveFailed": "Failed to archive reagent",
     "restoreFailed": "Failed to restore reagent",
+    "notificationsPermission": "Enable notifications in system settings to receive alerts",
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "technicalDetails": "Technical details"

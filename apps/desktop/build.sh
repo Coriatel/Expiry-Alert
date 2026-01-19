@@ -52,7 +52,7 @@ echo "✓ Frontend built successfully"
 echo ""
 echo "[5/5] Building Tauri application..."
 echo "This may take 10-15 minutes on first build..."
-npm run tauri build
+npm run tauri:build
 if [ $? -ne 0 ]; then
     echo "ERROR: Tauri build failed"
     exit 1

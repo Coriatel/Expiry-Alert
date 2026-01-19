@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "vitest": "^4.0.17"
   },
   "dependencies": {
     "date-fns": "^3.0.6"

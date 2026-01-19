@@ -142,7 +142,16 @@ Already optimized! The installer is ~5-15MB (much smaller than Electron).
 To sign the installer (prevents Windows SmartScreen warnings):
 
 1. Obtain a code signing certificate
-2. Edit `src-tauri/tauri.conf.json`:
+2. Export your certificate thumbprint before building:
+
+```bash
+# PowerShell
+$env:TAURI_WINDOWS_CERT_THUMBPRINT="YOUR_CERTIFICATE_THUMBPRINT"
+$env:TAURI_WINDOWS_TIMESTAMP_URL="http://timestamp.digicert.com"
+```
+
+The build script will inject these into `src-tauri/tauri.conf.json` before packaging.
+If you prefer, you can still edit the file manually:
 
 ```json
 {

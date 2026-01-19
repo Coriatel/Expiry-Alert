@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { List, Switch, Divider, Text } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { APP_VERSION } from '@expiry-alert/shared';
 import database from '../services/database';
+import { ensureNotificationPermissions, syncExpiryNotifications } from '../services/notifications';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
@@ -33,7 +34,18 @@ export default function SettingsScreen() {
   const toggleNotifications = async (enabled: boolean) => {
     setNotificationsEnabled(enabled);
     try {
+      if (enabled) {
+        const granted = await ensureNotificationPermissions();
+        if (!granted) {
+          Alert.alert(t('errors.notificationsPermission'));
+          setNotificationsEnabled(false);
+          await database.updateNotificationSettings(false, remindDays);
+          await syncExpiryNotifications();
+          return;
+        }
+      }
       await database.updateNotificationSettings(enabled, remindDays);
+      await syncExpiryNotifications();
     } catch (error) {
       console.error('Failed to save notification settings:', error);
       // Revert on error

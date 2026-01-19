@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme as NavigationDefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider, MD3LightTheme, adaptNavigationTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+
+import { syncExpiryNotifications } from './src/services/notifications';
 
 // Components
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -21,11 +23,18 @@ import './src/i18n';
 const Tab = createBottomTabNavigator();
 
 const { LightTheme } = adaptNavigationTheme({
-  reactNavigationLight: MD3LightTheme,
+  reactNavigationLight: NavigationDefaultTheme,
+  materialLight: MD3LightTheme,
 });
 
 function AppContent() {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    syncExpiryNotifications().catch((error) => {
+      console.error('Failed to sync notifications:', error);
+    });
+  }, []);
 
   return (
     <NavigationContainer theme={LightTheme}>
@@ -42,7 +51,7 @@ function AppContent() {
             title: t('dashboard.title'),
             tabBarLabel: t('nav.dashboard'),
             tabBarIcon: ({ color, size }) => (
-              <Icon name="flask" size={size} color={color} />
+              <MaterialCommunityIcons name="flask" size={size} color={color} />
             ),
           }}
         />
@@ -53,7 +62,7 @@ function AppContent() {
             title: t('archive.title'),
             tabBarLabel: t('nav.archive'),
             tabBarIcon: ({ color, size }) => (
-              <Icon name="archive" size={size} color={color} />
+              <MaterialCommunityIcons name="archive" size={size} color={color} />
             ),
           }}
         />
@@ -64,7 +73,7 @@ function AppContent() {
             title: t('settings.title'),
             tabBarLabel: t('nav.settings'),
             tabBarIcon: ({ color, size }) => (
-              <Icon name="cog" size={size} color={color} />
+              <MaterialCommunityIcons name="cog" size={size} color={color} />
             ),
           }}
         />

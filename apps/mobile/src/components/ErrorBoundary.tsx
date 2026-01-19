@@ -49,7 +49,7 @@ interface ErrorFallbackProps {
   onRetry: () => void;
 }
 
-function ErrorFallback({ error, onRetry }: ErrorFallbackProps): JSX.Element {
+function ErrorFallback({ error, onRetry }: ErrorFallbackProps): React.ReactElement {
   const { t } = useTranslation();
 
   return (

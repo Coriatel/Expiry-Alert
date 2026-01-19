@@ -56,7 +56,7 @@ npm run dev:mobile
 Download the latest release from [Releases](../../releases):
 - **Windows:** Download `.msi` or `.exe` file
 - **Android:** Download `.apk` file
-- **iOS:** Coming soon via TestFlight
+- **iOS:** TestFlight (requires Apple Developer account)
 
 See [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md) for detailed instructions.
 
