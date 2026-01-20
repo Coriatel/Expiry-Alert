@@ -2,7 +2,7 @@
   "name": "@expiry-alert/mobile",
   "version": "1.0.0",
   "description": "Mobile app for tracking reagent expiration (React Native)",
-  "main": "expo/AppEntry.js",
+  "main": "index.js",
   "private": true,
   "scripts": {
     "start": "expo start",
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~19.2.8",
+    "babel-plugin-module-resolver": "^5.0.2",
     "typescript": "^5.3.3"
   }
 }
