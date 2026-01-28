@@ -10,6 +10,10 @@
   "scripts": {
     "dev:desktop": "npm run dev --workspace=@expiry-alert/desktop",
     "build:desktop": "npm run build --workspace=@expiry-alert/desktop",
+    "dev:web": "npm run dev --workspace=@expiry-alert/web",
+    "build:web": "npm run build --workspace=@expiry-alert/web",
+    "dev:api": "npm run dev --workspace=@expiry-alert/api",
+    "build:api": "npm run build --workspace=@expiry-alert/api",
     "tauri:dev": "npm run tauri:dev --workspace=@expiry-alert/desktop",
     "tauri:build": "npm run tauri:build --workspace=@expiry-alert/desktop",
     "dev:mobile": "npm run start --workspace=@expiry-alert/mobile",

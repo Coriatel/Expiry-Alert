@@ -1,0 +1,44 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { requireAuth } from '../middleware/auth.js';
+import { getTeamId } from '../utils/team.js';
+import { updateReagent } from '../services/reagents.js';
+
+export const notificationsRouter = Router();
+
+notificationsRouter.use(requireAuth);
+
+notificationsRouter.post('/:id/snooze', async (req, res) => {
+  const teamId = getTeamId(req);
+  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const parsed = z.object({ days: z.number().int().min(1).max(365) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+  const snoozedUntil = new Date(Date.now() + parsed.data.days * 86400000).toISOString();
+  await updateReagent(id, {
+    snoozed_until: snoozedUntil,
+    updated_at: new Date().toISOString(),
+  });
+
+  res.status(204).send();
+});
+
+notificationsRouter.post('/:id/dismiss', async (req, res) => {
+  const teamId = getTeamId(req);
+  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const dismissedUntil = new Date(Date.now() + 3650 * 86400000).toISOString();
+  await updateReagent(id, {
+    dismissed_until: dismissedUntil,
+    updated_at: new Date().toISOString(),
+  });
+
+  res.status(204).send();
+});

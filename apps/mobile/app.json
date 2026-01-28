@@ -36,7 +36,13 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "color": "#2196F3",
+          "defaultChannel": "expiry-alerts"
+        }
+      ]
     ],
     "extra": {
       "eas": {

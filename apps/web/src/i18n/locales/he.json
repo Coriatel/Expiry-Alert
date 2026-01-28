@@ -1,0 +1,149 @@
+{
+  "app": {
+    "title": "מעקב תפוגת ריאגנטים"
+  },
+  "nav": {
+    "dashboard": "לוח בקרה",
+    "archive": "ארכיון",
+    "settings": "הגדרות"
+  },
+  "auth": {
+    "loading": "טוען התחברות...",
+    "signInTitle": "התחבר ל‑Expiry Alert",
+    "signInSubtitle": "השתמש בחשבון Google כדי לגשת לסביבת הצוות שלך.",
+    "continueWithGoogle": "המשך עם Google"
+  },
+  "dashboard": {
+    "title": "ריאגנטים פעילים",
+    "generalNotes": "הערות כלליות",
+    "addNote": "הוסף הערה",
+    "viewAllNotes": "הצג את כל ההערות",
+    "noNotes": "אין הערות עדיין",
+    "addReagent": "הוסף ריאגנט",
+    "addMultiple": "הוסף מספר ריאגנטים",
+    "noReagents": "לא נמצאו ריאגנטים"
+  },
+  "table": {
+    "name": "שם",
+    "category": "קטגוריה",
+    "expiryDate": "תאריך תפוגה",
+    "daysUntilExpiry": "ימים עד תפוגה",
+    "lotNumber": "מספר עוצבה",
+    "receivedDate": "תאריך קבלה",
+    "notes": "הערות",
+    "actions": "פעולות",
+    "selectAll": "בחר הכל",
+    "selected": "{{count}} נבחרו"
+  },
+  "category": {
+    "reagents": "ריאגנטים",
+    "beads": "כדוריות"
+  },
+  "status": {
+    "expired": "פג תוקף",
+    "expiresToday": "פג תוקף היום",
+    "expiresIn": "פג תוקף בעוד {{days}} ימים",
+    "expiresInOneDay": "פג תוקף בעוד יום אחד"
+  },
+  "actions": {
+    "edit": "ערוך",
+    "delete": "מחק",
+    "archive": "העבר לארכיון",
+    "restore": "שחזר",
+    "save": "שמור",
+    "saving": "שומר...",
+    "cancel": "ביטול",
+    "confirm": "אישור",
+    "close": "סגור",
+    "processing": "מעבד...",
+    "bulkDelete": "מחק את הנבחרים",
+    "bulkArchive": "העבר לארכיון",
+    "retry": "נסה שוב"
+  },
+  "form": {
+    "name": "שם",
+    "namePlaceholder": "הכנס שם ריאגנט",
+    "category": "קטגוריה",
+    "expiryDate": "תאריך תפוגה",
+    "lotNumber": "מספר עוצבה",
+    "lotNumberPlaceholder": "הכנס מספר עוצבה",
+    "receivedDate": "תאריך קבלה",
+    "notes": "הערות",
+    "notesPlaceholder": "הכנס הערות",
+    "required": "שדה חובה"
+  },
+  "dialog": {
+    "editReagent": "עריכת ריאגנט"
+  },
+  "archive": {
+    "title": "ריאגנטים בארכיון",
+    "empty": "אין ריאגנטים בארכיון"
+  },
+  "notifications": {
+    "title": "פג תוקף בקרוב!",
+    "message": "{{count}} ריאגנט/ים פגי תוקף בקרוב",
+    "remindTomorrow": "הזכר לי מחר",
+    "remindIn3Days": "הזכר לי בעוד 3 ימים",
+    "dismiss": "אל תזכיר לי יותר"
+  },
+  "settings": {
+    "title": "הגדרות התראות",
+    "enabled": "הפעל התראות",
+    "remindInDays": "הזכר לי {{days}} ימים לפני תפוגה",
+    "notifications": "התראות",
+    "pushNotifications": "התראות דחיפה",
+    "pushDescription": "קבל התראות על ריאגנטים שפג תוקפם במכשיר זה.",
+    "enable": "הפעל",
+    "disable": "כבה",
+    "notificationsEnabled": "התראות דחיפה הופעלו",
+    "notificationsDisabled": "התראות דחיפה כובו",
+    "subtitle": "ניהול העדפות",
+    "calendar": "שילוב לוח שנה",
+    "calendarExport": "ייצוא ללוח שנה",
+    "calendarDescription": "הורד קובץ ICS עם כל תאריכי התפוגה להוספה לאפליקציית לוח השנה שלך.",
+    "exportAll": "ייצא את כל תאריכי התפוגה",
+    "calendarExported": "לוח השנה יוצא בהצלחה"
+  },
+  "confirm": {
+    "delete": "האם אתה בטוח שברצונך למחוק ריאגנט זה?",
+    "deleteTitle": "מחיקת ריאגנט",
+    "deleteMessage": "האם אתה בטוח שברצונך למחוק את \"{{name}}\"? פעולה זו אינה ניתנת לביטול.",
+    "deleteMultiple": "האם אתה בטוח שברצונך למחוק {{count}} ריאגנטים?",
+    "deleteMultipleTitle": "מחיקת מספר ריאגנטים",
+    "deleteMultipleMessage": "האם אתה בטוח שברצונך למחוק {{count}} ריאגנטים? פעולה זו אינה ניתנת לביטול.",
+    "archive": "האם אתה בטוח שברצונך להעביר ריאגנט זה לארכיון?",
+    "archiveMultiple": "האם אתה בטוח שברצונך להעביר {{count}} ריאגנטים לארכיון?"
+  },
+  "success": {
+    "reagentAdded": "הריאגנט נוסף בהצלחה",
+    "reagentsAdded": "{{count}} ריאגנטים נוספו בהצלחה",
+    "reagentUpdated": "הריאגנט עודכן בהצלחה",
+    "reagentDeleted": "הריאגנט נמחק בהצלחה",
+    "reagentsDeleted": "{{count}} ריאגנטים נמחקו בהצלחה",
+    "reagentArchived": "הריאגנט הועבר לארכיון בהצלחה",
+    "reagentsArchived": "{{count}} ריאגנטים הועברו לארכיון בהצלחה",
+    "reagentRestored": "הריאגנט שוחזר בהצלחה",
+    "noteAdded": "ההערה נוספה בהצלחה",
+    "noteDeleted": "ההערה נמחקה בהצלחה",
+    "notificationSnoozed": "ההתראה נדחתה"
+  },
+  "errors": {
+    "loadFailed": "שגיאה בטעינת הנתונים. נא לנסות שוב.",
+    "addFailed": "שגיאה בהוספת הריאגנט. נא לנסות שוב.",
+    "updateFailed": "שגיאה בעדכון הריאגנט. נא לנסות שוב.",
+    "deleteFailed": "שגיאה במחיקת הריאגנט. נא לנסות שוב.",
+    "archiveFailed": "שגיאה בהעברה לארכיון. נא לנסות שוב.",
+    "restoreFailed": "שגיאה בשחזור הריאגנט. נא לנסות שוב.",
+    "addNoteFailed": "שגיאה בהוספת ההערה. נא לנסות שוב.",
+    "deleteNoteFailed": "שגיאה במחיקת ההערה. נא לנסות שוב.",
+    "snoozeFailed": "שגיאה בדחיית ההתראה. נא לנסות שוב.",
+    "somethingWentWrong": "משהו השתבש",
+    "unexpectedError": "אירעה שגיאה בלתי צפויה. נא לנסות שוב.",
+    "technicalDetails": "פרטים טכניים"
+  },
+  "validation": {
+    "nameRequired": "שם הוא שדה חובה",
+    "expiryDateRequired": "תאריך תפוגה הוא שדה חובה",
+    "invalidDate": "פורמט תאריך לא תקין"
+  }
+}

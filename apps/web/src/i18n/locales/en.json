@@ -1,0 +1,149 @@
+{
+  "app": {
+    "title": "Reagent Expiry Tracker"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "archive": "Archive",
+    "settings": "Settings"
+  },
+  "auth": {
+    "loading": "Loading session...",
+    "signInTitle": "Sign in to Expiry Alert",
+    "signInSubtitle": "Use your Google account to access your team workspace.",
+    "continueWithGoogle": "Continue with Google"
+  },
+  "dashboard": {
+    "title": "Active Reagents",
+    "generalNotes": "General Notes",
+    "addNote": "Add Note",
+    "viewAllNotes": "View All Notes",
+    "noNotes": "No notes yet",
+    "addReagent": "Add Reagent",
+    "addMultiple": "Add Multiple",
+    "noReagents": "No reagents found"
+  },
+  "table": {
+    "name": "Name",
+    "category": "Category",
+    "expiryDate": "Expiry Date",
+    "daysUntilExpiry": "Days Until Expiry",
+    "lotNumber": "LOT Number",
+    "receivedDate": "Received Date",
+    "notes": "Notes",
+    "actions": "Actions",
+    "selectAll": "Select All",
+    "selected": "{{count}} selected"
+  },
+  "category": {
+    "reagents": "Reagents",
+    "beads": "Beads"
+  },
+  "status": {
+    "expired": "Expired",
+    "expiresToday": "Expires Today",
+    "expiresIn": "Expires in {{days}} days",
+    "expiresInOneDay": "Expires in 1 day"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "archive": "Archive",
+    "restore": "Restore",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "processing": "Processing...",
+    "bulkDelete": "Delete Selected",
+    "bulkArchive": "Archive Selected",
+    "retry": "Try again"
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Enter reagent name",
+    "category": "Category",
+    "expiryDate": "Expiry Date",
+    "lotNumber": "LOT Number",
+    "lotNumberPlaceholder": "Enter LOT number",
+    "receivedDate": "Received Date",
+    "notes": "Notes",
+    "notesPlaceholder": "Enter notes",
+    "required": "Required field"
+  },
+  "dialog": {
+    "editReagent": "Edit Reagent"
+  },
+  "archive": {
+    "title": "Archived Reagents",
+    "empty": "No archived reagents"
+  },
+  "notifications": {
+    "title": "Expiring Soon!",
+    "message": "{{count}} reagent(s) are expiring soon",
+    "remindTomorrow": "Remind Tomorrow",
+    "remindIn3Days": "Remind in 3 Days",
+    "dismiss": "Don't Remind Again"
+  },
+  "settings": {
+    "title": "Notification Settings",
+    "enabled": "Enable Notifications",
+    "remindInDays": "Remind me {{days}} days before expiry",
+    "notifications": "Notifications",
+    "pushNotifications": "Push Notifications",
+    "pushDescription": "Receive notifications about expiring reagents on this device.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "notificationsEnabled": "Push notifications enabled",
+    "notificationsDisabled": "Push notifications disabled",
+    "subtitle": "Manage your preferences",
+    "calendar": "Calendar Integration",
+    "calendarExport": "Export to Calendar",
+    "calendarDescription": "Download an ICS file with all reagent expiry dates to add to your calendar app.",
+    "exportAll": "Export All Expiry Dates",
+    "calendarExported": "Calendar exported successfully"
+  },
+  "confirm": {
+    "delete": "Are you sure you want to delete this reagent?",
+    "deleteTitle": "Delete Reagent",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "deleteMultiple": "Are you sure you want to delete {{count}} reagents?",
+    "deleteMultipleTitle": "Delete Multiple Reagents",
+    "deleteMultipleMessage": "Are you sure you want to delete {{count}} reagents? This action cannot be undone.",
+    "archive": "Are you sure you want to archive this reagent?",
+    "archiveMultiple": "Are you sure you want to archive {{count}} reagents?"
+  },
+  "success": {
+    "reagentAdded": "Reagent added successfully",
+    "reagentsAdded": "{{count}} reagents added successfully",
+    "reagentUpdated": "Reagent updated successfully",
+    "reagentDeleted": "Reagent deleted successfully",
+    "reagentsDeleted": "{{count}} reagents deleted successfully",
+    "reagentArchived": "Reagent archived successfully",
+    "reagentsArchived": "{{count}} reagents archived successfully",
+    "reagentRestored": "Reagent restored successfully",
+    "noteAdded": "Note added successfully",
+    "noteDeleted": "Note deleted successfully",
+    "notificationSnoozed": "Notification snoozed"
+  },
+  "errors": {
+    "loadFailed": "Failed to load data. Please try again.",
+    "addFailed": "Failed to add reagent. Please try again.",
+    "updateFailed": "Failed to update reagent. Please try again.",
+    "deleteFailed": "Failed to delete reagent. Please try again.",
+    "archiveFailed": "Failed to archive reagent. Please try again.",
+    "restoreFailed": "Failed to restore reagent. Please try again.",
+    "addNoteFailed": "Failed to add note. Please try again.",
+    "deleteNoteFailed": "Failed to delete note. Please try again.",
+    "snoozeFailed": "Failed to snooze notification. Please try again.",
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "technicalDetails": "Technical details"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "expiryDateRequired": "Expiry date is required",
+    "invalidDate": "Invalid date format"
+  }
+}

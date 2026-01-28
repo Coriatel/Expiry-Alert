@@ -7,7 +7,7 @@ module.exports = function(api) {
         'module-resolver',
         {
           alias: {
-            '@shared': '../../packages/shared/src',
+            '@expiry-alert/shared': '../../packages/shared/src',
           },
         },
       ],

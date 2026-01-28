@@ -1,5 +1,6 @@
 export interface Reagent {
   id: number;
+  team_id?: number;
   name: string;
   category: 'reagents' | 'beads';
   expiry_date: string;
@@ -7,6 +8,8 @@ export interface Reagent {
   received_date?: string;
   notes?: string;
   is_archived: boolean;
+  snoozed_until?: string | null;
+  dismissed_until?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,8 +22,10 @@ export interface GeneralNote {
 
 export interface NotificationSettings {
   id: number;
+  team_id?: number;
   enabled: boolean;
   remind_in_days: number;
+  last_sent_at?: string | null;
 }
 
 export interface ReagentFormData {

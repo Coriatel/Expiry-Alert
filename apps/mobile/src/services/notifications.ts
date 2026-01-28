@@ -159,7 +159,11 @@ export async function syncExpiryNotifications(): Promise<void> {
         },
         sound: 'default',
       },
-      trigger: { date: scheduleDate, channelId: CHANNEL_ID },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: scheduleDate,
+        channelId: CHANNEL_ID,
+      },
     });
 
     await database.upsertNotificationSchedule(
