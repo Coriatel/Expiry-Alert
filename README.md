@@ -155,6 +155,7 @@ See [BUILD_GUIDE.md](./BUILD_GUIDE.md) for building production releases.
 Notes:
 - Skips dependency artifacts (for example `node_modules`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`).
 - If you update dependencies, document the change here and commit lockfiles separately.
+- Merges into the default remote branch (origin/HEAD).
 
 ---
 

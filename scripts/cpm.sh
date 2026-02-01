@@ -10,6 +10,10 @@ repo="$(git rev-parse --show-toplevel)"
 cd "$repo"
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
+default_branch="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+if [ -z "$default_branch" ]; then
+  default_branch="main"
+fi
 msg="$*"
 
 # If nothing is staged, stage tracked changes but skip dependency lockfiles.
@@ -32,8 +36,8 @@ git commit -m "$msg"
 
 git push origin "$branch"
 
-if [ "$branch" = "main" ]; then
-  git push origin main
+if [ "$branch" = "$default_branch" ]; then
+  git push origin "$default_branch"
   exit 0
 fi
 
@@ -44,11 +48,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-git fetch origin main
+git fetch origin "$default_branch"
 
-git worktree add -f "$tmp_dir" main
+if git show-ref --verify --quiet "refs/heads/$default_branch"; then
+  git worktree add "$tmp_dir" "$default_branch"
+else
+  git worktree add -b "$default_branch" "$tmp_dir" "origin/$default_branch"
+fi
 (
   cd "$tmp_dir"
   git merge --ff-only "$branch"
-  git push origin main
+  git push origin "$default_branch"
 )
