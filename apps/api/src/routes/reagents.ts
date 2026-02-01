@@ -21,7 +21,7 @@ const bulkSchema = z.object({
 });
 
 const idsSchema = z.object({
-  ids: z.array(z.number().int()),
+  ids: z.array(z.string()),
 });
 
 const isDateAfter = (value: string | null | undefined, compareTo: Date) => {
@@ -74,9 +74,7 @@ reagentsRouter.post('/', async (req, res) => {
   const parsed = reagentSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
-  const now = new Date().toISOString();
   await createReagent(teamId, {
-    team_id: teamId,
     name: parsed.data.name,
     category: parsed.data.category,
     expiry_date: parsed.data.expiryDate,
@@ -84,11 +82,9 @@ reagentsRouter.post('/', async (req, res) => {
     received_date: parsed.data.receivedDate ?? null,
     notes: parsed.data.notes ?? null,
     is_archived: false,
-    created_at: now,
-    updated_at: now,
   });
 
-  res.status(201).json({ id: Date.now() });
+  res.status(201).json({ status: 'created' });
 });
 
 reagentsRouter.post('/bulk', async (req, res) => {
@@ -98,10 +94,8 @@ reagentsRouter.post('/bulk', async (req, res) => {
   const parsed = bulkSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
-  const now = new Date().toISOString();
   for (const reagent of parsed.data.reagents) {
     await createReagent(teamId, {
-      team_id: teamId,
       name: reagent.name,
       category: reagent.category,
       expiry_date: reagent.expiryDate,
@@ -109,21 +103,18 @@ reagentsRouter.post('/bulk', async (req, res) => {
       received_date: reagent.receivedDate ?? null,
       notes: reagent.notes ?? null,
       is_archived: false,
-      created_at: now,
-      updated_at: now,
     });
   }
 
-  res.status(201).json({ ids: parsed.data.reagents.map(() => Date.now()) });
+  res.status(201).json({ status: 'ok' });
 });
 
 reagentsRouter.put('/:id', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
 
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-
+  const id = req.params.id;
+  
   const parsed = reagentSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
@@ -134,7 +125,6 @@ reagentsRouter.put('/:id', async (req, res) => {
     lot_number: parsed.data.lotNumber ?? null,
     received_date: parsed.data.receivedDate ?? null,
     notes: parsed.data.notes ?? null,
-    updated_at: new Date().toISOString(),
   });
 
   res.status(204).send();
@@ -144,8 +134,7 @@ reagentsRouter.delete('/:id', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
 
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  const id = req.params.id;
   await removeReagent(id);
   res.status(204).send();
 });
@@ -173,7 +162,6 @@ reagentsRouter.post('/archive', async (req, res) => {
 
   await bulkUpdate(parsed.data.ids, {
     is_archived: true,
-    updated_at: new Date().toISOString(),
   });
 
   res.status(204).send();
@@ -183,12 +171,9 @@ reagentsRouter.post('/:id/archive', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
 
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-
+  const id = req.params.id;
   await updateReagent(id, {
     is_archived: true,
-    updated_at: new Date().toISOString(),
   });
 
   res.status(204).send();
@@ -198,12 +183,9 @@ reagentsRouter.post('/:id/restore', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
 
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-
+  const id = req.params.id;
   await updateReagent(id, {
     is_archived: false,
-    updated_at: new Date().toISOString(),
   });
 
   res.status(204).send();

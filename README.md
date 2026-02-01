@@ -136,6 +136,26 @@ See [BUILD_GUIDE.md](./BUILD_GUIDE.md) for building production releases.
 - **Shared types** - Type safety across apps
 - **Shared utilities** - Business logic reuse
 
+### Web / API (PWA Deployment)
+- **Directus** for app data
+- **@directus/sdk** used by the API layer
+- **web-push + node-cron** for expiry notifications
+- **vite-plugin-pwa + workbox-window** for PWA support
+- **React 19.0.0** pinned via root overrides
+
+---
+
+## 🧰 Repo Utilities
+
+### /cpm (commit + push + merge, without deps)
+```bash
+./scripts/cpm.sh "Your commit message"
+```
+
+Notes:
+- Skips dependency artifacts (for example `node_modules`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`).
+- If you update dependencies, document the change here and commit lockfiles separately.
+
 ---
 
 **Made with ❤️ for Blood Banks and Medical Laboratories**

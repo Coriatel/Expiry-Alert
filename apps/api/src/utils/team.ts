@@ -1,6 +1,13 @@
 import type { Request } from 'express';
 
-export function getTeamId(req: Request): number | null {
+export type TeamId = number;
+
+export function getTeamId(req: Request): TeamId | null {
   const id = req.session.teamId;
-  return typeof id === 'number' ? id : null;
+  if (typeof id === 'number') return id;
+  if (typeof id === 'string') {
+    const parsed = Number(id);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }

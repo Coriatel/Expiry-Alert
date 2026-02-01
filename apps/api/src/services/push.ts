@@ -1,8 +1,7 @@
 import webpush, { PushSubscription } from 'web-push';
 import { config } from '../config.js';
-import { createRecords, deleteRecord, listRecords } from './nocodb.js';
+import { createRecord, deleteRecord, listRecords } from './directus.js';
 
-// Configure web-push
 if (config.vapid.publicKey && config.vapid.privateKey) {
   webpush.setVapidDetails(
     config.vapid.subject,
@@ -12,76 +11,62 @@ if (config.vapid.publicKey && config.vapid.privateKey) {
 }
 
 export interface PushSubscriptionRecord {
-  Id?: number;
-  user_id: number;
+  id: number;
+  user: number; // FK
   endpoint: string;
-  p256dh: string;
-  auth: string;
-  created_at?: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  date_created?: string;
 }
 
-const tableId = config.nocodb.tables.pushSubscriptions;
+const collection = config.directus.collections.pushSubscriptions as any;
 
 export async function saveSubscription(userId: number, subscription: PushSubscription) {
-  if (!tableId) {
-      console.warn('NOCODB_TABLE_PUSH_SUBSCRIPTIONS not set');
-      return;
-  }
-  
-  // Check if subscription exists
-  const existing = await listRecords<PushSubscriptionRecord>(tableId, {
-    where: `(endpoint,eq,${subscription.endpoint})`,
+  const existing = await listRecords<PushSubscriptionRecord>(collection, {
+    filter: { endpoint: { _eq: subscription.endpoint } },
   });
 
   if (existing.length > 0) {
-    // Update user_id if changed? Or just return.
-    // For now, assume endpoint is unique per device.
-    // If different user logs in, we might want to update user_id.
-    // But usually endpoint implies the browser profile.
-    // Let's update user_id to be safe.
-    // Wait, update logic requires knowing the ID.
-    // For simplicity, if it exists, we assume it's fine.
-    // Ideally we should update the owner if changed.
-    return; 
+    return;
   }
 
-  await createRecords(tableId, [
-    {
-      user_id: userId,
-      endpoint: subscription.endpoint,
-      p256dh: subscription.keys.p256dh,
-      auth: subscription.keys.auth,
+  await createRecord(collection, {
+    user: userId,
+    endpoint: subscription.endpoint,
+    keys: {
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
     },
-  ]);
+  });
 }
 
 export async function removeSubscription(endpoint: string) {
-  if (!tableId) return;
-
-  const existing = await listRecords<PushSubscriptionRecord>(tableId, {
-    where: `(endpoint,eq,${endpoint})`,
+  const existing = await listRecords<PushSubscriptionRecord>(collection, {
+    filter: { endpoint: { _eq: endpoint } },
   });
 
-  if (existing.length > 0 && existing[0].Id) {
-    await deleteRecord(tableId, existing[0].Id);
+  if (existing.length > 0) {
+    await deleteRecord(collection, existing[0].id);
   }
 }
 
 export async function sendNotificationToUser(userId: number, payload: any) {
-  if (!tableId) return;
-
-  const subscriptions = await listRecords<PushSubscriptionRecord>(tableId, {
-    where: `(user_id,eq,${userId})`,
+  const subscriptions = await listRecords<PushSubscriptionRecord>(collection, {
+    filter: { user: { _eq: userId } },
   });
 
   const notificationPayload = JSON.stringify(payload);
 
   const promises = subscriptions.map(async (sub) => {
+    const keys = typeof sub.keys === 'string' ? JSON.parse(sub.keys) : sub.keys;
+    
     const pushSub = {
       endpoint: sub.endpoint,
       keys: {
-        p256dh: sub.p256dh,
-        auth: sub.auth,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
       },
     };
 
@@ -89,8 +74,7 @@ export async function sendNotificationToUser(userId: number, payload: any) {
       await webpush.sendNotification(pushSub, notificationPayload);
     } catch (error: any) {
       if (error.statusCode === 410 || error.statusCode === 404) {
-        // Subscription expired or gone
-        if (sub.Id) await deleteRecord(tableId, sub.Id);
+        if (sub.id) await deleteRecord(collection, sub.id);
       } else {
         console.error('Error sending push notification', error);
       }

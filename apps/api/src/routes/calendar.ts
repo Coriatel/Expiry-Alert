@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { listReagents, ReagentRecord } from '../services/reagents.js';
 import { generateCalendar, generateSingleReagentCalendar } from '../services/calendar.js';
+import { getTeamId } from '../utils/team.js';
 
 export const calendarRouter = Router();
 
@@ -11,7 +12,11 @@ export const calendarRouter = Router();
  */
 calendarRouter.get('/export.ics', requireAuth, async (req, res) => {
   try {
-    const teamId = req.user!.teamId;
+    const teamId = getTeamId(req);
+    if (!teamId) {
+      return res.status(400).json({ error: 'Missing team' });
+    }
+
     const reagents = await listReagents(teamId);
 
     const icsContent = await generateCalendar(reagents);
@@ -31,15 +36,18 @@ calendarRouter.get('/export.ics', requireAuth, async (req, res) => {
  */
 calendarRouter.get('/reagent/:id.ics', requireAuth, async (req, res) => {
   try {
-    const teamId = req.user!.teamId;
-    const reagentId = parseInt(req.params.id, 10);
+    const teamId = getTeamId(req);
+    if (!teamId) {
+      return res.status(400).json({ error: 'Missing team' });
+    }
 
-    if (isNaN(reagentId)) {
+    const reagentId = req.params.id?.trim();
+    if (!reagentId) {
       return res.status(400).json({ error: 'Invalid reagent ID' });
     }
 
     const reagents = await listReagents(teamId);
-    const reagent = reagents.find((r) => (r.Id || r.id) === reagentId);
+    const reagent = reagents.find((r) => String(r.id) === reagentId);
 
     if (!reagent) {
       return res.status(404).json({ error: 'Reagent not found' });

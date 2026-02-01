@@ -5,7 +5,7 @@ import { createUser, getUserByGoogleSub, getUserById, toAuthUser, updateUser } f
 import { acceptInvite, ensureDefaultTeamForUser, listInvitesByEmail } from './services/teams.js';
 
 export function configurePassport() {
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
@@ -38,11 +38,13 @@ export function configurePassport() {
 
           if (existing && existing.id) {
             await updateUser(existing.id, {
-              name: profile.displayName,
+              display_name: profile.displayName,
               avatar_url: profile.photos?.[0]?.value,
-              last_login_at: now,
+              last_login: now,
             });
-            const authUser = toAuthUser({ ...existing, name: profile.displayName });
+            // Update the display_name in memory for the session
+            const authUser = toAuthUser({ ...existing, display_name: profile.displayName });
+            
             const invites = await listInvitesByEmail(email);
             for (const invite of invites) {
               if (invite.status === 'pending') {
@@ -55,11 +57,10 @@ export function configurePassport() {
 
           const created = await createUser({
             email,
-            name: profile.displayName,
+            display_name: profile.displayName,
             avatar_url: profile.photos?.[0]?.value,
-            google_sub: profile.id,
-            created_at: now,
-            last_login_at: now,
+            google_id: profile.id,
+            last_login: now,
           });
 
           if (!created) {

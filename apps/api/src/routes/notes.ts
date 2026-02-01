@@ -24,16 +24,14 @@ notesRouter.post('/', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   await createNote(teamId, parsed.data.content);
-  res.status(201).json({ id: Date.now() });
+  res.status(201).json({ id: 'pending' });
 });
 
 notesRouter.delete('/:id', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
 
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-
+  const id = req.params.id;
   await deleteNote(id);
   res.status(204).send();
 });

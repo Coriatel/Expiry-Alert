@@ -77,6 +77,18 @@ if (fs.existsSync(webDist)) {
   });
 }
 
+// Basic error logger to surface OAuth failures and other 5xx causes.
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  if (err?.oauthError) {
+    console.error('OAuthError', err.oauthError.statusCode ?? '', err.oauthError.data ?? err.oauthError);
+  }
+  if (err?.data) {
+    console.error('Error data', err.data);
+  }
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
 app.listen(config.port, () => {
   console.log(`Expiry Alert API listening on ${config.port}`);
 });

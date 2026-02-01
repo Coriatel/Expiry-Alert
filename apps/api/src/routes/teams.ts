@@ -23,7 +23,7 @@ teamsRouter.get('/', async (req, res) => {
 
   const memberships = await listMembershipsByUser(user.id);
   const teams = await listTeams();
-  const teamIds = new Set(memberships.map((m) => m.team_id));
+  const teamIds = new Set(memberships.map((m) => m.team));
   const userTeams = teams.filter((team) => team.id && teamIds.has(team.id));
 
   res.json({
@@ -52,11 +52,11 @@ teamsRouter.post('/switch', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const parsed = z.object({ teamId: z.number().int() }).safeParse(req.body);
+  const parsed = z.object({ teamId: z.coerce.number() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   const memberships = await listMembershipsByUser(user.id);
-  const allowed = memberships.some((m) => m.team_id === parsed.data.teamId);
+  const allowed = memberships.some((m) => m.team === parsed.data.teamId);
   if (!allowed) return res.status(403).json({ error: 'Forbidden' });
 
   req.session.teamId = parsed.data.teamId;
@@ -81,10 +81,10 @@ teamsRouter.post('/:teamId/members', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
   const teamId = Number(req.params.teamId);
-  if (!Number.isFinite(teamId)) return res.status(400).json({ error: 'Invalid team id' });
+  if (!Number.isFinite(teamId)) return res.status(400).json({ error: 'Invalid team' });
 
   const memberships = await listMembershipsByUser(user.id);
-  const current = memberships.find((m) => m.team_id === teamId);
+  const current = memberships.find((m) => m.team === teamId);
   if (!current || (current.role !== 'owner' && current.role !== 'admin')) {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -94,11 +94,10 @@ teamsRouter.post('/:teamId/members', async (req, res) => {
 
   if (invitedUser && invitedUser.id) {
     await createMembership({
-      team_id: teamId,
-      user_id: invitedUser.id,
+      team: teamId,
+      user: invitedUser.id,
       role,
       email_alerts_enabled: true,
-      created_at: new Date().toISOString(),
     });
     return res.status(201).json({ status: 'added' });
   }

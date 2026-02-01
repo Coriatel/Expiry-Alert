@@ -1,7 +1,7 @@
 # Expiry Alert PWA Conversion Progress
 
 **Status:** Phase 4 Complete (ICS Calendar Export)
-**Last Updated:** 2026-01-28
+**Last Updated:** 2026-01-29
 **Plan:** `~/.claude/plans/async-yawning-map.md` (Internal Claude plan)
 
 ## Goal
@@ -26,10 +26,7 @@ Convert the existing `apps/web` React application into a Progressive Web App (PW
 ### Phase 2: Push Notification Backend - COMPLETED
 - [x] Install `web-push` and `node-cron` in `apps/api`
 - [x] Generate VAPID keys
-- [ ] Create NocoDB table for push subscriptions (Manual Step Required)
-    - Table Name: `PushSubscriptions`
-    - Columns: `user_id` (Number), `endpoint` (Text), `p256dh` (Text), `auth` (Text)
-    - Add Table ID to `.env` as `NOCODB_TABLE_PUSH_SUBSCRIPTIONS`
+- [x] Directus schema created for push subscriptions (`push_subscriptions`)
 - [x] Create API endpoints:
     - `POST /api/push/subscribe`
     - `DELETE /api/push/unsubscribe`
@@ -81,6 +78,7 @@ Convert the existing `apps/web` React application into a Progressive Web App (PW
 - **Mobile:** Bottom navigation with safe area support for iOS
 
 ## Remaining Manual Steps
-1. Create `PushSubscriptions` table in NocoDB (see Phase 2)
-2. Configure Google OAuth credentials for production
-3. Set up Caddy reverse proxy for production deployment
+1. Verify Google OAuth login in production
+2. Subscribe to push notifications and confirm cron delivery
+
+**Completed:** Directus migration + production build deployed on 2026-01-29.

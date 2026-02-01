@@ -19,7 +19,7 @@ export async function generateCalendar(reagents: ReagentRecord[]): Promise<strin
         description: buildDescription(reagent),
         start: [year, month, day] as [number, number, number],
         duration: { days: 1 },
-        uid: `reagent-${reagent.Id || reagent.id}@expiry-alert`,
+        uid: `reagent-${reagent.id}@expiry-alert`,
         categories: [reagent.category],
         alarms: [
           // Remind 7 days before

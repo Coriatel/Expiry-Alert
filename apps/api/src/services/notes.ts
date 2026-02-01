@@ -1,35 +1,30 @@
 import { config } from '../config.js';
-import { createRecords, deleteRecord, listRecords } from './nocodb.js';
-import { normalizeId } from '../utils/records.js';
+import { createRecord, deleteRecord, listRecords } from './directus.js';
 
 export type NoteRecord = {
-  Id?: number;
-  id?: number;
-  team_id: number;
+  id: number;
+  team: number; // FK
   content: string;
-  created_at: string;
-  updated_at?: string;
+  date_created: string;
+  date_updated?: string;
 };
 
-const notesTable = config.nocodb.tables.notes;
+const collection = config.directus.collections.notes as any;
 
 export async function listNotes(teamId: number) {
-  const records = await listRecords<NoteRecord>(notesTable, { limit: 1000 });
-  return records.map(normalizeId).filter((n) => n.team_id === teamId);
+  return listRecords<NoteRecord>(collection, { 
+      filter: { team: { _eq: teamId } },
+      limit: 1000 
+  });
 }
 
 export async function createNote(teamId: number, content: string) {
-  const now = new Date().toISOString();
-  await createRecords(notesTable, [
-    {
-      team_id: teamId,
+  await createRecord(collection, {
+      team: teamId,
       content,
-      created_at: now,
-      updated_at: now,
-    },
-  ]);
+  });
 }
 
-export async function deleteNote(id: number) {
-  await deleteRecord(notesTable, id);
+export async function deleteNote(id: string) {
+  await deleteRecord(collection, id);
 }

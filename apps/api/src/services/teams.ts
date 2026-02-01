@@ -1,87 +1,81 @@
 import { config } from '../config.js';
-import { createRecords, listRecords, updateRecords } from './nocodb.js';
-import { normalizeId, recordId } from '../utils/records.js';
-import { whereEq } from '../utils/nocodb.js';
+import { createRecord, listRecords, updateSingleRecord, updateRecords, deleteRecord } from './directus.js';
+import { whereEq } from '../utils/directus.js';
 
 export type TeamRecord = {
-  Id?: number;
-  id?: number;
+  id: number;
   name: string;
-  owner_id: number;
-  created_at?: string;
+  owner: number; // FK
+  date_created?: string;
 };
 
 export type MembershipRecord = {
-  Id?: number;
-  id?: number;
-  team_id: number;
-  user_id: number;
+  id: number;
+  team: number; // FK
+  user: number; // FK
   role: 'owner' | 'admin' | 'member';
   email_alerts_enabled?: boolean;
-  created_at?: string;
+  date_created?: string;
 };
 
 export type InviteRecord = {
-  Id?: number;
-  id?: number;
-  team_id: number;
+  id: number;
+  team: number; // FK
   email: string;
   role: 'owner' | 'admin' | 'member';
   status: 'pending' | 'accepted' | 'expired';
-  created_at?: string;
-  accepted_at?: string | null;
+  code: string;
+  expires_at?: string;
+  date_created?: string;
 };
 
-const teamTable = config.nocodb.tables.teams;
-const membershipTable = config.nocodb.tables.memberships;
-const inviteTable = config.nocodb.tables.invites;
+const teamTable = config.directus.collections.teams as any;
+const membershipTable = config.directus.collections.memberships as any;
+const inviteTable = config.directus.collections.invites as any;
 
 export async function listTeams() {
-  const teams = await listRecords<TeamRecord>(teamTable, { limit: 1000 });
-  return teams.map(normalizeId);
+  return listRecords<TeamRecord>(teamTable, { limit: 1000 });
 }
 
 export async function listMembershipsByUser(userId: number) {
-  const memberships = await listRecords<MembershipRecord>(membershipTable, {
-    where: whereEq('user_id', userId),
+  return listRecords<MembershipRecord>(membershipTable, {
+    filter: whereEq('user', userId),
     limit: 1000,
   });
-  return memberships.map(normalizeId);
 }
 
 export async function listMembershipsByTeam(teamId: number) {
-  const memberships = await listRecords<MembershipRecord>(membershipTable, {
-    where: whereEq('team_id', teamId),
+  return listRecords<MembershipRecord>(membershipTable, {
+    filter: whereEq('team', teamId),
     limit: 1000,
   });
-  return memberships.map(normalizeId);
 }
 
 export async function createTeam(name: string, ownerId: number) {
-  const now = new Date().toISOString();
-  await createRecords(teamTable, [{ name, owner_id: ownerId, created_at: now }]);
-  const teams = await listRecords<TeamRecord>(teamTable, { limit: 1, where: whereEq('name', name) });
-  const record = teams[0];
-  return record ? normalizeId(record) : null;
+  const result = await createRecord(teamTable, { name, owner: ownerId });
+  const record = Array.isArray(result) ? result[0] : result;
+  return record;
 }
 
-export async function createMembership(data: MembershipRecord) {
-  await createRecords(membershipTable, [data]);
+export async function createMembership(data: Partial<MembershipRecord>) {
+  await createRecord(membershipTable, data);
   return null;
 }
 
-export async function ensureMembership(userId: number, teamId: number, role: MembershipRecord['role']) {
+export async function ensureMembership(
+  userId: number,
+  teamId: number,
+  role: MembershipRecord['role']
+) {
   const memberships = await listMembershipsByUser(userId);
-  const exists = memberships.find((m) => m.team_id === teamId);
+  const exists = memberships.find((m) => m.team === teamId);
   if (exists) return exists;
 
-  const now = new Date().toISOString();
   await createMembership({
-    team_id: teamId,
-    user_id: userId,
+    team: teamId,
+    user: userId,
     role,
     email_alerts_enabled: true,
-    created_at: now,
   });
   return null;
 }
@@ -89,7 +83,7 @@ export async function ensureMembership(userId: number, teamId: number, role: Mem
 export async function ensureDefaultTeamForUser(userId: number, displayName: string) {
   const memberships = await listMembershipsByUser(userId);
   if (memberships.length > 0) {
-    return memberships[0].team_id;
+    return memberships[0].team;
   }
 
   const teamName = `${displayName}'s Team`;
@@ -100,34 +94,36 @@ export async function ensureDefaultTeamForUser(userId: number, displayName: stri
   return team.id;
 }
 
-export async function updateMembership(id: number, data: Partial<MembershipRecord>) {
-  await updateRecords(membershipTable, [{ Id: id, ...data }]);
+export async function updateMembership(id: string, data: Partial<MembershipRecord>) {
+  await updateSingleRecord(membershipTable, id, data);
 }
 
 export async function createInvite(teamId: number, email: string, role: InviteRecord['role']) {
-  const now = new Date().toISOString();
-  await createRecords(inviteTable, [
-    { team_id: teamId, email, role, status: 'pending', created_at: now },
-  ]);
+    const code = Math.random().toString(36).substring(2, 15);
+    // Expires in 7 days
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    
+    await createRecord(inviteTable, { 
+        team: teamId, 
+        email, 
+        role, 
+        status: 'pending', 
+        code,
+        expires_at: expiresAt.toISOString()
+    });
 }
 
 export async function listInvitesByEmail(email: string) {
-  const invites = await listRecords<InviteRecord>(inviteTable, {
-    where: whereEq('email', email),
+  return listRecords<InviteRecord>(inviteTable, {
+    filter: whereEq('email', email),
     limit: 1000,
   });
-  return invites.map(normalizeId);
 }
 
 export async function acceptInvite(invite: InviteRecord, userId: number) {
-  const id = recordId(invite);
-  if (!id) return;
-  await updateRecords(inviteTable, [
-    {
-      Id: id,
+  await updateSingleRecord(inviteTable, invite.id, {
       status: 'accepted',
-      accepted_at: new Date().toISOString(),
-    },
-  ]);
-  await ensureMembership(userId, invite.team_id, invite.role);
+  });
+  await ensureMembership(userId, invite.team, invite.role);
 }

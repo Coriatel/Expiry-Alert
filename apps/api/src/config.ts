@@ -24,18 +24,18 @@ export const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY ?? '',
     subject: process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com',
   },
-  nocodb: {
-    baseUrl: process.env.NOCODB_BASE_URL ?? 'http://localhost:8086',
-    apiToken: process.env.NOCODB_API_TOKEN ?? '',
-    tables: {
-      users: process.env.NOCODB_TABLE_USERS ?? '',
-      teams: process.env.NOCODB_TABLE_TEAMS ?? '',
-      memberships: process.env.NOCODB_TABLE_MEMBERSHIPS ?? '',
-      invites: process.env.NOCODB_TABLE_INVITES ?? '',
-      reagents: process.env.NOCODB_TABLE_REAGENTS ?? '',
-      notes: process.env.NOCODB_TABLE_NOTES ?? '',
-      settings: process.env.NOCODB_TABLE_SETTINGS ?? '',
-      pushSubscriptions: process.env.NOCODB_TABLE_PUSH_SUBSCRIPTIONS ?? '',
+  directus: {
+    url: process.env.DIRECTUS_URL ?? 'http://directus:8055',
+    staticToken: process.env.DIRECTUS_STATIC_TOKEN ?? '',
+    collections: {
+      users: 'app_users',
+      teams: 'teams',
+      memberships: 'memberships',
+      invites: 'invites',
+      reagents: 'reagents',
+      notes: 'notes',
+      settings: 'settings',
+      pushSubscriptions: 'push_subscriptions',
     },
   },
 };
@@ -47,15 +47,7 @@ export function warnMissingConfig() {
     ['GOOGLE_CLIENT_SECRET', config.google.clientSecret],
     ['VAPID_PUBLIC_KEY', config.vapid.publicKey],
     ['VAPID_PRIVATE_KEY', config.vapid.privateKey],
-    ['NOCODB_API_TOKEN', config.nocodb.apiToken],
-    ['NOCODB_TABLE_USERS', config.nocodb.tables.users],
-    ['NOCODB_TABLE_TEAMS', config.nocodb.tables.teams],
-    ['NOCODB_TABLE_MEMBERSHIPS', config.nocodb.tables.memberships],
-    ['NOCODB_TABLE_INVITES', config.nocodb.tables.invites],
-    ['NOCODB_TABLE_REAGENTS', config.nocodb.tables.reagents],
-    ['NOCODB_TABLE_NOTES', config.nocodb.tables.notes],
-    ['NOCODB_TABLE_SETTINGS', config.nocodb.tables.settings],
-    ['NOCODB_TABLE_PUSH_SUBSCRIPTIONS', config.nocodb.tables.pushSubscriptions],
+    ['DIRECTUS_STATIC_TOKEN', config.directus.staticToken],
   ];
 
   const missing = required.filter(([, value]) => !value).map(([key]) => key);

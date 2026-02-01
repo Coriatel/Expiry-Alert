@@ -1,17 +1,15 @@
 import { config } from '../config.js';
-import { createRecords, findOne, listRecords, updateRecords } from './nocodb.js';
-import { normalizeId, recordId } from '../utils/records.js';
-import { whereEq } from '../utils/nocodb.js';
+import { createRecord, findOne, listRecords, updateSingleRecord } from './directus.js';
+import { whereEq } from '../utils/directus.js';
 
 export type UserRecord = {
-  Id?: number;
-  id?: number;
+  id: number;
   email: string;
-  name: string;
+  display_name: string;
   avatar_url?: string | null;
-  google_sub: string;
-  created_at?: string;
-  last_login_at?: string;
+  google_id: string;
+  date_created?: string;
+  last_login?: string;
 };
 
 export type AuthUser = {
@@ -21,48 +19,38 @@ export type AuthUser = {
   avatar_url?: string | null;
 };
 
-const tableId = config.nocodb.tables.users;
+const collection = config.directus.collections.users as any;
 
 export async function getUserByGoogleSub(sub: string) {
-  const record = await findOne<UserRecord>(tableId, whereEq('google_sub', sub));
-  return record ? normalizeId(record) : null;
+  return findOne<UserRecord>(collection, whereEq('google_id', sub));
 }
 
 export async function getUserByEmail(email: string) {
-  const record = await findOne<UserRecord>(tableId, whereEq('email', email));
-  return record ? normalizeId(record) : null;
+  return findOne<UserRecord>(collection, whereEq('email', email));
 }
 
 export async function getUserById(id: number) {
-  const record = await findOne<UserRecord>(tableId, whereEq('Id', id));
-  return record ? normalizeId(record) : null;
+  return findOne<UserRecord>(collection, whereEq('id', id));
 }
 
 export async function listUsers() {
-  const records = await listRecords<UserRecord>(tableId, { limit: 1000 });
-  return records.map(normalizeId);
+  return listRecords<UserRecord>(collection, { limit: 1000 });
 }
 
-export async function createUser(data: Omit<UserRecord, 'Id' | 'id'>) {
-  await createRecords(tableId, [data]);
-  return getUserByGoogleSub(data.google_sub);
+export async function createUser(data: Partial<UserRecord>) {
+  const result = await createRecord(collection, data);
+  return Array.isArray(result) ? result[0] : result;
 }
 
 export async function updateUser(id: number, data: Partial<UserRecord>) {
-  await updateRecords(tableId, [{ Id: id, ...data }]);
-  return getUserById(id);
+  return updateSingleRecord(collection, id, data);
 }
 
 export function toAuthUser(record: UserRecord): AuthUser {
-  const id = recordId(record);
-  if (id === null) {
-    throw new Error('User record missing id');
-  }
-
   return {
-    id,
+    id: record.id,
     email: record.email,
-    name: record.name,
+    name: record.display_name,
     avatar_url: record.avatar_url ?? null,
   };
 }
