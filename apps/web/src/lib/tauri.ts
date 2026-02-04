@@ -160,6 +160,7 @@ export type TeamSummary = {
   id: number;
   name: string;
   owner?: number;
+  role?: TeamRole;
 };
 
 export type TeamListResponse = {
@@ -169,6 +170,11 @@ export type TeamListResponse = {
 
 export type InviteMemberResponse = {
   status: 'added' | 'invited';
+};
+
+export type JoinTeamByPasswordResponse = {
+  teamId: number;
+  teamName: string;
 };
 
 export async function getGoogleCalendarStatus(): Promise<GoogleCalendarStatus> {
@@ -218,5 +224,29 @@ export async function inviteTeamMember(
   return apiFetch(`/api/teams/${teamId}/members`, {
     method: 'POST',
     body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function setTeamPassword(teamId: number, password: string): Promise<void> {
+  await apiFetch(`/api/teams/${teamId}/password`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
+}
+
+export async function joinTeamWithPassword(
+  teamName: string,
+  password: string
+): Promise<JoinTeamByPasswordResponse> {
+  return apiFetch('/api/teams/join-with-password', {
+    method: 'POST',
+    body: JSON.stringify({ teamName, password }),
+  });
+}
+
+export async function requestTeamPasswordReset(teamName: string): Promise<void> {
+  await apiFetch('/api/teams/password/forgot', {
+    method: 'POST',
+    body: JSON.stringify({ teamName }),
   });
 }

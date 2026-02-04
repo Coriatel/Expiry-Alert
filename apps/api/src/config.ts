@@ -7,22 +7,33 @@ const asNumber = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const defaultGoogleCallbackUrl = 'http://localhost:3001/api/auth/google/callback';
+const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL ?? defaultGoogleCallbackUrl;
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: asNumber(process.env.PORT, 3001),
   sessionSecret: process.env.SESSION_SECRET ?? 'change-me',
   sessionName: process.env.SESSION_NAME ?? 'expiryalert.sid',
   appBaseUrl: process.env.APP_BASE_URL ?? 'http://localhost:5173',
+  apiBaseUrl: process.env.API_BASE_URL ?? '',
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    callbackUrl:
-      process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3001/api/auth/google/callback',
+    callbackUrl: googleCallbackUrl,
   },
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY ?? '',
     privateKey: process.env.VAPID_PRIVATE_KEY ?? '',
     subject: process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com',
+  },
+  smtp: {
+    host: process.env.SMTP_HOST ?? '',
+    port: asNumber(process.env.SMTP_PORT, 587),
+    secure: (process.env.SMTP_SECURE ?? 'false') === 'true',
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? '',
   },
   directus: {
     url: process.env.DIRECTUS_URL ?? 'http://directus:8055',
@@ -37,6 +48,9 @@ export const config = {
       settings: 'settings',
       pushSubscriptions: 'push_subscriptions',
     },
+  },
+  teamAccess: {
+    resetTtlMinutes: asNumber(process.env.TEAM_PASSWORD_RESET_TTL_MINUTES, 30),
   },
 };
 

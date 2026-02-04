@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, BellOff, Calendar, CalendarPlus, Download, Link2, Unlink, Users, UserPlus, Plus } from 'lucide-react';
+import { Bell, BellOff, Calendar, CalendarPlus, Download, Link2, Unlink, Users, UserPlus, Plus, LockKeyhole, KeyRound, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -14,7 +14,11 @@ import {
   getGoogleCalendarStatus,
   getTeams,
   inviteTeamMember,
+  joinTeamWithPassword,
+  requestTeamPasswordReset,
+  setTeamPassword,
   switchTeam,
+  type TeamSummary,
   type GoogleCalendarMode,
 } from '@/lib/tauri';
 import { googleCalendarConnectUrl } from '@/lib/auth';
@@ -42,10 +46,14 @@ export function Settings() {
   const [alertAt, setAlertAt] = useState(getDefaultAlertAt());
   const [createLoading, setCreateLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(true);
-  const [teams, setTeams] = useState<{ id: number; name: string }[]>([]);
+  const [teams, setTeams] = useState<TeamSummary[]>([]);
   const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [teamPassword, setTeamPasswordValue] = useState('');
+  const [joinTeamName, setJoinTeamName] = useState('');
+  const [joinTeamPassword, setJoinTeamPassword] = useState('');
+  const [forgotTeamName, setForgotTeamName] = useState('');
   const [teamBusy, setTeamBusy] = useState(false);
 
   useEffect(() => {
@@ -86,6 +94,12 @@ export function Settings() {
       setSelectedReagentIds(activeReagents.map((r) => r.id));
       setTeams(teamData.teams);
       setCurrentTeamId(teamData.currentTeamId);
+      if (teamData.currentTeamId) {
+        const current = teamData.teams.find((team) => team.id === teamData.currentTeamId);
+        if (current?.name) {
+          setForgotTeamName(current.name);
+        }
+      }
       if (teamData.currentTeamId && !window.localStorage.getItem('expiry-alert.preferredTeamId')) {
         window.localStorage.setItem('expiry-alert.preferredTeamId', String(teamData.currentTeamId));
       }
@@ -114,6 +128,10 @@ export function Settings() {
       const activeReagents = await getActiveReagents();
       setReagents(activeReagents);
       setSelectedReagentIds(activeReagents.map((r) => r.id));
+      const switchedTeam = teams.find((team) => team.id === nextTeamId);
+      if (switchedTeam?.name) {
+        setForgotTeamName(switchedTeam.name);
+      }
       showToast(t('settings.teamSwitched'), 'success');
     } catch (error: any) {
       console.error(error);
@@ -159,6 +177,59 @@ export function Settings() {
     } catch (error: any) {
       console.error(error);
       showToast(error.message || t('settings.memberInviteFailed'), 'error');
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const handleSetTeamPassword = async () => {
+    if (!currentTeamId || teamPassword.trim().length < 6) return;
+
+    setTeamBusy(true);
+    try {
+      await setTeamPassword(currentTeamId, teamPassword.trim());
+      setTeamPasswordValue('');
+      showToast(t('settings.teamPasswordSaved'), 'success');
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t('settings.teamPasswordSaveFailed'), 'error');
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const handleJoinTeamWithPassword = async () => {
+    const name = joinTeamName.trim();
+    const password = joinTeamPassword.trim();
+    if (!name || password.length < 6) return;
+
+    setTeamBusy(true);
+    try {
+      const result = await joinTeamWithPassword(name, password);
+      window.localStorage.setItem('expiry-alert.preferredTeamId', String(result.teamId));
+      setJoinTeamName('');
+      setJoinTeamPassword('');
+      showToast(t('settings.teamJoined', { team: result.teamName }), 'success');
+      await loadSettingsData();
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t('settings.teamJoinFailed'), 'error');
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
+  const handleForgotTeamPassword = async () => {
+    const name = forgotTeamName.trim();
+    if (!name) return;
+
+    setTeamBusy(true);
+    try {
+      await requestTeamPasswordReset(name);
+      showToast(t('settings.teamPasswordResetRequested'), 'success');
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t('settings.teamPasswordResetRequestFailed'), 'error');
     } finally {
       setTeamBusy(false);
     }
@@ -275,6 +346,9 @@ export function Settings() {
     }
   };
 
+  const currentTeam = teams.find((team) => team.id === currentTeamId);
+  const canManageTeamPassword = currentTeam?.role === 'owner' || currentTeam?.role === 'admin';
+
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-8">
       <div>
@@ -352,6 +426,89 @@ export function Settings() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">{t('settings.inviteHelp')}</p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <LockKeyhole className="h-4 w-4" />
+              {t('settings.teamPasswordTitle')}
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={teamPassword}
+                onChange={(e) => setTeamPasswordValue(e.target.value)}
+                placeholder={t('settings.teamPasswordPlaceholder')}
+                disabled={teamBusy || !currentTeamId || !canManageTeamPassword}
+              />
+              <Button
+                variant="outline"
+                onClick={handleSetTeamPassword}
+                disabled={teamBusy || !currentTeamId || !canManageTeamPassword || teamPassword.trim().length < 6}
+              >
+                {t('settings.saveTeamPassword')}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {canManageTeamPassword
+                ? t('settings.teamPasswordHelpAdmin')
+                : t('settings.teamPasswordHelpMember')}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              {t('settings.joinByPasswordTitle')}
+            </label>
+            <div className="space-y-2">
+              <Input
+                value={joinTeamName}
+                onChange={(e) => setJoinTeamName(e.target.value)}
+                placeholder={t('settings.joinTeamNamePlaceholder')}
+                disabled={teamBusy}
+              />
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={joinTeamPassword}
+                  onChange={(e) => setJoinTeamPassword(e.target.value)}
+                  placeholder={t('settings.joinTeamPasswordPlaceholder')}
+                  disabled={teamBusy}
+                />
+                <Button
+                  onClick={handleJoinTeamWithPassword}
+                  disabled={teamBusy || joinTeamName.trim().length === 0 || joinTeamPassword.trim().length < 6}
+                >
+                  {t('settings.joinTeam')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            {t('settings.forgotTeamPasswordTitle')}
+          </label>
+          <div className="flex gap-2">
+            <Input
+              value={forgotTeamName}
+              onChange={(e) => setForgotTeamName(e.target.value)}
+              placeholder={t('settings.forgotTeamNamePlaceholder')}
+              disabled={teamBusy}
+            />
+            <Button
+              variant="outline"
+              onClick={handleForgotTeamPassword}
+              disabled={teamBusy || forgotTeamName.trim().length === 0}
+            >
+              {t('settings.sendResetEmail')}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{t('settings.forgotTeamPasswordHelp')}</p>
         </div>
       </div>
 
