@@ -4,6 +4,7 @@ import { Card, Text } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import type { Reagent } from '@expiry-alert/shared';
 import database from '../services/database';
+import { syncExpiryNotifications } from '../services/notifications';
 import ReagentCard from '../components/ReagentCard';
 
 export default function ArchiveScreen() {
@@ -36,10 +37,19 @@ export default function ArchiveScreen() {
     setRefreshing(false);
   };
 
+  const syncNotifications = useCallback(async () => {
+    try {
+      await syncExpiryNotifications();
+    } catch (error) {
+      console.error('Failed to sync notifications:', error);
+    }
+  }, []);
+
   const handleRestore = async (id: number) => {
     try {
       await database.restoreReagent(id);
       await loadArchivedReagents();
+      await syncNotifications();
     } catch (error) {
       console.error('Failed to restore reagent:', error);
       Alert.alert(t('errors.restoreFailed'));
@@ -59,6 +69,7 @@ export default function ArchiveScreen() {
             try {
               await database.deleteReagent(id);
               await loadArchivedReagents();
+              await syncNotifications();
             } catch (error) {
               console.error('Failed to delete reagent:', error);
               Alert.alert(t('errors.deleteFailed'));

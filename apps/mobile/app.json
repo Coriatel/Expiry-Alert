@@ -16,20 +16,39 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bloodbank.reagenttracker"
+      "bundleIdentifier": "com.bloodbank.reagenttracker",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.bloodbank.reagenttracker"
+      "package": "com.bloodbank.reagenttracker",
+      "versionCode": 1,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#2196F3",
+          "defaultChannel": "expiry-alerts"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bebae268-355a-4b3f-a6b3-b013ec154d88"
+      }
+    },
+    "owner": "coriat"
   }
 }

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Reagent } from '@expiry-alert/shared';
 import { getDaysUntilExpiry } from '@expiry-alert/shared';
 import database from '../services/database';
+import { syncExpiryNotifications } from '../services/notifications';
 import ReagentCard from '../components/ReagentCard';
 
 interface AddReagentForm {
@@ -41,6 +42,7 @@ export default function DashboardScreen() {
       setLoading(true);
       await database.init();
       await loadReagents();
+      await syncNotifications();
     } catch (error) {
       console.error('Failed to initialize database:', error);
       Alert.alert(t('errors.loadFailed'));
@@ -58,6 +60,14 @@ export default function DashboardScreen() {
     }
   }, []);
 
+  const syncNotifications = useCallback(async () => {
+    try {
+      await syncExpiryNotifications();
+    } catch (error) {
+      console.error('Failed to sync notifications:', error);
+    }
+  }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadReagents();
@@ -68,6 +78,7 @@ export default function DashboardScreen() {
     try {
       await database.archiveReagent(id);
       await loadReagents();
+      await syncNotifications();
     } catch (error) {
       console.error('Failed to archive reagent:', error);
       Alert.alert(t('errors.archiveFailed'));
@@ -87,6 +98,7 @@ export default function DashboardScreen() {
             try {
               await database.deleteReagent(id);
               await loadReagents();
+              await syncNotifications();
             } catch (error) {
               console.error('Failed to delete reagent:', error);
               Alert.alert(t('errors.deleteFailed'));
@@ -114,6 +126,7 @@ export default function DashboardScreen() {
         form.notes.trim() || undefined
       );
       await loadReagents();
+      await syncNotifications();
       setShowAddModal(false);
       setForm(initialForm);
     } catch (error) {

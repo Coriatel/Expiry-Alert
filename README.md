@@ -56,7 +56,7 @@ npm run dev:mobile
 Download the latest release from [Releases](../../releases):
 - **Windows:** Download `.msi` or `.exe` file
 - **Android:** Download `.apk` file
-- **iOS:** Coming soon via TestFlight
+- **iOS:** TestFlight (requires Apple Developer account)
 
 See [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md) for detailed instructions.
 
@@ -135,6 +135,27 @@ See [BUILD_GUIDE.md](./BUILD_GUIDE.md) for building production releases.
 - **~30% code sharing** between platforms
 - **Shared types** - Type safety across apps
 - **Shared utilities** - Business logic reuse
+
+### Web / API (PWA Deployment)
+- **Directus** for app data
+- **@directus/sdk** used by the API layer
+- **web-push + node-cron** for expiry notifications
+- **vite-plugin-pwa + workbox-window** for PWA support
+- **React 19.0.0** pinned via root overrides
+
+---
+
+## 🧰 Repo Utilities
+
+### /cpm (commit + push + merge, without deps)
+```bash
+./scripts/cpm.sh "Your commit message"
+```
+
+Notes:
+- Skips dependency artifacts (for example `node_modules`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`).
+- If you update dependencies, document the change here and commit lockfiles separately.
+- Merges into the default remote branch (origin/HEAD).
 
 ---
 

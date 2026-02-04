@@ -2,14 +2,29 @@
   "name": "@expiry-alert/shared",
   "version": "1.0.0",
   "description": "Shared types, utilities, and business logic for Expiry Alert",
-  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./types": "./src/types.ts",
-    "./utils": "./src/utils.ts",
-    "./constants": "./src/constants.ts"
+    ".": {
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./types": {
+      "import": "./src/types.ts",
+      "require": "./src/types.ts",
+      "types": "./src/types.ts"
+    },
+    "./utils": {
+      "import": "./src/utils.ts",
+      "require": "./src/utils.ts",
+      "types": "./src/utils.ts"
+    },
+    "./constants": {
+      "import": "./src/constants.ts",
+      "require": "./src/constants.ts",
+      "types": "./src/constants.ts"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -18,7 +33,7 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "vitest": "^4.0.17"
   },
   "dependencies": {
     "date-fns": "^3.0.6"

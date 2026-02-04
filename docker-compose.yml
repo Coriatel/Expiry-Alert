@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  expiryalert-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - ./apps/api/.env
+    ports:
+      - "3011:3001"
+    restart: unless-stopped
+    depends_on:
+      - directus
+
+  directus:
+    image: directus/directus:latest
+    ports:
+      - "8055:8055"
+    volumes:
+      - ./directus/uploads:/directus/uploads
+      - ./directus/extensions:/directus/extensions
+    environment:
+      KEY: "${DIRECTUS_KEY}"
+      SECRET: "${DIRECTUS_SECRET}"
+      ADMIN_EMAIL: "${DIRECTUS_ADMIN_EMAIL}"
+      ADMIN_PASSWORD: "${DIRECTUS_ADMIN_PASSWORD}"
+      DB_CLIENT: 'pg'
+      DB_HOST: 'directus-db'
+      DB_PORT: '5432'
+      DB_DATABASE: 'directus'
+      DB_USER: 'directus'
+      DB_PASSWORD: 'directus_password'
+      WEBSOCKETS_ENABLED: 'true'
+      PUBLIC_URL: 'https://cms.expiryalert.coriathost.cloud'
+    restart: unless-stopped
+    depends_on:
+      - directus-db
+
+  directus-db:
+    image: postgres:15
+    volumes:
+      - directus-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: 'directus'
+      POSTGRES_PASSWORD: 'directus_password'
+      POSTGRES_DB: 'directus'
+    restart: unless-stopped
+
+volumes:
+  directus-data:

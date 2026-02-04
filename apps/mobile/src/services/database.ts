@@ -1,9 +1,7 @@
-import * as SQLite from 'expo-sqlite';
+import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 import type { Reagent, GeneralNote } from '@expiry-alert/shared';
 
 const DB_NAME = 'reagents.db';
-const DB_VERSION = 1;
-
 /**
  * Input validation error
  */
@@ -42,7 +40,7 @@ function validateReagentInput(
 }
 
 class DatabaseService {
-  private db: SQLite.WebSQLDatabase | null = null;
+  private db: SQLiteDatabase | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
 
@@ -72,54 +70,47 @@ class DatabaseService {
   }
 
   private async _doInit(): Promise<void> {
-    this.db = SQLite.openDatabase(DB_NAME);
+    this.db = await openDatabaseAsync(DB_NAME);
     await this.runMigrations();
   }
 
   /**
    * Run database migrations
    */
-  private runMigrations(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
+  private async runMigrations(): Promise<void> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    const db = this.db;
+
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(
+        `CREATE TABLE IF NOT EXISTS db_version (
+          version INTEGER PRIMARY KEY
+        );`
+      );
+
+      const row = await db.getFirstAsync<{ version: number }>(
+        'SELECT COALESCE(MAX(version), 0) as version FROM db_version'
+      );
+      const currentVersion = row?.version ?? 0;
+
+      if (currentVersion < 1) {
+        await this.migrateV1(db);
       }
 
-      this.db.transaction(
-        (tx) => {
-          // Create version table
-          tx.executeSql(
-            `CREATE TABLE IF NOT EXISTS db_version (
-              version INTEGER PRIMARY KEY
-            );`
-          );
-
-          // Check current version
-          tx.executeSql(
-            'SELECT COALESCE(MAX(version), 0) as version FROM db_version',
-            [],
-            (_, { rows }) => {
-              const currentVersion = rows.item(0).version;
-
-              if (currentVersion < 1) {
-                this.migrateV1(tx);
-              }
-            }
-          );
-        },
-        (error) => reject(error),
-        () => resolve()
-      );
+      if (currentVersion < 2) {
+        await this.migrateV2(db);
+      }
     });
   }
 
   /**
    * Migration to version 1 - initial schema
    */
-  private migrateV1(tx: SQLite.SQLTransaction): void {
-    // Reagents table with constraints
-    tx.executeSql(
+  private async migrateV1(db: SQLiteDatabase): Promise<void> {
+    await db.execAsync(
       `CREATE TABLE IF NOT EXISTS reagents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -134,16 +125,14 @@ class DatabaseService {
       );`
     );
 
-    // Indexes for better query performance
-    tx.executeSql(
+    await db.execAsync(
       'CREATE INDEX IF NOT EXISTS idx_reagents_expiry ON reagents(expiry_date);'
     );
-    tx.executeSql(
+    await db.execAsync(
       'CREATE INDEX IF NOT EXISTS idx_reagents_archived ON reagents(is_archived);'
     );
 
-    // General notes table
-    tx.executeSql(
+    await db.execAsync(
       `CREATE TABLE IF NOT EXISTS general_notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         content TEXT NOT NULL,
@@ -151,8 +140,7 @@ class DatabaseService {
       );`
     );
 
-    // Notification settings table
-    tx.executeSql(
+    await db.execAsync(
       `CREATE TABLE IF NOT EXISTS notification_settings (
         id INTEGER PRIMARY KEY,
         enabled INTEGER DEFAULT 1 CHECK(enabled IN (0, 1)),
@@ -160,16 +148,29 @@ class DatabaseService {
       );`
     );
 
-    // Insert default settings
-    tx.executeSql(
+    await db.runAsync(
       'INSERT OR IGNORE INTO notification_settings (id, enabled, remind_in_days) VALUES (1, 1, 5);'
     );
 
-    // Update version
-    tx.executeSql(
-      'INSERT OR REPLACE INTO db_version (version) VALUES (?);',
-      [DB_VERSION]
+    await db.runAsync('INSERT OR REPLACE INTO db_version (version) VALUES (?);', [1]);
+  }
+
+  /**
+   * Migration to version 2 - notification schedule tracking
+   */
+  private async migrateV2(db: SQLiteDatabase): Promise<void> {
+    await db.execAsync(
+      `CREATE TABLE IF NOT EXISTS notification_schedule (
+        reagent_id INTEGER PRIMARY KEY,
+        notification_id TEXT NOT NULL,
+        scheduled_for TEXT NOT NULL,
+        expiry_date TEXT NOT NULL,
+        remind_days INTEGER NOT NULL,
+        created_at TEXT NOT NULL
+      );`
     );
+
+    await db.runAsync('INSERT OR REPLACE INTO db_version (version) VALUES (?);', [2]);
   }
 
   /**
@@ -190,29 +191,14 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'SELECT * FROM reagents WHERE is_archived = 0 ORDER BY expiry_date ASC',
-          [],
-          (_, { rows }) => {
-            const reagents: Reagent[] = [];
-            for (let i = 0; i < rows.length; i++) {
-              const row = rows.item(i);
-              reagents.push({
-                ...row,
-                is_archived: row.is_archived === 1,
-              });
-            }
-            resolve(reagents);
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    const rows = await this.db!.getAllAsync<Omit<Reagent, 'is_archived'> & { is_archived: number }>(
+      'SELECT * FROM reagents WHERE is_archived = 0 ORDER BY expiry_date ASC'
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      is_archived: row.is_archived === 1,
+    }));
   }
 
   /**
@@ -222,29 +208,14 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'SELECT * FROM reagents WHERE is_archived = 1 ORDER BY updated_at DESC',
-          [],
-          (_, { rows }) => {
-            const reagents: Reagent[] = [];
-            for (let i = 0; i < rows.length; i++) {
-              const row = rows.item(i);
-              reagents.push({
-                ...row,
-                is_archived: row.is_archived === 1,
-              });
-            }
-            resolve(reagents);
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    const rows = await this.db!.getAllAsync<Omit<Reagent, 'is_archived'> & { is_archived: number }>(
+      'SELECT * FROM reagents WHERE is_archived = 1 ORDER BY updated_at DESC'
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      is_archived: row.is_archived === 1,
+    }));
   }
 
   /**
@@ -264,28 +235,23 @@ class DatabaseService {
     // Validate input
     validateReagentInput(name, category, expiryDate);
 
-    return new Promise((resolve, reject) => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
+    const result = await this.db!.runAsync(
+      `INSERT INTO reagents (name, category, expiry_date, lot_number, received_date, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name.trim(),
+        category,
+        expiryDate,
+        lotNumber || null,
+        receivedDate || null,
+        notes || null,
+        now,
+        now,
+      ]
+    );
 
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          `INSERT INTO reagents (name, category, expiry_date, lot_number, received_date, notes, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [name.trim(), category, expiryDate, lotNumber || null, receivedDate || null, notes || null, now, now],
-          (_, result) => {
-            if (result.insertId !== undefined && result.insertId !== null) {
-              resolve(result.insertId);
-            } else {
-              reject(new Error('Failed to get insert ID'));
-            }
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    return result.lastInsertRowId;
   }
 
   /**
@@ -306,23 +272,23 @@ class DatabaseService {
     // Validate input
     validateReagentInput(name, category, expiryDate);
 
-    return new Promise((resolve, reject) => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          `UPDATE reagents
-           SET name = ?, category = ?, expiry_date = ?, lot_number = ?, received_date = ?, notes = ?, updated_at = ?
-           WHERE id = ?`,
-          [name.trim(), category, expiryDate, lotNumber || null, receivedDate || null, notes || null, now, id],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync(
+      `UPDATE reagents
+       SET name = ?, category = ?, expiry_date = ?, lot_number = ?, received_date = ?, notes = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        name.trim(),
+        category,
+        expiryDate,
+        lotNumber || null,
+        receivedDate || null,
+        notes || null,
+        now,
+        id,
+      ]
+    );
   }
 
   /**
@@ -332,21 +298,12 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'UPDATE reagents SET is_archived = 1, updated_at = ? WHERE id = ?',
-          [now, id],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync(
+      'UPDATE reagents SET is_archived = 1, updated_at = ? WHERE id = ?',
+      [now, id]
+    );
   }
 
   /**
@@ -356,21 +313,12 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'UPDATE reagents SET is_archived = 0, updated_at = ? WHERE id = ?',
-          [now, id],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync(
+      'UPDATE reagents SET is_archived = 0, updated_at = ? WHERE id = ?',
+      [now, id]
+    );
   }
 
   /**
@@ -380,19 +328,7 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'DELETE FROM reagents WHERE id = ?',
-          [id],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync('DELETE FROM reagents WHERE id = ?', [id]);
   }
 
   // ==================== General Notes Operations ====================
@@ -404,25 +340,9 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'SELECT * FROM general_notes ORDER BY created_at DESC',
-          [],
-          (_, { rows }) => {
-            const notes: GeneralNote[] = [];
-            for (let i = 0; i < rows.length; i++) {
-              notes.push(rows.item(i));
-            }
-            resolve(notes);
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    return this.db!.getAllAsync<GeneralNote>(
+      'SELECT * FROM general_notes ORDER BY created_at DESC'
+    );
   }
 
   /**
@@ -441,27 +361,14 @@ class DatabaseService {
       throw new ValidationError('Note content too long (max 10000 characters)');
     }
 
-    return new Promise((resolve, reject) => {
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'INSERT INTO general_notes (content, created_at) VALUES (?, ?)',
-          [trimmedContent, now],
-          (_, result) => {
-            if (result.insertId !== undefined && result.insertId !== null) {
-              resolve(result.insertId);
-            } else {
-              reject(new Error('Failed to get insert ID'));
-            }
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    const result = await this.db!.runAsync(
+      'INSERT INTO general_notes (content, created_at) VALUES (?, ?)',
+      [trimmedContent, now]
+    );
+
+    return result.lastInsertRowId;
   }
 
   /**
@@ -471,19 +378,7 @@ class DatabaseService {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'DELETE FROM general_notes WHERE id = ?',
-          [id],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync('DELETE FROM general_notes WHERE id = ?', [id]);
   }
 
   // ==================== Notification Settings ====================
@@ -491,33 +386,22 @@ class DatabaseService {
   /**
    * Get notification settings
    */
-  async getNotificationSettings(): Promise<{ enabled: boolean; remind_in_days: number }> {
+  async getNotificationSettings(): Promise<{ enabled: boolean; remindDays: number }> {
     await this.init();
     this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'SELECT enabled, remind_in_days FROM notification_settings WHERE id = 1',
-          [],
-          (_, { rows }) => {
-            if (rows.length > 0) {
-              const row = rows.item(0);
-              resolve({
-                enabled: row.enabled === 1,
-                remind_in_days: row.remind_in_days,
-              });
-            } else {
-              resolve({ enabled: true, remind_in_days: 5 });
-            }
-          },
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    const row = await this.db!.getFirstAsync<{ enabled: number; remind_in_days: number }>(
+      'SELECT enabled, remind_in_days FROM notification_settings WHERE id = 1'
+    );
+
+    if (row) {
+      return {
+        enabled: row.enabled === 1,
+        remindDays: row.remind_in_days,
+      };
+    }
+
+    return { enabled: true, remindDays: 5 };
   }
 
   /**
@@ -532,19 +416,71 @@ class DatabaseService {
       throw new ValidationError('Remind in days must be between 1 and 365');
     }
 
-    return new Promise((resolve, reject) => {
-      this.db!.transaction((tx) => {
-        tx.executeSql(
-          'UPDATE notification_settings SET enabled = ?, remind_in_days = ? WHERE id = 1',
-          [enabled ? 1 : 0, remindInDays],
-          () => resolve(),
-          (_, error) => {
-            reject(error);
-            return false;
-          }
-        );
-      });
-    });
+    await this.db!.runAsync(
+      'UPDATE notification_settings SET enabled = ?, remind_in_days = ? WHERE id = 1',
+      [enabled ? 1 : 0, remindInDays]
+    );
+  }
+
+  // ==================== Notification Schedule ====================
+
+  async getNotificationSchedules(): Promise<
+    {
+      reagent_id: number;
+      notification_id: string;
+      scheduled_for: string;
+      expiry_date: string;
+      remind_days: number;
+    }[]
+  > {
+    await this.init();
+    this.ensureInitialized();
+
+    return this.db!.getAllAsync<{
+      reagent_id: number;
+      notification_id: string;
+      scheduled_for: string;
+      expiry_date: string;
+      remind_days: number;
+    }>(
+      'SELECT reagent_id, notification_id, scheduled_for, expiry_date, remind_days FROM notification_schedule'
+    );
+  }
+
+  async upsertNotificationSchedule(
+    reagentId: number,
+    notificationId: string,
+    scheduledFor: string,
+    expiryDate: string,
+    remindDays: number
+  ): Promise<void> {
+    await this.init();
+    this.ensureInitialized();
+
+    const now = new Date().toISOString();
+
+    await this.db!.runAsync(
+      `INSERT OR REPLACE INTO notification_schedule
+       (reagent_id, notification_id, scheduled_for, expiry_date, remind_days, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [reagentId, notificationId, scheduledFor, expiryDate, remindDays, now]
+    );
+  }
+
+  async deleteNotificationSchedule(reagentId: number): Promise<void> {
+    await this.init();
+    this.ensureInitialized();
+
+    await this.db!.runAsync('DELETE FROM notification_schedule WHERE reagent_id = ?', [
+      reagentId,
+    ]);
+  }
+
+  async clearNotificationSchedules(): Promise<void> {
+    await this.init();
+    this.ensureInitialized();
+
+    await this.db!.runAsync('DELETE FROM notification_schedule');
   }
 }
 
