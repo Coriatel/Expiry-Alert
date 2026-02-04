@@ -3,7 +3,8 @@ FROM node:22-slim AS builder
 WORKDIR /app
 COPY . .
 
-RUN npm ci
+# Some branches have package-lock drift; use install here for resilient VPS deploys.
+RUN npm install --no-audit --no-fund
 RUN npm run build --workspace=@expiry-alert/web
 RUN npm run build --workspace=@expiry-alert/api
 
