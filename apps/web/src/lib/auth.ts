@@ -29,3 +29,4 @@ export async function logout(): Promise<void> {
 }
 
 export const googleLoginUrl = `${API_BASE}/api/auth/google`;
+export const googleCalendarConnectUrl = `${API_BASE}/api/auth/google/calendar`;
