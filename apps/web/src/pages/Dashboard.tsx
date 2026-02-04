@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Archive } from 'lucide-react';
+import { Plus, Trash2, Archive, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ReagentTable } from '@/components/ReagentTable';
@@ -38,6 +38,7 @@ interface ConfirmState {
 export function Dashboard() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const [printTimestamp, setPrintTimestamp] = useState(() => new Date().toLocaleString());
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,16 +64,12 @@ export function Dashboard() {
   } = useStore();
 
   // Load data
-  useEffect(() => {
-    loadData();
-    // Check for expiring reagents every 5 minutes
-    const interval = setInterval(loadExpiringReagents, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
     try {
-      setIsLoading(true);
+      if (!background) {
+        setIsLoading(true);
+      }
       const [reagentsData, notesData, expiringData] = await Promise.all([
         getActiveReagents(),
         getGeneralNotes(),
@@ -83,11 +80,23 @@ export function Dashboard() {
       setExpiringReagents(expiringData);
     } catch (error) {
       console.error('Failed to load data:', error);
-      showToast(t('errors.loadFailed'), 'error');
+      if (!background) {
+        showToast(t('errors.loadFailed'), 'error');
+      }
     } finally {
-      setIsLoading(false);
+      if (!background) {
+        setIsLoading(false);
+      }
     }
   }, [setReagents, setGeneralNotes, setExpiringReagents, showToast, t]);
+
+  useEffect(() => {
+    void loadData();
+    const interval = setInterval(() => {
+      void loadData({ background: true });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   const loadExpiringReagents = async () => {
     try {
@@ -254,26 +263,42 @@ export function Dashboard() {
     setConfirmState((prev) => ({ ...prev, open: false }));
   };
 
+  const handlePrint = () => {
+    setPrintTimestamp(new Date().toLocaleString());
+    window.print();
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <div className="hidden print:block border-b pb-3">
+        <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('dashboard.printedAt', { at: printTimestamp })}</p>
+      </div>
+
       {/* Notification Banner */}
-      <NotificationBanner
-        reagents={expiringReagents}
-        onSnooze={handleSnooze}
-        onDismiss={handleDismiss}
-      />
+      <div className="print:hidden">
+        <NotificationBanner
+          reagents={expiringReagents}
+          onSnooze={handleSnooze}
+          onDismiss={handleDismiss}
+        />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint} className="print:hidden">
+            <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t('actions.print')}
+          </Button>
           {selectedReagentIds.length > 0 && (
             <>
-              <Button variant="outline" onClick={handleBulkArchive} disabled={isLoading}>
+              <Button variant="outline" onClick={handleBulkArchive} disabled={isLoading} className="print:hidden">
                 <Archive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t('actions.bulkArchive')} ({selectedReagentIds.length})
               </Button>
-              <Button variant="destructive" onClick={handleBulkDelete} disabled={isLoading}>
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={isLoading} className="print:hidden">
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t('actions.bulkDelete')} ({selectedReagentIds.length})
               </Button>
@@ -293,7 +318,7 @@ export function Dashboard() {
 
       {/* Add Button */}
       {!showBulkAdd && (
-        <Button onClick={() => setShowBulkAdd(true)} disabled={isLoading}>
+        <Button onClick={() => setShowBulkAdd(true)} disabled={isLoading} className="print:hidden">
           <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           {t('dashboard.addMultiple')}
         </Button>
@@ -301,7 +326,9 @@ export function Dashboard() {
 
       {/* Bulk Add Form */}
       {showBulkAdd && (
-        <BulkAddForm onSave={handleBulkAdd} onCancel={() => setShowBulkAdd(false)} />
+        <div className="print:hidden">
+          <BulkAddForm onSave={handleBulkAdd} onCancel={() => setShowBulkAdd(false)} />
+        </div>
       )}
 
       {/* Reagents Table */}

@@ -70,7 +70,11 @@ export function ReagentTable({
       }),
       columnHelper.accessor('category', {
         header: t('table.category'),
-        cell: (info) => t(`category.${info.getValue()}`),
+        cell: (info) => {
+          const value = info.getValue();
+          if (!value) return '-';
+          return t(`category.${value}`, { defaultValue: '-' });
+        },
       }),
       columnHelper.accessor('expiry_date', {
         header: t('table.expiryDate'),
@@ -176,9 +180,13 @@ export function ReagentTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
+                // Hide select/actions columns in print output.
                 <th
                   key={header.id}
-                  className="px-4 py-3 text-start text-sm font-medium border-b"
+                  className={cn(
+                    'px-4 py-3 text-start text-sm font-medium border-b',
+                    (header.id === 'select' || header.id === 'actions') && 'print-hide'
+                  )}
                   style={{ width: header.getSize() }}
                 >
                   {header.isPlaceholder ? null : (
@@ -214,7 +222,13 @@ export function ReagentTable({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-sm">
+                  <td
+                    key={cell.id}
+                    className={cn(
+                      'px-4 py-3 text-sm',
+                      (cell.column.id === 'select' || cell.column.id === 'actions') && 'print-hide'
+                    )}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

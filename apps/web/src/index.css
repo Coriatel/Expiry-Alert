@@ -110,3 +110,70 @@ html[dir="rtl"] body {
 .animate-in.slide-in-from-top-2 {
   animation: slideInFromTop 0.15s ease-out;
 }
+
+.print-hide {
+  display: table-cell;
+}
+
+@page {
+  margin: 12mm;
+  size: auto;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  header,
+  nav,
+  .print-hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    min-height: auto !important;
+  }
+
+  .container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .table-container {
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  .table-container thead {
+    position: static !important;
+    display: table-header-group !important;
+    background: #f8fafc !important;
+  }
+
+  .table-container tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #fff !important;
+  }
+
+  .table-container th,
+  .table-container td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 6px 8px !important;
+    color: #111827 !important;
+    background: transparent !important;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+}

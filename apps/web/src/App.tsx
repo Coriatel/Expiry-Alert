@@ -4,19 +4,30 @@ import { Archive as ArchiveIcon, LayoutDashboard, Globe, LogOut, Settings as Set
 import { Dashboard } from '@/pages/Dashboard';
 import { Archive } from '@/pages/Archive';
 import { Settings } from '@/pages/Settings';
+import { LegalPage } from '@/pages/LegalPage';
 import { Button } from '@/components/ui/Button';
 import { ToastProvider } from '@/components/ui/Toast';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
 import { googleLoginUrl } from '@/lib/auth';
+import { getTeams, switchTeam } from '@/lib/tauri';
 
 type Page = 'dashboard' | 'archive' | 'settings';
+type PublicPage = 'privacy' | 'terms' | null;
+
+function resolvePublicPage(pathname: string): PublicPage {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  if (normalized === '/privacy') return 'privacy';
+  if (normalized === '/terms') return 'terms';
+  return null;
+}
 
 function App() {
   const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, loading, error, signOut } = useAuth();
+  const { user, loading, error, signOut, refresh } = useAuth();
+  const publicPage = resolvePublicPage(window.location.pathname);
 
   // Set RTL direction
   useEffect(() => {
@@ -33,6 +44,46 @@ function App() {
     setCurrentPage(page);
     setMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (!user) return;
+
+    const preferredRaw = window.localStorage.getItem('expiry-alert.preferredTeamId');
+    if (!preferredRaw) return;
+
+    const preferredTeamId = Number(preferredRaw);
+    if (!Number.isFinite(preferredTeamId)) {
+      window.localStorage.removeItem('expiry-alert.preferredTeamId');
+      return;
+    }
+    if (user.team_id === preferredTeamId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const teamData = await getTeams();
+        const hasAccess = teamData.teams.some((team) => team.id === preferredTeamId);
+        if (!hasAccess) {
+          window.localStorage.removeItem('expiry-alert.preferredTeamId');
+          return;
+        }
+        await switchTeam(preferredTeamId);
+        if (!cancelled) {
+          await refresh();
+        }
+      } catch (err) {
+        console.error('Failed to restore preferred team', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, refresh]);
+
+  if (publicPage) {
+    return <LegalPage kind={publicPage} language={i18n.language} onToggleLanguage={toggleLanguage} />;
+  }
 
   if (loading) {
     return (
@@ -57,6 +108,15 @@ function App() {
           >
             {t('auth.continueWithGoogle')}
           </a>
+          <div className="mt-4 text-xs text-muted-foreground flex items-center gap-3">
+            <a href="/privacy" className="underline-offset-2 hover:underline">
+              {t('auth.privacyPolicy')}
+            </a>
+            <span>•</span>
+            <a href="/terms" className="underline-offset-2 hover:underline">
+              {t('auth.termsOfService')}
+            </a>
+          </div>
         </div>
       </div>
     );

@@ -141,3 +141,82 @@ export async function dismissNotification(reagentId: number): Promise<void> {
 export async function getExpiringReagents(): Promise<Reagent[]> {
   return apiFetch('/api/reagents?scope=expiring');
 }
+
+export type GoogleCalendarMode = 'single' | 'separate';
+
+export type GoogleCalendarStatus = {
+  connected: boolean;
+};
+
+export type GoogleCalendarCreateResponse = {
+  created: number;
+  links: string[];
+  mode: GoogleCalendarMode;
+};
+
+export type TeamRole = 'owner' | 'admin' | 'member';
+
+export type TeamSummary = {
+  id: number;
+  name: string;
+  owner?: number;
+};
+
+export type TeamListResponse = {
+  teams: TeamSummary[];
+  currentTeamId: number | null;
+};
+
+export type InviteMemberResponse = {
+  status: 'added' | 'invited';
+};
+
+export async function getGoogleCalendarStatus(): Promise<GoogleCalendarStatus> {
+  return apiFetch('/api/calendar/google/status');
+}
+
+export async function disconnectGoogleCalendar(): Promise<void> {
+  await apiFetch('/api/calendar/google/disconnect', {
+    method: 'POST',
+  });
+}
+
+export async function createGoogleCalendarEvents(
+  reagentIds: number[],
+  alertAt: string,
+  mode: GoogleCalendarMode
+): Promise<GoogleCalendarCreateResponse> {
+  return apiFetch('/api/calendar/google/events', {
+    method: 'POST',
+    body: JSON.stringify({ reagentIds, alertAt, mode }),
+  });
+}
+
+export async function getTeams(): Promise<TeamListResponse> {
+  return apiFetch('/api/teams');
+}
+
+export async function createTeam(name: string): Promise<TeamSummary> {
+  return apiFetch('/api/teams', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function switchTeam(teamId: number): Promise<void> {
+  await apiFetch('/api/teams/switch', {
+    method: 'POST',
+    body: JSON.stringify({ teamId }),
+  });
+}
+
+export async function inviteTeamMember(
+  teamId: number,
+  email: string,
+  role: TeamRole = 'member'
+): Promise<InviteMemberResponse> {
+  return apiFetch(`/api/teams/${teamId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}

@@ -17,7 +17,11 @@ export function Archive() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
-    loadArchivedReagents();
+    void loadArchivedReagents();
+    const interval = setInterval(() => {
+      void loadArchivedReagents();
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadArchivedReagents = async () => {
@@ -120,7 +124,9 @@ export function Archive() {
                     />
                   </td>
                   <td className="px-4 py-3 font-medium">{reagent.name}</td>
-                  <td className="px-4 py-3">{t(`category.${reagent.category}`)}</td>
+                  <td className="px-4 py-3">
+                    {reagent.category ? t(`category.${reagent.category}`, { defaultValue: '-' }) : '-'}
+                  </td>
                   <td className="px-4 py-3">{formatDate(reagent.expiry_date)}</td>
                   <td className="px-4 py-3">{reagent.lot_number || '-'}</td>
                   <td className="px-4 py-3">
