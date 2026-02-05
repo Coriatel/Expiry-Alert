@@ -1,0 +1,22 @@
+{
+  "name": "flexible-editor-content-vue-example",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "core-js": "^3.8.3",
+    "vue": "^3.3.0",
+    "vue-class-component": "^8.0.0-0"
+  },
+  "devDependencies": {
+    "directus-extension-flexible-editor": "file:../../..",
+    "@vue/cli-plugin-babel": "~5.0.0-beta.3",
+    "@vue/cli-plugin-typescript": "~5.0.0-beta.3",
+    "@vue/cli-service": "~5.0.0-beta.3",
+    "@vue/compiler-sfc": "^3.0.4",
+    "typescript": "~5.9.3"
+  }
+}

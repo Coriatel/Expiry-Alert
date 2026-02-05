@@ -1,0 +1,40 @@
+{
+	"name": "@quickifyai/directus-extension-save-and-stay-button",
+	"description": "Provide Save and Stay functionality as a button",
+	"icon": "save",
+	"version": "1.0.2",
+	"license": "gpl-3.0",
+	"keywords": [
+		"directus",
+		"directus-extension",
+		"directus-extension-interface"
+	],
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"author": {
+		"email": "eric@quickify.ai",
+		"name": "Eric Paquette"
+	},
+	"homepage": "https://bitbucket.org/rocketfuelgames/directus-extension-save-and-stay-button/src/main/README.md",
+	"repository": {
+		"type": "git",
+		"url": "git+https://bitbucket.org/rocketfuelgames/directus-extension-save-and-stay-button.git"
+	},
+	"directus:extension": {
+		"type": "interface",
+		"path": "dist/index.js",
+		"source": "src/index.js",
+		"host": "^11.0.0"
+	},
+	"scripts": {
+		"build": "directus-extension build",
+		"dev": "directus-extension build -w --no-minify",
+		"link": "directus-extension link"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "12.1.1",
+		"vue": "^3.5.12"
+	}
+}

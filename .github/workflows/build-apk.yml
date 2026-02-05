@@ -1,0 +1,94 @@
+name: Build Android APK Only
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Completely isolate mobile build
+        run: |
+          # Remove root package.json entirely
+          rm -f package.json package-lock.json
+          rm -rf node_modules
+          echo '{}' > package.json
+
+      - name: Install shared package dependencies
+        working-directory: packages/shared
+        run: npm install
+
+      - name: Prepare mobile package.json
+        working-directory: apps/mobile
+        run: |
+          # Remove @expiry-alert/shared from dependencies (it's a local package)
+          cat package.json | sed 's/"@expiry-alert\/shared": "\*",//' > package.json.tmp
+          mv package.json.tmp package.json
+          cat package.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Setup shared package
+        working-directory: apps/mobile
+        run: |
+          mkdir -p node_modules/@expiry-alert
+          cp -r ../../packages/shared node_modules/@expiry-alert/
+
+      - name: Verify dependencies
+        working-directory: apps/mobile
+        run: |
+          echo "=== expo-sqlite ==="
+          ls -la node_modules/expo-sqlite/build/ || echo "NOT FOUND"
+          echo ""
+          echo "=== @expiry-alert/shared ==="
+          ls -la node_modules/@expiry-alert/shared/ || echo "NOT FOUND"
+          echo ""
+          echo "=== Root check ==="
+          ls ../../node_modules 2>/dev/null && echo "WARNING: root node_modules exists" || echo "OK: no root node_modules"
+
+      - name: Final root cleanup
+        run: |
+          rm -rf node_modules
+          rm -f package.json package-lock.json
+
+      - name: Build Android APK
+        working-directory: apps/mobile
+        run: |
+          export NODE_PATH="$(pwd)/node_modules"
+          npx expo prebuild --platform android --clean
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Android APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          if-no-files-found: warn

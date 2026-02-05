@@ -1,0 +1,63 @@
+{
+	"name": "@timio23/directus-group-tabs",
+	"type": "module",
+	"version": "3.0.0",
+	"description": "This interface allows you to group fields into tabs within Directus",
+	"author": "Tim Butterfield",
+	"contributors": [
+		{
+			"name": "Tim Butterfield",
+			"email": "tim.butterfield@me.com",
+			"url": "https://www.npmjs.com/~timio23"
+		},
+		{
+			"name": "Hannes Küttner"
+		}
+	],
+	"license": "GPL-3.0",
+	"keywords": [
+		"directus",
+		"directus-extension",
+		"directus-custom-interface",
+		"directus-extensions-interfaces"
+	],
+	"icon": "extension",
+	"files": [
+		"dist"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/timio23/directus-group-tabs-interface.git"
+	},
+	"bugs": {
+		"url": "https://github.com/timio23/directus-group-tabs-interface/issues"
+	},
+	"homepage": "https://github.com/timio23/directus-group-tabs-interface",
+	"directus:extension": {
+		"type": "interface",
+		"path": "dist/index.js",
+		"source": "src/index.ts",
+		"host": "^11.1.2"
+	},
+	"scripts": {
+		"build": "directus-extension build",
+		"dev": "directus-extension build -w --no-minify",
+		"link": "directus-extension link",
+		"add": "directus-extension add",
+		"validate": "directus-extension validate"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "^14.0.0",
+		"@directus/format-title": "^12.0.1",
+		"@directus/types": "^13.2.0",
+		"@directus/utils": "^13.0.7",
+		"@types/lodash-es": "^4.17.7",
+		"lodash-es": "^4.17.21",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"vue": "^3.5.17",
+		"vue-i18n": "^11.1.10",
+		"@vueuse/core": "^13.5.0"
+	}
+}
