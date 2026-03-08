@@ -246,6 +246,7 @@
     "title": "Install ExpiryAlert",
     "description": "Add to your home screen for push notifications and quick access.",
     "iosInstructions": "Tap the Share button, then 'Add to Home Screen' to get push notifications.",
+    "androidInstructions": "Tap the menu (⋮) then 'Install app' or 'Add to Home Screen' for push notifications.",
     "installButton": "Install App"
   }
 }
