@@ -119,7 +119,9 @@
     "message": "{{count}} reagent(s) are expiring soon",
     "remindTomorrow": "Remind Tomorrow",
     "remindIn3Days": "Remind in 3 Days",
-    "dismiss": "Don't Remind Again"
+    "dismiss": "Don't Remind Again",
+    "dismissForToday": "Dismiss for today",
+    "dismissAll": "Dismiss All"
   },
   "settings": {
     "title": "Notification Settings",
@@ -128,6 +130,8 @@
     "notifications": "Notifications",
     "pushNotifications": "Push Notifications",
     "pushDescription": "Receive notifications about expiring reagents on this device.",
+    "iosTitle": "iOS Users",
+    "iosDescription": "Push notifications require iOS 16.4+ and the app must be added to your Home Screen first. Tap Share > Add to Home Screen.",
     "enable": "Enable",
     "disable": "Disable",
     "notificationsEnabled": "Push notifications enabled",
@@ -237,5 +241,11 @@
     "nameRequired": "Name is required",
     "expiryDateRequired": "Expiry date is required",
     "invalidDate": "Invalid date format"
+  },
+  "install": {
+    "title": "Install ExpiryAlert",
+    "description": "Add to your home screen for push notifications and quick access.",
+    "iosInstructions": "Tap the Share button, then 'Add to Home Screen' to get push notifications.",
+    "installButton": "Install App"
   }
 }

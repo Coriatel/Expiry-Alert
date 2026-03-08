@@ -119,7 +119,9 @@
     "message": "{{count}} ריאגנט/ים פגי תוקף בקרוב",
     "remindTomorrow": "הזכר לי מחר",
     "remindIn3Days": "הזכר לי בעוד 3 ימים",
-    "dismiss": "אל תזכיר לי יותר"
+    "dismiss": "אל תזכיר לי יותר",
+    "dismissForToday": "סגור להיום",
+    "dismissAll": "סגור הכל"
   },
   "settings": {
     "title": "הגדרות התראות",
@@ -128,6 +130,8 @@
     "notifications": "התראות",
     "pushNotifications": "התראות דחיפה",
     "pushDescription": "קבל התראות על ריאגנטים שפג תוקפם במכשיר זה.",
+    "iosTitle": "משתמשי iOS",
+    "iosDescription": "התראות דחיפה דורשות iOS 16.4+ והאפליקציה חייבת להיות מותקנת במסך הבית. לחץ שיתוף > הוסף למסך הבית.",
     "enable": "הפעל",
     "disable": "כבה",
     "notificationsEnabled": "התראות דחיפה הופעלו",
@@ -237,5 +241,11 @@
     "nameRequired": "שם הוא שדה חובה",
     "expiryDateRequired": "תאריך תפוגה הוא שדה חובה",
     "invalidDate": "פורמט תאריך לא תקין"
+  },
+  "install": {
+    "title": "התקן ExpiryAlert",
+    "description": "הוסף למסך הבית לקבלת התראות ולגישה מהירה.",
+    "iosInstructions": "לחץ על כפתור השיתוף, ואז 'הוסף למסך הבית' לקבלת התראות.",
+    "installButton": "התקן"
   }
 }

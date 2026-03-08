@@ -9,7 +9,15 @@ import { getDaysUntilExpiry } from '@/lib/utils';
 interface NotificationBannerProps {
   reagents: Reagent[];
   onSnooze: (reagentId: number, days: number) => void;
-  onDismiss: (reagentId: number) => void;
+  onDismiss: (reagentId: number, alertType?: string) => void;
+}
+
+function getAlertType(days: number): string {
+  if (days >= 7) return '7day';
+  if (days === 2) return '2day';
+  if (days === 1) return '1day';
+  if (days === 0) return '0day';
+  return 'expired';
 }
 
 export function NotificationBanner({ reagents, onSnooze, onDismiss }: NotificationBannerProps) {
@@ -96,12 +104,14 @@ export function NotificationBanner({ reagents, onSnooze, onDismiss }: Notificati
                 <div className="space-y-2 mb-3 max-h-36 overflow-y-auto">
                   {reagents.map((reagent) => {
                     const days = getDaysUntilExpiry(reagent.expiry_date);
+                    const alertType = getAlertType(days);
+                    const isUrgent = days <= 2;
                     return (
                       <div
                         key={reagent.id}
                         className="flex items-center justify-between bg-white/50 rounded p-2 text-xs"
                       >
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <span className="font-medium">{reagent.name}</span>
                           <span className="text-muted-foreground text-xs mx-2">
                             {days < 0
@@ -113,6 +123,14 @@ export function NotificationBanner({ reagents, onSnooze, onDismiss }: Notificati
                               : t('status.expiresIn', { days })}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => onDismiss(reagent.id, alertType)}
+                          className="flex-shrink-0 text-orange-600 hover:text-orange-800 p-1 rounded hover:bg-orange-200"
+                          title={isUrgent ? t('notifications.dismissForToday') : t('notifications.dismiss')}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     );
                   })}
@@ -140,11 +158,17 @@ export function NotificationBanner({ reagents, onSnooze, onDismiss }: Notificati
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => reagents.forEach((r) => onDismiss(r.id))}
+                    onClick={() => {
+                      reagents.forEach((r) => {
+                        const days = getDaysUntilExpiry(r.expiry_date);
+                        const alertType = getAlertType(days);
+                        onDismiss(r.id, alertType);
+                      });
+                    }}
                     className="bg-white"
                   >
                     <X className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
-                    {t('notifications.dismiss')}
+                    {t('notifications.dismissAll')}
                   </Button>
                 </div>
               </div>

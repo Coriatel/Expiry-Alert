@@ -1,5 +1,6 @@
 import express from 'express';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -37,20 +38,36 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 
-app.use(
-  session({
-    name: config.sessionName,
-    secret: config.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: config.nodeEnv === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
-  })
-);
+// Session store — prefer PostgreSQL if configured, fall back to MemoryStore
+const sessionConfig: session.SessionOptions = {
+  name: config.sessionName,
+  secret: config.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: config.nodeEnv === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  },
+};
+
+let pgSessionStore: InstanceType<ReturnType<typeof connectPgSimple>> | undefined;
+
+if (config.sessionDbUrl) {
+  const PgSession = connectPgSimple(session);
+  pgSessionStore = new PgSession({
+    conString: config.sessionDbUrl,
+    tableName: 'app_sessions',
+    createTableIfMissing: true,
+  });
+  sessionConfig.store = pgSessionStore;
+  console.log('Session store: PostgreSQL');
+} else {
+  console.warn('SESSION_DB_URL not set — using MemoryStore (sessions lost on restart)');
+}
+
+app.use(session(sessionConfig));
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -89,6 +106,21 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`Expiry Alert API listening on ${config.port}`);
 });
+
+// Graceful shutdown
+function shutdown(signal: string) {
+  console.log(`${signal} received — shutting down gracefully`);
+  server.close(() => {
+    if (pgSessionStore) pgSessionStore.close();
+    console.log('Server closed');
+    process.exit(0);
+  });
+  // Force exit after 10s
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { getTeamId } from '../utils/team.js';
 import { updateReagent } from '../services/reagents.js';
+import { dismissNotificationLog, AlertType } from '../services/notificationLog.js';
 
 export const notificationsRouter = Router();
 
@@ -26,6 +27,8 @@ notificationsRouter.post('/:id/snooze', async (req, res) => {
   res.status(204).send();
 });
 
+const validAlertTypes: AlertType[] = ['7day', '2day', '1day', '0day', 'expired'];
+
 notificationsRouter.post('/:id/dismiss', async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: 'Missing team' });
@@ -33,7 +36,21 @@ notificationsRouter.post('/:id/dismiss', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
 
-  const dismissedUntil = new Date(Date.now() + 3650 * 86400000).toISOString();
+  const userId = (req.user as any)?.id;
+  const alertType = req.body?.alertType as AlertType | undefined;
+
+  if (alertType && validAlertTypes.includes(alertType)) {
+    // New smart dismiss: log-based
+    await dismissNotificationLog(id, userId, alertType);
+  }
+
+  // Also set legacy reagent-level dismiss for in-app banner compatibility
+  // 7day or no alertType: permanent dismiss (10 years)
+  // Recurring alerts: 24-hour dismiss
+  const isRecurring = alertType && ['2day', '1day', '0day', 'expired'].includes(alertType);
+  const dismissMs = isRecurring ? 86400000 : 3650 * 86400000;
+  const dismissedUntil = new Date(Date.now() + dismissMs).toISOString();
+
   await updateReagent(id, {
     dismissed_until: dismissedUntil,
   });
