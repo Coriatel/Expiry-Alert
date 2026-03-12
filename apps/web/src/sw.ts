@@ -43,8 +43,8 @@ self.addEventListener("push", (event) => {
     actions?: Array<{ action: string; title: string }>;
   } = {
     body: data.body,
-    icon: data.icon || "/icon-192.png",
-    badge: data.badge || "/icon-badge-72.png",
+    icon: data.icon || "/icon-192-v2.png",
+    badge: data.badge || "/icon-badge-72-v2.png",
     tag: data.tag,
     renotify: !!data.tag,
     data: data.data,

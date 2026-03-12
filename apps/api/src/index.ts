@@ -18,6 +18,7 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { teamsRouter } from "./routes/teams.js";
 import { pushRouter } from "./routes/push.js";
 import { calendarRouter } from "./routes/calendar.js";
+import { messagesRouter } from "./routes/messages.js";
 import { initCron } from "./services/cron.js";
 
 warnMissingConfig();
@@ -87,6 +88,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/teams", teamsRouter);
 app.use("/api/push", pushRouter);
 app.use("/api/calendar", calendarRouter);
+app.use("/api/messages", messagesRouter);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(__dirname, "../../web/dist");

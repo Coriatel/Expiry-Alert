@@ -11,10 +11,15 @@ import {
 import { config } from "../config.js";
 
 interface Schema {
-  app_users: any[];
+  expiryalert_users: any[];
   teams: any[];
   memberships: any[];
   invites: any[];
+  expiryalert_join_requests: any[];
+  expiryalert_admin_events: any[];
+  expiryalert_messages: any[];
+  expiryalert_message_recipients: any[];
+  expiryalert_message_reagents: any[];
   reagents: any[];
   notes: any[];
   settings: any[];

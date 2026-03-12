@@ -1,7 +1,7 @@
 import { config } from '../config.js';
 import { createRecord, listRecords, updateSingleRecord } from './directus.js';
 
-export type AlertType = '7day' | '2day' | '1day' | '0day' | 'expired';
+export type AlertType = '7day' | '2day' | '1day' | '0day' | 'expired' | '5day_summary';
 
 export interface NotificationLogRecord {
   id: number;
@@ -16,10 +16,14 @@ export interface NotificationLogRecord {
 
 const collection = config.directus.collections.notificationLog as any;
 
+export function isRecurringAlertType(alertType: AlertType): boolean {
+  return alertType !== '7day';
+}
+
 /**
  * Check if a notification of this type was already sent for this reagent+user combo.
- * For 7day: returns the record if it exists at all (one-time).
- * For recurring (2day/1day/0day/expired): returns the record if sent today.
+ * For one-time alerts (currently only 7day): returns the record if it exists at all.
+ * For recurring alerts: returns the record if sent today.
  */
 export async function findExistingLog(
   reagentId: number,
@@ -34,7 +38,7 @@ export async function findExistingLog(
     ],
   };
 
-  if (alertType === '7day') {
+  if (!isRecurringAlertType(alertType)) {
     // For 7day: any record means already handled
     const records = await listRecords<NotificationLogRecord>(collection, {
       filter,
@@ -107,8 +111,8 @@ export async function logNotificationSent(
 
 /**
  * Dismiss a notification.
- * 7day: permanent (next_eligible_at = null).
- * Recurring: 24-hour (next_eligible_at = tomorrow 00:00 UTC).
+ * One-time alerts: permanent (next_eligible_at = null).
+ * Recurring alerts: 24-hour (next_eligible_at = tomorrow 00:00 UTC).
  */
 export async function dismissNotificationLog(
   reagentId: number,
@@ -130,7 +134,7 @@ export async function dismissNotificationLog(
 
   if (records.length === 0) {
     // No log to dismiss — create a pre-emptive dismiss record
-    const nextEligible = alertType === '7day' ? null : tomorrowMidnightUTC();
+    const nextEligible = isRecurringAlertType(alertType) ? tomorrowMidnightUTC() : null;
     await createRecord(collection, {
       reagent: reagentId,
       user: userId,
@@ -143,7 +147,7 @@ export async function dismissNotificationLog(
     return;
   }
 
-  const nextEligible = alertType === '7day' ? null : tomorrowMidnightUTC();
+  const nextEligible = isRecurringAlertType(alertType) ? tomorrowMidnightUTC() : null;
   await updateSingleRecord(collection, records[0].id, {
     dismissed_at: new Date().toISOString(),
     next_eligible_at: nextEligible,

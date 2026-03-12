@@ -41,12 +41,18 @@ pushRouter.delete('/unsubscribe', async (req, res) => {
 pushRouter.post('/test', async (req, res) => {
     const user = req.user as any;
     try {
-        await sendNotificationToUser(user.id, {
+        const result = await sendNotificationToUser(user.id, {
             title: 'Test Notification',
             body: 'This is a test notification from Expiry Alert',
             icon: '/icon-192.png'
         });
-        res.json({ success: true });
+        if (result.total === 0) {
+            return res.status(409).json({ error: 'No active push subscription for this device' });
+        }
+        if (result.sent === 0) {
+            return res.status(502).json({ error: 'Failed to deliver test notification' });
+        }
+        res.json({ success: true, sent: result.sent });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to send test notification' });

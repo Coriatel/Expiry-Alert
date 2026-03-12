@@ -4,46 +4,7 @@ import type {
   NotificationSettings,
   ReagentFormData,
 } from "@/types";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
-
-type ApiError = {
-  error?: string;
-  message?: string;
-  details?: string;
-};
-
-async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const text = await response.text();
-  const data = text ? (JSON.parse(text) as ApiError & T) : ({} as ApiError & T);
-
-  if (!response.ok) {
-    const message =
-      data.error ||
-      data.message ||
-      data.details ||
-      `Request failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  return data as T;
-}
+import { apiFetch } from "@/lib/http";
 
 // Reagent operations
 export async function getAllReagents(): Promise<Reagent[]> {
@@ -203,6 +164,71 @@ export type JoinTeamByPasswordResponse = {
   teamName: string;
 };
 
+export type JoinTeamRequestResponse = {
+  teamId: number;
+  teamName: string;
+  status: "pending" | "already-member";
+};
+
+export type TeamJoinRequest = {
+  id: number;
+  team_id: number;
+  requester_id: number;
+  requester_name: string;
+  requester_email: string;
+  message?: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at?: string;
+};
+
+export type TeamMemberSummary = {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  role: TeamRole;
+  status: "active" | "suspended";
+  date_created?: string;
+};
+
+export type MessageScope = "private" | "team" | "system";
+export type MessageBox = "inbox" | "sent";
+export type MessageScopeFilter = "all" | MessageScope;
+
+export type MessageAttachment = {
+  id: number;
+  reagent_id: number | null;
+  snapshot_name: string;
+  snapshot_expiry_date: string | null;
+  snapshot_lot_number: string | null;
+  snapshot_category: string | null;
+  live_accessible: boolean;
+  live: {
+    id: number;
+    name: string;
+    expiry_date: string;
+    is_archived: boolean;
+  } | null;
+};
+
+export type UserMessage = {
+  id: number;
+  scope: MessageScope;
+  team_id: number | null;
+  sender: {
+    id: number;
+    name: string;
+    email: string;
+    avatar_url?: string | null;
+  };
+  title: string | null;
+  body: string;
+  created_at: string | null;
+  read_at: string | null;
+  recipient_count?: number;
+  attachments: MessageAttachment[];
+};
+
 export async function getGoogleCalendarStatus(): Promise<GoogleCalendarStatus> {
   return apiFetch("/api/calendar/google/status");
 }
@@ -280,4 +306,84 @@ export async function requestTeamPasswordReset(
     method: "POST",
     body: JSON.stringify({ teamName }),
   });
+}
+
+export async function requestJoinToTeam(
+  teamName: string,
+  message?: string,
+): Promise<JoinTeamRequestResponse> {
+  return apiFetch("/api/teams/join-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      teamName,
+      message: message?.trim() || undefined,
+    }),
+  });
+}
+
+export async function getTeamJoinRequests(
+  teamId: number,
+): Promise<TeamJoinRequest[]> {
+  const response = await apiFetch<{ requests: TeamJoinRequest[] }>(
+    `/api/teams/${teamId}/join-requests`,
+  );
+  return response.requests ?? [];
+}
+
+export async function getTeamMembers(): Promise<TeamMemberSummary[]> {
+  const response = await apiFetch<{ members: TeamMemberSummary[] }>(
+    "/api/teams/members",
+  );
+  return response.members ?? [];
+}
+
+export async function getMessages(
+  box: MessageBox,
+  scope: MessageScopeFilter = "all",
+): Promise<UserMessage[]> {
+  const params = new URLSearchParams({ box, scope });
+  const response = await apiFetch<{ messages: UserMessage[] }>(
+    `/api/messages?${params.toString()}`,
+  );
+  return response.messages ?? [];
+}
+
+export async function getUnreadMessageCount(): Promise<number> {
+  const response = await apiFetch<{ count: number }>("/api/messages/unread-count");
+  return response.count ?? 0;
+}
+
+export async function sendMessage(input: {
+  scope: MessageScope;
+  recipientUserId?: number;
+  title?: string;
+  body: string;
+  reagentIds?: number[];
+}): Promise<number> {
+  const response = await apiFetch<{ id: number }>("/api/messages", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return response.id;
+}
+
+export async function markMessageAsRead(messageId: number): Promise<void> {
+  await apiFetch(`/api/messages/${messageId}/read`, {
+    method: "POST",
+  });
+}
+
+export async function reviewTeamJoinRequest(
+  teamId: number,
+  requestId: number,
+  action: "approve" | "reject",
+): Promise<"approved" | "rejected"> {
+  const response = await apiFetch<{ status: "approved" | "rejected" }>(
+    `/api/teams/${teamId}/join-requests/${requestId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ action }),
+    },
+  );
+  return response.status;
 }

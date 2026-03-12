@@ -12,12 +12,17 @@ export default defineConfig({
       srcDir: "src",
       filename: "sw.ts",
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
+      includeAssets: [
+        "favicon-v2.ico",
+        "apple-touch-icon-v2.png",
+        "mask-icon-v2.svg",
+      ],
       manifest: {
+        id: "/",
         name: "Reagent Expiry Tracker",
         short_name: "Expiry Alert",
         description: "Track reagent expiration dates and receive alerts",
-        theme_color: "#1976d2",
+        theme_color: "#1B5E7B",
         background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait-primary",
@@ -25,19 +30,19 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/icon-192.png",
+            src: "/icon-192-v2.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icon-512.png",
+            src: "/icon-512-v2.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icon-maskable-512.png",
+            src: "/icon-maskable-512-v2.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

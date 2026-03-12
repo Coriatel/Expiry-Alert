@@ -5,6 +5,8 @@ import {
   BellOff,
   Calendar,
   CalendarPlus,
+  ChevronDown,
+  ChevronUp,
   Download,
   Link2,
   Unlink,
@@ -18,10 +20,17 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
+import { TeamMembersPanel } from "@/components/TeamMembersPanel";
+import { TeamJoinRequestsPanel } from "@/components/TeamJoinRequestsPanel";
+import { emitMessagesUpdated } from "@/lib/messageEvents";
 import {
+  PUSH_ERROR_CODES,
+  getPushSupportState,
   subscribeToPush,
   unsubscribeFromPush,
   checkPushSubscription,
+  sendTestPushNotification,
 } from "@/services/push";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -33,6 +42,7 @@ import {
   getTeams,
   inviteTeamMember,
   joinTeamWithPassword,
+  requestJoinToTeam,
   requestTeamPasswordReset,
   setTeamPassword,
   switchTeam,
@@ -55,8 +65,10 @@ export function Settings() {
   const { showToast } = useToast();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [supportError, setSupportError] = useState("");
+  const [requiresIosInstall, setRequiresIosInstall] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [calendarStatusLoading, setCalendarStatusLoading] = useState(true);
   const [reagentsLoading, setReagentsLoading] = useState(true);
@@ -74,18 +86,44 @@ export function Settings() {
   const [teamPassword, setTeamPasswordValue] = useState("");
   const [joinTeamName, setJoinTeamName] = useState("");
   const [joinTeamPassword, setJoinTeamPassword] = useState("");
+  const [requestTeamName, setRequestTeamName] = useState("");
+  const [requestTeamMessage, setRequestTeamMessage] = useState("");
   const [forgotTeamName, setForgotTeamName] = useState("");
   const [teamBusy, setTeamBusy] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [googleCalendarOpen, setGoogleCalendarOpen] = useState(false);
+  const [calendarExportOpen, setCalendarExportOpen] = useState(false);
+  const showIosIconRefreshNote =
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+    window.matchMedia?.("(display-mode: standalone)").matches;
 
   useEffect(() => {
+    const supportState = getPushSupportState();
+    const iosInstallRequired = supportState.reason === "ios-home-screen";
+    setRequiresIosInstall(iosInstallRequired);
+
+    if (!supportState.supported) {
+      setIsSubscribed(false);
+      setSupportError(
+        iosInstallRequired
+          ? t("settings.iosDescription")
+          : supportState.error || t("push.unsupported"),
+      );
+      return;
+    }
+
+    setSupportError("");
     checkPushSubscription()
       .then((sub) => {
         setIsSubscribed(!!sub);
       })
-      .catch(() => {
-        setSupportError("Push notifications not supported on this device");
+      .catch((error) => {
+        console.error("Failed to check push subscription", error);
+        setIsSubscribed(false);
       });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -166,6 +204,7 @@ export function Settings() {
       if (switchedTeam?.name) {
         setForgotTeamName(switchedTeam.name);
       }
+      emitMessagesUpdated();
       showToast(t("settings.teamSwitched"), "success");
     } catch (error: any) {
       console.error(error);
@@ -261,6 +300,33 @@ export function Settings() {
     }
   };
 
+  const handleRequestJoinAccess = async () => {
+    const name = requestTeamName.trim();
+    if (!name) return;
+
+    setTeamBusy(true);
+    try {
+      const result = await requestJoinToTeam(
+        name,
+        requestTeamMessage.trim() || undefined,
+      );
+      setRequestTeamName("");
+      setRequestTeamMessage("");
+      showToast(
+        result.status === "already-member"
+          ? t("settings.teamJoined", { team: result.teamName })
+          : t("settings.joinRequestSubmitted", { team: result.teamName }),
+        "success",
+      );
+      await loadSettingsData();
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t("settings.joinRequestFailed"), "error");
+    } finally {
+      setTeamBusy(false);
+    }
+  };
+
   const handleForgotTeamPassword = async () => {
     const name = forgotTeamName.trim();
     if (!name) return;
@@ -281,6 +347,29 @@ export function Settings() {
   };
 
   const handleToggle = async () => {
+    const supportState = getPushSupportState();
+    if (!supportState.supported) {
+      const message =
+        supportState.reason === "ios-home-screen"
+          ? t("settings.iosDescription")
+          : supportState.error || t("push.unsupported");
+      setSupportError(message);
+      showToast(message, "error");
+      return;
+    }
+
+    setSupportError("");
+
+    // Check if permission is permanently denied
+    if (
+      !isSubscribed &&
+      "Notification" in window &&
+      Notification.permission === "denied"
+    ) {
+      showToast(t("push.denied"), "error");
+      return;
+    }
+
     setLoading(true);
     try {
       if (isSubscribed) {
@@ -294,9 +383,37 @@ export function Settings() {
       }
     } catch (error: any) {
       console.error(error);
-      showToast(error.message || t("errors.unexpectedError"), "error");
+      if (error.message === PUSH_ERROR_CODES.iosHomeScreenRequired) {
+        const message = t("settings.iosDescription");
+        setSupportError(message);
+        showToast(message, "error");
+      } else if (error.message === PUSH_ERROR_CODES.unsupported) {
+        const message = t("push.unsupported");
+        setSupportError(message);
+        showToast(message, "error");
+      } else if (
+        error.message?.includes("denied") ||
+        ("Notification" in window && Notification.permission === "denied")
+      ) {
+        showToast(t("push.denied"), "error");
+      } else {
+        showToast(error.message || t("errors.unexpectedError"), "error");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    setTestLoading(true);
+    try {
+      await sendTestPushNotification();
+      showToast(t("push.testSent"), "success");
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t("push.testFailed"), "error");
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -399,6 +516,7 @@ export function Settings() {
   const currentTeam = teams.find((team) => team.id === currentTeamId);
   const canManageTeamPassword =
     currentTeam?.role === "owner" || currentTeam?.role === "admin";
+  const canInviteMembers = canManageTeamPassword;
 
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-8">
@@ -407,6 +525,11 @@ export function Settings() {
           {t("nav.settings")}
         </h1>
         <p className="text-muted-foreground">{t("settings.subtitle")}</p>
+        {showIosIconRefreshNote ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("settings.iconRefreshNote")}
+          </p>
+        ) : null}
       </div>
 
       {/* Team Workspace */}
@@ -478,12 +601,15 @@ export function Settings() {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder={t("settings.inviteEmailPlaceholder")}
-              disabled={teamBusy || !currentTeamId}
+              disabled={teamBusy || !currentTeamId || !canInviteMembers}
             />
             <Button
               onClick={handleInviteMember}
               disabled={
-                teamBusy || !currentTeamId || inviteEmail.trim().length === 0
+                teamBusy ||
+                !currentTeamId ||
+                !canInviteMembers ||
+                inviteEmail.trim().length === 0
               }
             >
               <UserPlus className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
@@ -491,7 +617,9 @@ export function Settings() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            {t("settings.inviteHelp")}
+            {canInviteMembers
+              ? t("settings.inviteHelp")
+              : t("settings.inviteHelpReadOnly")}
           </p>
         </div>
 
@@ -567,6 +695,38 @@ export function Settings() {
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Mail className="h-4 w-4" />
+            {t("settings.requestJoinTitle")}
+          </label>
+          <div className="space-y-2">
+            <Input
+              value={requestTeamName}
+              onChange={(e) => setRequestTeamName(e.target.value)}
+              placeholder={t("settings.requestJoinTeamPlaceholder")}
+              disabled={teamBusy}
+            />
+            <Textarea
+              value={requestTeamMessage}
+              onChange={(e) => setRequestTeamMessage(e.target.value)}
+              placeholder={t("settings.requestJoinMessagePlaceholder")}
+              disabled={teamBusy}
+              maxLength={500}
+            />
+            <Button
+              variant="outline"
+              onClick={handleRequestJoinAccess}
+              disabled={teamBusy || requestTeamName.trim().length === 0}
+            >
+              {t("settings.requestJoinAction")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.requestJoinHelp")}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Mail className="h-4 w-4" />
             {t("settings.forgotTeamPasswordTitle")}
           </label>
           <div className="flex gap-2">
@@ -590,219 +750,307 @@ export function Settings() {
         </div>
       </div>
 
-      {/* Push Notifications */}
-      <div className="bg-card rounded-xl border p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {t("settings.notifications")}
-        </h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">{t("settings.pushNotifications")}</p>
-            <p className="text-sm text-muted-foreground">
-              {t("settings.pushDescription")}
-            </p>
+      {/* Team Members Panel */}
+      {canManageTeamPassword && currentTeamId && (
+        <div className="bg-card rounded-xl border p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            {t("teamManagement.title")}
+          </h2>
+          <div className="space-y-6">
+            <TeamJoinRequestsPanel teamId={currentTeamId} />
+            <TeamMembersPanel teamId={currentTeamId} />
           </div>
-          <Button
-            variant={isSubscribed ? "outline" : "default"}
-            onClick={handleToggle}
-            disabled={loading || !!supportError}
-          >
-            {loading ? (
-              t("actions.processing")
-            ) : isSubscribed ? (
-              <>
-                <BellOff className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t("settings.disable")}
-              </>
-            ) : (
-              <>
-                <Bell className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t("settings.enable")}
-              </>
-            )}
-          </Button>
         </div>
-        {supportError && (
-          <p className="text-destructive text-sm mt-2">{supportError}</p>
-        )}
-        {typeof navigator !== "undefined" &&
-          /iPad|iPhone|iPod/.test(navigator.userAgent) && (
-            <div className="mt-3 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-              <p className="font-medium mb-1">{t("settings.iosTitle")}</p>
-              <p>{t("settings.iosDescription")}</p>
-            </div>
+      )}
+
+      {/* Push Notifications */}
+      <div className="bg-card rounded-xl border">
+        <button
+          type="button"
+          onClick={() => setNotificationsOpen(!notificationsOpen)}
+          className="w-full flex items-center justify-between p-6 text-start"
+        >
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            {t("settings.notifications")}
+          </h2>
+          {notificationsOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
           )}
+        </button>
+        {notificationsOpen && (
+          <div className="px-6 pb-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{t("settings.pushNotifications")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("settings.pushDescription")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isSubscribed ? (
+                  <Button
+                    variant="outline"
+                    onClick={handleSendTestNotification}
+                    disabled={testLoading}
+                  >
+                    {testLoading ? t("actions.processing") : t("push.testAction")}
+                  </Button>
+                ) : null}
+                <Button
+                  variant={isSubscribed ? "outline" : "default"}
+                  onClick={handleToggle}
+                  disabled={loading || !!supportError}
+                >
+                  {loading ? (
+                    t("actions.processing")
+                  ) : isSubscribed ? (
+                    <>
+                      <BellOff className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                      {t("settings.disable")}
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                      {t("settings.enable")}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            {supportError && (
+              <p className="text-destructive text-sm mt-2">{supportError}</p>
+            )}
+            {"Notification" in window &&
+              Notification.permission === "denied" && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
+                  <p className="font-medium mb-1 text-destructive">
+                    {t("push.denied")}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t("push.deniedHelp")}
+                  </p>
+                </div>
+              )}
+            {typeof navigator !== "undefined" &&
+              /iPad|iPhone|iPod/.test(navigator.userAgent) && (
+                <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                  <p className="font-medium mb-1">{t("settings.iosTitle")}</p>
+                  <p>{t("settings.iosDescription")}</p>
+                </div>
+              )}
+            {requiresIosInstall && (
+              <p className="text-xs text-muted-foreground">
+                {t("push.iosGuidance")}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Google Calendar Integration */}
-      <div className="bg-card rounded-xl border p-6 space-y-4">
-        <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
-          <CalendarPlus className="h-5 w-5" />
-          {t("settings.googleCalendar")}
-        </h2>
+      <div className="bg-card rounded-xl border">
+        <button
+          type="button"
+          onClick={() => setGoogleCalendarOpen(!googleCalendarOpen)}
+          className="w-full flex items-center justify-between p-6 text-start"
+        >
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <CalendarPlus className="h-5 w-5" />
+            {t("settings.googleCalendar")}
+          </h2>
+          {googleCalendarOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </button>
+        {googleCalendarOpen && (
+          <div className="px-6 pb-6 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={calendarConnected ? "outline" : "default"}
+                disabled={calendarStatusLoading}
+                onClick={handleConnectGoogleCalendar}
+              >
+                <Link2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                {calendarConnected
+                  ? t("settings.reconnectGoogleCalendar")
+                  : t("settings.connectGoogleCalendar")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDisconnectGoogleCalendar}
+                disabled={!calendarConnected || createLoading}
+              >
+                <Unlink className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                {t("settings.disconnectGoogleCalendar")}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {calendarStatusLoading
+                  ? t("actions.processing")
+                  : calendarConnected
+                    ? t("settings.googleCalendarConnectedState")
+                    : t("settings.googleCalendarDisconnectedState")}
+              </span>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={calendarConnected ? "outline" : "default"}
-            disabled={calendarStatusLoading}
-            onClick={handleConnectGoogleCalendar}
-          >
-            <Link2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {calendarConnected
-              ? t("settings.reconnectGoogleCalendar")
-              : t("settings.connectGoogleCalendar")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleDisconnectGoogleCalendar}
-            disabled={!calendarConnected || createLoading}
-          >
-            <Unlink className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("settings.disconnectGoogleCalendar")}
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {calendarStatusLoading
-              ? t("actions.processing")
-              : calendarConnected
-                ? t("settings.googleCalendarConnectedState")
-                : t("settings.googleCalendarDisconnectedState")}
-          </span>
-        </div>
+            <p className="text-sm text-muted-foreground">
+              {t("settings.googleCalendarDescription")}
+            </p>
 
-        <p className="text-sm text-muted-foreground">
-          {t("settings.googleCalendarDescription")}
-        </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {t("settings.alertDateTime")}
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={alertAt}
+                  onChange={(e) => setAlertAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {t("settings.createMode")}
+                </label>
+                <Select
+                  value={calendarMode}
+                  onChange={(e) =>
+                    setCalendarMode(e.target.value as GoogleCalendarMode)
+                  }
+                >
+                  <option value="single">{t("settings.modeSingle")}</option>
+                  <option value="separate">{t("settings.modeSeparate")}</option>
+                </Select>
+              </div>
+            </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              {t("settings.alertDateTime")}
-            </label>
-            <Input
-              type="datetime-local"
-              value={alertAt}
-              onChange={(e) => setAlertAt(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              {t("settings.createMode")}
-            </label>
-            <Select
-              value={calendarMode}
-              onChange={(e) =>
-                setCalendarMode(e.target.value as GoogleCalendarMode)
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">{t("settings.activeReagents")}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSelectedReagentIds(reagents.map((r) => r.id))
+                    }
+                    disabled={reagentsLoading || reagents.length === 0}
+                  >
+                    {t("table.selectAll")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedReagentIds([])}
+                    disabled={reagentsLoading || reagents.length === 0}
+                  >
+                    {t("actions.cancel")}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="max-h-56 overflow-auto rounded-lg border p-3 space-y-2">
+                {reagentsLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("actions.processing")}
+                  </p>
+                ) : reagents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("dashboard.noReagents")}
+                  </p>
+                ) : (
+                  reagents.map((reagent) => (
+                    <label
+                      key={reagent.id}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedReagentIds.includes(reagent.id)}
+                        onChange={() => toggleReagent(reagent.id)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-medium">{reagent.name}</span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({t("table.expiryDate")}: {reagent.expiry_date})
+                        </span>
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t("table.selected", { count: selectedReagentIds.length })}
+              </p>
+            </div>
+
+            <Button
+              onClick={handleCreateGoogleCalendarEvents}
+              disabled={
+                !calendarConnected ||
+                createLoading ||
+                selectedReagentIds.length === 0
               }
             >
-              <option value="single">{t("settings.modeSingle")}</option>
-              <option value="separate">{t("settings.modeSeparate")}</option>
-            </Select>
+              <CalendarPlus className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+              {createLoading
+                ? t("actions.processing")
+                : t("settings.createGoogleCalendarEvents")}
+            </Button>
           </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="font-medium">{t("settings.activeReagents")}</p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedReagentIds(reagents.map((r) => r.id))}
-                disabled={reagentsLoading || reagents.length === 0}
-              >
-                {t("table.selectAll")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedReagentIds([])}
-                disabled={reagentsLoading || reagents.length === 0}
-              >
-                {t("actions.cancel")}
-              </Button>
-            </div>
-          </div>
-
-          <div className="max-h-56 overflow-auto rounded-lg border p-3 space-y-2">
-            {reagentsLoading ? (
-              <p className="text-sm text-muted-foreground">
-                {t("actions.processing")}
-              </p>
-            ) : reagents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {t("dashboard.noReagents")}
-              </p>
-            ) : (
-              reagents.map((reagent) => (
-                <label
-                  key={reagent.id}
-                  className="flex items-start gap-3 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedReagentIds.includes(reagent.id)}
-                    onChange={() => toggleReagent(reagent.id)}
-                    className="mt-1"
-                  />
-                  <span>
-                    <span className="font-medium">{reagent.name}</span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      ({t("table.expiryDate")}: {reagent.expiry_date})
-                    </span>
-                  </span>
-                </label>
-              ))
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("table.selected", { count: selectedReagentIds.length })}
-          </p>
-        </div>
-
-        <Button
-          onClick={handleCreateGoogleCalendarEvents}
-          disabled={
-            !calendarConnected ||
-            createLoading ||
-            selectedReagentIds.length === 0
-          }
-        >
-          <CalendarPlus className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-          {createLoading
-            ? t("actions.processing")
-            : t("settings.createGoogleCalendarEvents")}
-        </Button>
+        )}
       </div>
 
       {/* Calendar Export */}
-      <div className="bg-card rounded-xl border p-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          {t("settings.calendar")}
-        </h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">{t("settings.calendarExport")}</p>
-            <p className="text-sm text-muted-foreground">
-              {t("settings.calendarDescription")}
-            </p>
+      <div className="bg-card rounded-xl border">
+        <button
+          type="button"
+          onClick={() => setCalendarExportOpen(!calendarExportOpen)}
+          className="w-full flex items-center justify-between p-6 text-start"
+        >
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            {t("settings.calendar")}
+          </h2>
+          {calendarExportOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </button>
+        {calendarExportOpen && (
+          <div className="px-6 pb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{t("settings.calendarExport")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("settings.calendarDescription")}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleCalendarExport}
+                disabled={calendarLoading}
+              >
+                {calendarLoading ? (
+                  t("actions.processing")
+                ) : (
+                  <>
+                    <Download className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                    {t("settings.exportAll")}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleCalendarExport}
-            disabled={calendarLoading}
-          >
-            {calendarLoading ? (
-              t("actions.processing")
-            ) : (
-              <>
-                <Download className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t("settings.exportAll")}
-              </>
-            )}
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

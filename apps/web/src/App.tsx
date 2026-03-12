@@ -5,24 +5,33 @@ import {
   LayoutDashboard,
   Globe,
   LogOut,
+  MessageSquare,
   Settings as SettingsIcon,
   Menu,
   X,
 } from "lucide-react";
 import { Dashboard } from "@/pages/Dashboard";
 import { Archive } from "@/pages/Archive";
+import { Messages } from "@/pages/Messages";
 import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
 import { Button } from "@/components/ui/Button";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
-import { googleLoginUrl } from "@/lib/auth";
+import { LoginForm } from "@/components/LoginForm";
+import { RegisterForm } from "@/components/RegisterForm";
+import { TeamSelection } from "@/components/TeamSelection";
+import { PendingApproval } from "@/components/PendingApproval";
 import { getTeams, switchTeam } from "@/lib/tauri";
-import { InstallPrompt } from "@/components/InstallPrompt";
+import type { AuthUser } from "@/lib/auth";
 
-type Page = "dashboard" | "archive" | "settings";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
+
+type Page = "dashboard" | "archive" | "messages" | "settings";
 type PublicPage = "privacy" | "terms" | null;
+type AuthScreen = "login" | "register" | "team-select" | "pending-approval";
 
 function resolvePublicPage(pathname: string): PublicPage {
   const normalized = pathname.replace(/\/+$/, "") || "/";
@@ -35,8 +44,26 @@ function App() {
   const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, loading, error, signOut, refresh } = useAuth();
+  const {
+    user,
+    loading,
+    error,
+    signOut,
+    refresh,
+    setUser,
+    teamApproved,
+    needsTeam,
+    isSuspended,
+    hasPendingJoinRequest,
+  } = useAuth();
   const publicPage = resolvePublicPage(window.location.pathname);
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
+  const userLabel = user?.name?.trim() || user?.email?.trim() || "User";
+  const userInitial = userLabel.charAt(0).toUpperCase() || "U";
+  const { count: unreadMessageCount } = useUnreadMessageCount(
+    Boolean(user?.id),
+    user?.team_id ?? null,
+  );
 
   // Set RTL direction
   useEffect(() => {
@@ -94,6 +121,25 @@ function App() {
     };
   }, [user, refresh]);
 
+  useEffect(() => {
+    if (!user) {
+      setAuthScreen("login");
+      return;
+    }
+
+    if (hasPendingJoinRequest) {
+      setAuthScreen("pending-approval");
+      return;
+    }
+
+    if (needsTeam) {
+      setAuthScreen("team-select");
+      return;
+    }
+
+    setAuthScreen("login");
+  }, [user, hasPendingJoinRequest, needsTeam]);
+
   if (publicPage) {
     return (
       <LegalPage
@@ -112,32 +158,141 @@ function App() {
     );
   }
 
+  // Not authenticated
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
-        <div className="max-w-md w-full bg-card border rounded-2xl p-8 shadow-sm">
-          <h1 className="text-2xl font-bold mb-2">{t("auth.signInTitle")}</h1>
-          <p className="text-muted-foreground mb-6">
-            {t("auth.signInSubtitle")}
+        {authScreen === "login" && (
+          <LoginForm
+            error={error}
+            onSuccess={(u) => {
+              setUser(u);
+            }}
+            onSwitchToRegister={() => setAuthScreen("register")}
+          />
+        )}
+        {authScreen === "register" && (
+          <RegisterForm
+            onSuccess={(u) => {
+              setUser(u);
+            }}
+            onSwitchToLogin={() => setAuthScreen("login")}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Authenticated but needs team
+  if (hasPendingJoinRequest || (!teamApproved && authScreen === "pending-approval")) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <PendingApproval
+          pendingRequest={user.pending_join_request ?? null}
+          onApproved={(u) => {
+            if (u.team_id != null) {
+              window.localStorage.setItem(
+                "expiry-alert.preferredTeamId",
+                String(u.team_id),
+              );
+            }
+            setUser(u);
+            setAuthScreen("login");
+          }}
+          onPendingCleared={(nextUser: AuthUser | null) => {
+            if (!nextUser) {
+              setUser(null);
+              setAuthScreen("login");
+              return;
+            }
+
+            setUser(nextUser);
+            setAuthScreen(nextUser.needsTeam ? "team-select" : "login");
+          }}
+          onSignOut={async () => {
+            await signOut();
+            setAuthScreen("login");
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (needsTeam) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <TeamSelection
+          onTeamSelected={(result) => {
+            if (result.pendingRequest || !result.approved) {
+              setAuthScreen("pending-approval");
+              void refresh();
+              return;
+            }
+
+            window.localStorage.setItem(
+              "expiry-alert.preferredTeamId",
+              String(result.teamId),
+            );
+            setAuthScreen("login");
+            void refresh();
+          }}
+          onSignOut={async () => {
+            await signOut();
+            setAuthScreen("login");
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (!teamApproved) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <PendingApproval
+          pendingRequest={null}
+          onApproved={(u) => {
+            if (u.team_id != null) {
+              window.localStorage.setItem(
+                "expiry-alert.preferredTeamId",
+                String(u.team_id),
+              );
+            }
+            setUser(u);
+            setAuthScreen("login");
+          }}
+          onPendingCleared={(nextUser: AuthUser | null) => {
+            setUser(nextUser);
+            setAuthScreen(nextUser?.needsTeam ? "team-select" : "login");
+          }}
+          onSignOut={async () => {
+            await signOut();
+            setAuthScreen("login");
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Suspended
+  if (isSuspended) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="max-w-md w-full bg-card border rounded-2xl p-8 shadow-sm text-center">
+          <h1 className="text-xl font-bold mb-2">
+            {t("teamManagement.suspended")}
+          </h1>
+          <p className="text-muted-foreground mb-4">
+            {t("auth.accountSuspended")}
           </p>
-          {error ? (
-            <div className="mb-4 text-sm text-destructive">{error}</div>
-          ) : null}
-          <a
-            href={googleLoginUrl}
-            className="w-full inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground h-11 px-4 font-medium"
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await signOut();
+              setAuthScreen("login");
+            }}
           >
-            {t("auth.continueWithGoogle")}
-          </a>
-          <div className="mt-4 text-xs text-muted-foreground flex items-center gap-3">
-            <a href="/privacy" className="underline-offset-2 hover:underline">
-              {t("auth.privacyPolicy")}
-            </a>
-            <span>•</span>
-            <a href="/terms" className="underline-offset-2 hover:underline">
-              {t("auth.termsOfService")}
-            </a>
-          </div>
+            {t("auth.signOut")}
+          </Button>
         </div>
       </div>
     );
@@ -151,9 +306,16 @@ function App() {
           <header className="border-b bg-card sticky top-0 z-40">
             <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
               <div className="flex items-center justify-between">
-                <h1 className="text-xl md:text-2xl font-bold truncate">
-                  {t("app.title")}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/logo-icon-v2.png"
+                    alt="Expiry Alert"
+                    className="h-8 w-8 object-contain"
+                  />
+                  <h1 className="text-xl md:text-2xl font-bold truncate">
+                    {t("app.title")}
+                  </h1>
+                </div>
 
                 {/* Desktop Navigation */}
                 <div className="hidden md:flex items-center gap-4">
@@ -175,6 +337,21 @@ function App() {
                     >
                       <ArchiveIcon className="h-4 w-4" />
                       {t("nav.archive")}
+                    </Button>
+                    <Button
+                      variant={
+                        currentPage === "messages" ? "default" : "ghost"
+                      }
+                      onClick={() => navigateTo("messages")}
+                      className="flex items-center gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      {t("nav.messages")}
+                      {unreadMessageCount > 0 ? (
+                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[11px] font-semibold text-destructive-foreground">
+                          {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                        </span>
+                      ) : null}
                     </Button>
                     <Button
                       variant={currentPage === "settings" ? "default" : "ghost"}
@@ -200,14 +377,23 @@ function App() {
                       {user.avatar_url ? (
                         <img
                           src={user.avatar_url}
-                          alt={user.name}
+                          alt={userLabel}
                           className="h-7 w-7 rounded-full"
                         />
                       ) : (
-                        <div className="h-7 w-7 rounded-full bg-muted" />
+                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                          {userInitial}
+                        </div>
                       )}
-                      <span className="text-sm font-medium">{user.name}</span>
-                      <Button variant="ghost" size="sm" onClick={signOut}>
+                      <span className="text-sm font-medium">{userLabel}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          await signOut();
+                          setAuthScreen("login");
+                        }}
+                      >
                         <LogOut className="h-4 w-4" />
                       </Button>
                     </div>
@@ -240,19 +426,28 @@ function App() {
                     {user.avatar_url ? (
                       <img
                         src={user.avatar_url}
-                        alt={user.name}
+                        alt={userLabel}
                         className="h-10 w-10 rounded-full"
                       />
                     ) : (
-                      <div className="h-10 w-10 rounded-full bg-muted" />
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-medium">
+                        {userInitial}
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{user.name}</p>
+                      <p className="font-medium truncate">{userLabel}</p>
                       <p className="text-sm text-muted-foreground truncate">
                         {user.email}
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={signOut}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        await signOut();
+                        setAuthScreen("login");
+                      }}
+                    >
                       <LogOut className="h-4 w-4" />
                     </Button>
                   </div>
@@ -267,6 +462,11 @@ function App() {
               <Dashboard />
             ) : currentPage === "archive" ? (
               <Archive />
+            ) : currentPage === "messages" ? (
+              <Messages
+                currentUserId={user.id}
+                isSystemAdmin={user.is_system_admin === true}
+              />
             ) : (
               <Settings />
             )}
@@ -296,6 +496,24 @@ function App() {
               >
                 <ArchiveIcon className="h-5 w-5" />
                 <span className="text-xs mt-1">{t("nav.archive")}</span>
+              </button>
+              <button
+                onClick={() => navigateTo("messages")}
+                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[64px] transition-colors ${
+                  currentPage === "messages"
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                <div className="relative">
+                  <MessageSquare className="h-5 w-5" />
+                  {unreadMessageCount > 0 ? (
+                    <span className="absolute -top-2 -end-3 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-xs mt-1">{t("nav.messages")}</span>
               </button>
               <button
                 onClick={() => navigateTo("settings")}

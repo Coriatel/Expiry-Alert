@@ -1,7 +1,13 @@
-import { config } from '../config.js';
-import { createRecord, listRecords, updateSingleRecord, updateRecords, deleteRecord } from './directus.js';
-import { whereEq } from '../utils/directus.js';
-import { hashSecret, randomToken, verifySecret } from './security.js';
+import { config } from "../config.js";
+import {
+  createRecord,
+  listRecords,
+  updateSingleRecord,
+  updateRecords,
+  deleteRecord,
+} from "./directus.js";
+import { whereEq } from "../utils/directus.js";
+import { hashSecret, randomToken, verifySecret } from "./security.js";
 
 export type TeamRecord = {
   id: number;
@@ -10,6 +16,9 @@ export type TeamRecord = {
   access_password_hash?: string | null;
   password_reset_token?: string | null;
   password_reset_expires_at?: string | null;
+  approved?: boolean;
+  approved_at?: string | null;
+  approval_token?: string | null;
   date_created?: string;
 };
 
@@ -17,8 +26,9 @@ export type MembershipRecord = {
   id: number;
   team: number; // FK
   user: number; // FK
-  role: 'owner' | 'admin' | 'member';
+  role: "owner" | "admin" | "member";
   email_alerts_enabled?: boolean;
+  status?: "active" | "suspended";
   date_created?: string;
 };
 
@@ -26,8 +36,8 @@ export type InviteRecord = {
   id: number;
   team: number; // FK
   email: string;
-  role: 'owner' | 'admin' | 'member';
-  status: 'pending' | 'accepted' | 'expired';
+  role: "owner" | "admin" | "member";
+  status: "pending" | "accepted" | "expired";
   code: string;
   expires_at?: string;
   date_created?: string;
@@ -43,7 +53,7 @@ export async function listTeams() {
 
 export async function getTeamById(teamId: number) {
   const teams = await listRecords<TeamRecord>(teamTable, {
-    filter: whereEq('id', teamId),
+    filter: whereEq("id", teamId),
     limit: 1,
   });
   return teams[0] ?? null;
@@ -51,7 +61,7 @@ export async function getTeamById(teamId: number) {
 
 export async function getTeamByName(name: string) {
   const teams = await listRecords<TeamRecord>(teamTable, {
-    filter: whereEq('name', name),
+    filter: whereEq("name", name),
     limit: 1,
   });
   return teams[0] ?? null;
@@ -59,14 +69,14 @@ export async function getTeamByName(name: string) {
 
 export async function listMembershipsByUser(userId: number) {
   return listRecords<MembershipRecord>(membershipTable, {
-    filter: whereEq('user', userId),
+    filter: whereEq("user", userId),
     limit: 1000,
   });
 }
 
 export async function listMembershipsByTeam(teamId: number) {
   return listRecords<MembershipRecord>(membershipTable, {
-    filter: whereEq('team', teamId),
+    filter: whereEq("team", teamId),
     limit: 1000,
   });
 }
@@ -75,6 +85,28 @@ export async function createTeam(name: string, ownerId: number) {
   const result = await createRecord(teamTable, { name, owner: ownerId });
   const record = Array.isArray(result) ? result[0] : result;
   return record;
+}
+
+export async function createTeamAutoApproved(
+  name: string,
+  ownerId: number,
+  joinPassword?: string,
+) {
+  const team = await createTeam(name, ownerId);
+  if (!team || !team.id) return null;
+
+  await updateTeam(team.id, {
+    approved: true,
+    approved_at: new Date().toISOString(),
+    approval_token: null,
+    access_password_hash: joinPassword ? hashSecret(joinPassword) : null,
+  });
+  await ensureMembership(ownerId, team.id, "owner");
+  return {
+    ...team,
+    approved: true,
+    approved_at: new Date().toISOString(),
+  };
 }
 
 export async function updateTeam(teamId: number, data: Partial<TeamRecord>) {
@@ -89,7 +121,7 @@ export async function createMembership(data: Partial<MembershipRecord>) {
 export async function ensureMembership(
   userId: number,
   teamId: number,
-  role: MembershipRecord['role']
+  role: MembershipRecord["role"],
 ) {
   const memberships = await listMembershipsByUser(userId);
   const exists = memberships.find((m) => m.team === teamId);
@@ -104,18 +136,53 @@ export async function ensureMembership(
   return null;
 }
 
-export async function ensureDefaultTeamForUser(userId: number, displayName: string) {
+export async function ensureDefaultTeamForUser(
+  userId: number,
+  displayName: string,
+) {
   const memberships = await listMembershipsByUser(userId);
   if (memberships.length > 0) {
     return memberships[0].team;
   }
 
   const teamName = `${displayName}'s Team`;
-  const team = await createTeam(teamName, userId);
+  const team = await createTeamAutoApproved(teamName, userId);
+  if (!team || !team.id) return null;
+  return team.id;
+}
+
+export async function createTeamPendingApproval(
+  name: string,
+  ownerId: number,
+  joinPassword: string,
+) {
+  const team = await createTeam(name, ownerId);
   if (!team || !team.id) return null;
 
-  await ensureMembership(userId, team.id, 'owner');
-  return team.id;
+  const token = randomToken(24);
+  const accessPasswordHash = hashSecret(joinPassword);
+  await updateTeam(team.id, {
+    approved: false,
+    approval_token: token,
+    access_password_hash: accessPasswordHash,
+  });
+  await ensureMembership(ownerId, team.id, "owner");
+  return { ...team, approval_token: token };
+}
+
+export async function getTeamByApprovalToken(token: string) {
+  const teams = await listRecords<TeamRecord>(teamTable, {
+    filter: whereEq("approval_token", token),
+    limit: 1,
+  });
+  return teams[0] ?? null;
+}
+
+export async function updateMembershipStatus(
+  membershipId: number | string,
+  status: "active" | "suspended",
+) {
+  await updateSingleRecord(membershipTable, membershipId, { status });
 }
 
 export async function setTeamPassword(teamId: number, password: string) {
@@ -133,7 +200,9 @@ export function verifyTeamPassword(team: TeamRecord, password: string) {
 
 export async function createTeamPasswordResetToken(teamId: number) {
   const token = randomToken(20);
-  const expiresAt = new Date(Date.now() + config.teamAccess.resetTtlMinutes * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + config.teamAccess.resetTtlMinutes * 60 * 1000,
+  ).toISOString();
   await updateTeam(teamId, {
     password_reset_token: token,
     password_reset_expires_at: expiresAt,
@@ -143,7 +212,7 @@ export async function createTeamPasswordResetToken(teamId: number) {
 
 export async function getTeamByPasswordResetToken(token: string) {
   const teams = await listRecords<TeamRecord>(teamTable, {
-    filter: whereEq('password_reset_token', token),
+    filter: whereEq("password_reset_token", token),
     limit: 1,
   });
   return teams[0] ?? null;
@@ -154,36 +223,43 @@ export function isResetTokenExpired(team: TeamRecord) {
   return new Date(team.password_reset_expires_at).getTime() < Date.now();
 }
 
-export async function updateMembership(id: string, data: Partial<MembershipRecord>) {
+export async function updateMembership(
+  id: string,
+  data: Partial<MembershipRecord>,
+) {
   await updateSingleRecord(membershipTable, id, data);
 }
 
-export async function createInvite(teamId: number, email: string, role: InviteRecord['role']) {
-    const code = Math.random().toString(36).substring(2, 15);
-    // Expires in 7 days
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-    
-    await createRecord(inviteTable, { 
-        team: teamId, 
-        email, 
-        role, 
-        status: 'pending', 
-        code,
-        expires_at: expiresAt.toISOString()
-    });
+export async function createInvite(
+  teamId: number,
+  email: string,
+  role: InviteRecord["role"],
+) {
+  const code = Math.random().toString(36).substring(2, 15);
+  // Expires in 7 days
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+
+  await createRecord(inviteTable, {
+    team: teamId,
+    email,
+    role,
+    status: "pending",
+    code,
+    expires_at: expiresAt.toISOString(),
+  });
 }
 
 export async function listInvitesByEmail(email: string) {
   return listRecords<InviteRecord>(inviteTable, {
-    filter: whereEq('email', email),
+    filter: whereEq("email", email),
     limit: 1000,
   });
 }
 
 export async function acceptInvite(invite: InviteRecord, userId: number) {
   await updateSingleRecord(inviteTable, invite.id, {
-      status: 'accepted',
+    status: "accepted",
   });
   await ensureMembership(userId, invite.team, invite.role);
 }

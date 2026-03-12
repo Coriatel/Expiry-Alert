@@ -1,13 +1,27 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Archive, Printer } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Archive,
+  Printer,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReagentTable } from "@/components/ReagentTable";
+import { ReagentCardList } from "@/components/ReagentCardList";
 import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { GeneralNotes } from "@/components/GeneralNotes";
-import { NotificationBanner } from "@/components/NotificationBanner";
+import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
+import { FilterSortToolbar } from "@/components/FilterSortToolbar";
+import { PushPromptBanner } from "@/components/PushPromptBanner";
+import { ExpiryCalendar } from "@/components/ExpiryCalendar";
+import { ExpiryTimeline } from "@/components/ExpiryTimeline";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useStore } from "@/store/store";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -25,7 +39,9 @@ import {
   snoozeNotification,
   dismissNotification,
 } from "@/lib/tauri";
+import { getExpiryStatus, getDaysUntilExpiry } from "@/lib/utils";
 import type { Reagent, ReagentFormData } from "@/types";
+import type { SortingState } from "@tanstack/react-table";
 
 interface ConfirmState {
   open: boolean;
@@ -38,6 +54,7 @@ interface ConfirmState {
 export function Dashboard() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const isMobile = useIsMobile();
   const [printTimestamp, setPrintTimestamp] = useState(() =>
     new Date().toLocaleString(),
   );
@@ -63,7 +80,23 @@ export function Dashboard() {
     setSelectedReagentIds,
     toggleReagentSelection,
     clearSelection,
+    // Preferences
+    viewMode,
+    statusFilter,
+    categoryFilter,
+    sortField,
+    sortDirection,
+    setViewMode,
+    setStatusFilter,
+    setCategoryFilter,
+    setSortField,
+    setSortDirection,
+    calendarExpanded,
+    setCalendarExpanded,
   } = useStore();
+
+  // Effective view mode: use preference, but default to cards on mobile if never set
+  const effectiveViewMode = viewMode ?? (isMobile ? "cards" : "table");
 
   // Load data
   const loadData = useCallback(
@@ -109,6 +142,56 @@ export function Dashboard() {
       setExpiringReagents(data);
     } catch (error) {
       console.error("Failed to load expiring reagents:", error);
+    }
+  };
+
+  // Filter & sort reagents
+  const filteredReagents = useMemo(() => {
+    let result = reagents;
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter(
+        (r) => getExpiryStatus(r.expiry_date) === statusFilter,
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== "all") {
+      result = result.filter((r) => r.category === categoryFilter);
+    }
+
+    // Sort
+    const sorted = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case "name":
+          cmp = (a.name || "").localeCompare(b.name || "");
+          break;
+        case "days_until_expiry":
+          cmp =
+            getDaysUntilExpiry(a.expiry_date) -
+            getDaysUntilExpiry(b.expiry_date);
+          break;
+        case "expiry_date":
+        default:
+          cmp = a.expiry_date.localeCompare(b.expiry_date);
+          break;
+      }
+      return sortDirection === "desc" ? -cmp : cmp;
+    });
+
+    return sorted;
+  }, [reagents, statusFilter, categoryFilter, sortField, sortDirection]);
+
+  // Convert sort state for TanStack table
+  const tableSorting: SortingState = [
+    { id: sortField, desc: sortDirection === "desc" },
+  ];
+  const handleTableSortingChange = (newSorting: SortingState) => {
+    if (newSorting.length > 0) {
+      setSortField(newSorting[0].id);
+      setSortDirection(newSorting[0].desc ? "desc" : "asc");
     }
   };
 
@@ -268,10 +351,10 @@ export function Dashboard() {
   };
 
   const handleSelectAll = () => {
-    if (selectedReagentIds.length === reagents.length) {
+    if (selectedReagentIds.length === filteredReagents.length) {
       clearSelection();
     } else {
-      setSelectedReagentIds(reagents.map((r) => r.id));
+      setSelectedReagentIds(filteredReagents.map((r) => r.id));
     }
   };
 
@@ -286,24 +369,58 @@ export function Dashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="hidden print:block border-b pb-3">
-        <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("dashboard.printedAt", { at: printTimestamp })}
-        </p>
+      {/* Print header */}
+      <div className="hidden print:block border-b pb-3 mb-4">
+        <div className="flex items-center gap-3">
+          <img src="/logo-icon-v2.png" alt="" className="h-8 w-8" />
+          <div>
+            <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
+            <p className="text-sm text-muted-foreground">
+              {t("dashboard.printedAt", { at: printTimestamp })}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Notification Banner */}
-      <div className="print:hidden">
-        <NotificationBanner
-          reagents={expiringReagents}
-          onSnooze={handleSnooze}
-          onDismiss={handleDismiss}
-        />
+      {/* Push Notification Prompt */}
+      <PushPromptBanner />
+
+      {/* Inline Alert Section */}
+      <ExpiryAlertSection
+        reagents={expiringReagents}
+        onSnooze={handleSnooze}
+        onDismiss={handleDismiss}
+      />
+
+      {/* Expiry Calendar & Timeline */}
+      <div className="bg-card rounded-xl border print:hidden">
+        <button
+          onClick={() => setCalendarExpanded(!calendarExpanded)}
+          className="w-full flex items-center justify-between p-4"
+        >
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            <span className="font-semibold">{t("calendar.title")}</span>
+          </div>
+          {calendarExpanded ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </button>
+        {calendarExpanded && (
+          <div className="px-4 pb-4 grid gap-6 md:grid-cols-2">
+            <ExpiryCalendar reagents={reagents} />
+            <div>
+              <h3 className="font-semibold mb-3">{t("calendar.timeline")}</h3>
+              <ExpiryTimeline reagents={reagents} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
         <div className="flex gap-2">
           <Button
@@ -370,16 +487,59 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Reagents Table */}
-      <ReagentTable
-        reagents={reagents}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onArchive={handleArchive}
-        selectedIds={selectedReagentIds}
-        onToggleSelect={toggleReagentSelection}
-        onSelectAll={handleSelectAll}
+      {/* Filter/Sort Toolbar */}
+      <FilterSortToolbar
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        sortField={sortField}
+        onSortFieldChange={setSortField}
+        sortDirection={sortDirection}
+        onSortDirectionChange={setSortDirection}
+        viewMode={effectiveViewMode}
+        onViewModeChange={setViewMode}
       />
+
+      {/* Reagents View */}
+      {effectiveViewMode === "cards" ? (
+        <>
+          <ReagentCardList
+            reagents={filteredReagents}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onArchive={handleArchive}
+            selectedIds={selectedReagentIds}
+            onToggleSelect={toggleReagentSelection}
+            onSelectAll={handleSelectAll}
+          />
+          {/* Hidden table for print */}
+          <ReagentTable
+            reagents={filteredReagents}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onArchive={handleArchive}
+            selectedIds={selectedReagentIds}
+            onToggleSelect={toggleReagentSelection}
+            onSelectAll={handleSelectAll}
+            sorting={tableSorting}
+            onSortingChange={handleTableSortingChange}
+            className="hidden print:block"
+          />
+        </>
+      ) : (
+        <ReagentTable
+          reagents={filteredReagents}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onArchive={handleArchive}
+          selectedIds={selectedReagentIds}
+          onToggleSelect={toggleReagentSelection}
+          onSelectAll={handleSelectAll}
+          sorting={tableSorting}
+          onSortingChange={handleTableSortingChange}
+        />
+      )}
 
       {/* Edit Dialog */}
       <EditReagentDialog

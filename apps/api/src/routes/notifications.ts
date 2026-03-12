@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { getTeamId } from '../utils/team.js';
 import { updateReagent } from '../services/reagents.js';
-import { dismissNotificationLog, AlertType } from '../services/notificationLog.js';
+import {
+  dismissNotificationLog,
+  AlertType,
+  isRecurringAlertType,
+} from '../services/notificationLog.js';
 
 export const notificationsRouter = Router();
 
@@ -27,7 +31,7 @@ notificationsRouter.post('/:id/snooze', async (req, res) => {
   res.status(204).send();
 });
 
-const validAlertTypes: AlertType[] = ['7day', '2day', '1day', '0day', 'expired'];
+const validAlertTypes: AlertType[] = ['7day', '2day', '1day', '0day', 'expired', '5day_summary'];
 
 notificationsRouter.post('/:id/dismiss', async (req, res) => {
   const teamId = getTeamId(req);
@@ -47,7 +51,7 @@ notificationsRouter.post('/:id/dismiss', async (req, res) => {
   // Also set legacy reagent-level dismiss for in-app banner compatibility
   // 7day or no alertType: permanent dismiss (10 years)
   // Recurring alerts: 24-hour dismiss
-  const isRecurring = alertType && ['2day', '1day', '0day', 'expired'].includes(alertType);
+  const isRecurring = alertType ? isRecurringAlertType(alertType) : false;
   const dismissMs = isRecurring ? 86400000 : 3650 * 86400000;
   const dismissedUntil = new Date(Date.now() + dismissMs).toISOString();
 

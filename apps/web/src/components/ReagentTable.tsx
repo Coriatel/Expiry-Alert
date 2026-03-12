@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,12 +7,17 @@ import {
   flexRender,
   createColumnHelper,
   SortingState,
-} from '@tanstack/react-table';
-import { Pencil, Trash2, Archive, CheckSquare, Square } from 'lucide-react';
-import type { Reagent } from '@/types';
-import { Button } from '@/components/ui/Button';
-import { getDaysUntilExpiry, getExpiryStatus, getStatusColor, formatDate } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+} from "@tanstack/react-table";
+import { Pencil, Trash2, Archive, CheckSquare, Square } from "lucide-react";
+import type { Reagent } from "@/types";
+import { Button } from "@/components/ui/Button";
+import {
+  getDaysUntilExpiry,
+  getExpiryStatus,
+  getStatusColor,
+  formatDate,
+} from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface ReagentTableProps {
   reagents: Reagent[];
@@ -22,6 +27,9 @@ interface ReagentTableProps {
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onSelectAll: () => void;
+  sorting?: SortingState;
+  onSortingChange?: (sorting: SortingState) => void;
+  className?: string;
 }
 
 const columnHelper = createColumnHelper<Reagent>();
@@ -34,16 +42,19 @@ export function ReagentTable({
   selectedIds,
   onToggleSelect,
   onSelectAll,
+  sorting: externalSorting,
+  onSortingChange,
+  className,
 }: ReagentTableProps) {
   const { t } = useTranslation();
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'expiry_date', desc: false },
-  ]);
+
+  const defaultSorting: SortingState = [{ id: "expiry_date", desc: false }];
+  const sorting = externalSorting ?? defaultSorting;
 
   const columns = useMemo(
     () => [
       columnHelper.display({
-        id: 'select',
+        id: "select",
         header: () => (
           <button onClick={onSelectAll} className="flex items-center">
             {selectedIds.length === reagents.length && reagents.length > 0 ? (
@@ -54,7 +65,10 @@ export function ReagentTable({
           </button>
         ),
         cell: ({ row }) => (
-          <button onClick={() => onToggleSelect(row.original.id)} className="flex items-center">
+          <button
+            onClick={() => onToggleSelect(row.original.id)}
+            className="flex items-center"
+          >
             {selectedIds.includes(row.original.id) ? (
               <CheckSquare className="h-4 w-4" />
             ) : (
@@ -64,25 +78,27 @@ export function ReagentTable({
         ),
         size: 40,
       }),
-      columnHelper.accessor('name', {
-        header: t('table.name'),
-        cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+      columnHelper.accessor("name", {
+        header: t("table.name"),
+        cell: (info) => (
+          <span className="font-medium break-words">{info.getValue()}</span>
+        ),
       }),
-      columnHelper.accessor('category', {
-        header: t('table.category'),
+      columnHelper.accessor("category", {
+        header: t("table.category"),
         cell: (info) => {
           const value = info.getValue();
-          if (!value) return '-';
-          return t(`category.${value}`, { defaultValue: '-' });
+          if (!value) return "-";
+          return t(`category.${value}`, { defaultValue: "-" });
         },
       }),
-      columnHelper.accessor('expiry_date', {
-        header: t('table.expiryDate'),
+      columnHelper.accessor("expiry_date", {
+        header: t("table.expiryDate"),
         cell: (info) => formatDate(info.getValue()),
       }),
       columnHelper.display({
-        id: 'days_until_expiry',
-        header: t('table.daysUntilExpiry'),
+        id: "days_until_expiry",
+        header: t("table.daysUntilExpiry"),
         cell: ({ row }) => {
           const days = getDaysUntilExpiry(row.original.expiry_date);
           const status = getExpiryStatus(row.original.expiry_date);
@@ -90,43 +106,43 @@ export function ReagentTable({
           return (
             <span
               className={cn(
-                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
-                getStatusColor(status)
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap",
+                getStatusColor(status),
               )}
             >
               {days < 0
-                ? t('status.expired')
+                ? t("status.expired")
                 : days === 0
-                ? t('status.expiresToday')
-                : days === 1
-                ? t('status.expiresInOneDay')
-                : t('status.expiresIn', { days })}
+                  ? t("status.expiresToday")
+                  : days === 1
+                    ? t("status.expiresInOneDay")
+                    : t("status.expiresIn", { days })}
             </span>
           );
         },
       }),
-      columnHelper.accessor('lot_number', {
-        header: t('table.lotNumber'),
-        cell: (info) => info.getValue() || '-',
+      columnHelper.accessor("lot_number", {
+        header: t("table.lotNumber"),
+        cell: (info) => info.getValue() || "-",
       }),
-      columnHelper.accessor('notes', {
-        header: t('table.notes'),
+      columnHelper.accessor("notes", {
+        header: t("table.notes"),
         cell: (info) => (
-          <div className="max-w-xs truncate" title={info.getValue() || ''}>
-            {info.getValue() || '-'}
+          <div className="max-w-xs line-clamp-2" title={info.getValue() || ""}>
+            {info.getValue() || "-"}
           </div>
         ),
       }),
       columnHelper.display({
-        id: 'actions',
-        header: t('table.actions'),
+        id: "actions",
+        header: t("table.actions"),
         cell: ({ row }) => (
           <div className="flex gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onEdit(row.original)}
-              title={t('actions.edit')}
+              title={t("actions.edit")}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -134,7 +150,7 @@ export function ReagentTable({
               variant="ghost"
               size="sm"
               onClick={() => onArchive(row.original.id)}
-              title={t('actions.archive')}
+              title={t("actions.archive")}
             >
               <Archive className="h-4 w-4" />
             </Button>
@@ -142,7 +158,7 @@ export function ReagentTable({
               variant="ghost"
               size="sm"
               onClick={() => onDelete(row.original.id)}
-              title={t('actions.delete')}
+              title={t("actions.delete")}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -151,7 +167,16 @@ export function ReagentTable({
         size: 120,
       }),
     ],
-    [t, selectedIds, reagents.length, onToggleSelect, onSelectAll, onEdit, onArchive, onDelete]
+    [
+      t,
+      selectedIds,
+      reagents.length,
+      onToggleSelect,
+      onSelectAll,
+      onEdit,
+      onArchive,
+      onDelete,
+    ],
   );
 
   const table = useReactTable({
@@ -160,7 +185,10 @@ export function ReagentTable({
     state: {
       sorting,
     },
-    onSortingChange: setSorting,
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      onSortingChange?.(next);
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -168,38 +196,49 @@ export function ReagentTable({
   if (reagents.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        {t('dashboard.noReagents')}
+        {t("dashboard.noReagents")}
       </div>
     );
   }
 
   return (
-    <div className="table-container overflow-auto max-h-[600px] border rounded-lg">
+    <div
+      className={cn(
+        "table-container overflow-auto max-h-[600px] border rounded-lg",
+        className,
+      )}
+    >
       <table className="w-full">
         <thead className="bg-muted sticky top-0 z-10">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                // Hide select/actions columns in print output.
                 <th
                   key={header.id}
                   className={cn(
-                    'px-4 py-3 text-start text-sm font-medium border-b',
-                    (header.id === 'select' || header.id === 'actions') && 'print-hide'
+                    "px-4 py-3 text-start text-sm font-medium border-b whitespace-nowrap",
+                    (header.id === "select" || header.id === "actions") &&
+                      "print-hide",
                   )}
                   style={{ width: header.getSize() }}
                 >
                   {header.isPlaceholder ? null : (
                     <div
                       className={cn(
-                        header.column.getCanSort() && 'cursor-pointer select-none',
-                        'flex items-center gap-2'
+                        header.column.getCanSort() &&
+                          "cursor-pointer select-none",
+                        "flex items-center gap-2",
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                       {header.column.getIsSorted() && (
-                        <span>{header.column.getIsSorted() === 'desc' ? '↓' : '↑'}</span>
+                        <span>
+                          {header.column.getIsSorted() === "desc" ? "↓" : "↑"}
+                        </span>
                       )}
                     </div>
                   )}
@@ -215,18 +254,20 @@ export function ReagentTable({
               <tr
                 key={row.id}
                 className={cn(
-                  'border-b hover:bg-muted/50',
-                  status === 'expired' && 'bg-red-50',
-                  status === 'expiring-soon' && 'bg-orange-50',
-                  status === 'expiring-week' && 'bg-yellow-50'
+                  "border-b hover:bg-muted/50",
+                  status === "expired" && "bg-red-50",
+                  status === "expiring-soon" && "bg-orange-50",
+                  status === "expiring-week" && "bg-yellow-50",
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
                     className={cn(
-                      'px-4 py-3 text-sm',
-                      (cell.column.id === 'select' || cell.column.id === 'actions') && 'print-hide'
+                      "px-4 py-3 text-sm whitespace-nowrap",
+                      (cell.column.id === "select" ||
+                        cell.column.id === "actions") &&
+                        "print-hide",
                     )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

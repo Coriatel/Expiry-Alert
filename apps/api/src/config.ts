@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
 const asNumber = (value: string | undefined, fallback: number) => {
   const parsed = value ? Number.parseInt(value, 10) : NaN;
@@ -41,10 +42,15 @@ export const config = {
     url: process.env.DIRECTUS_URL ?? "http://directus:8055",
     staticToken: process.env.DIRECTUS_STATIC_TOKEN ?? "",
     collections: {
-      users: "app_users",
+      users: "expiryalert_users",
       teams: "teams",
       memberships: "memberships",
       invites: "invites",
+      joinRequests: "expiryalert_join_requests",
+      adminEvents: "expiryalert_admin_events",
+      messages: "expiryalert_messages",
+      messageRecipients: "expiryalert_message_recipients",
+      messageReagents: "expiryalert_message_reagents",
       reagents: "reagents",
       notes: "notes",
       settings: "settings",
@@ -56,6 +62,7 @@ export const config = {
   teamAccess: {
     resetTtlMinutes: asNumber(process.env.TEAM_PASSWORD_RESET_TTL_MINUTES, 30),
   },
+  adminEmail: process.env.ADMIN_EMAIL ?? "coriatel@gmail.com",
 };
 
 export function warnMissingConfig() {

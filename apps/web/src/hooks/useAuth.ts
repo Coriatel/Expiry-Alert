@@ -21,13 +21,38 @@ export function useAuth() {
   }, []);
 
   const signOut = useCallback(async () => {
-    await logout();
-    setUser(null);
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Failed to log out cleanly', err);
+    } finally {
+      window.localStorage.removeItem('expiry-alert.preferredTeamId');
+      setError(null);
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  return { user, loading, error, refresh, signOut };
+  const hasPendingJoinRequest = Boolean(user?.pending_join_request);
+  const teamApproved = user?.team_approved !== false;
+  const needsTeam =
+    !hasPendingJoinRequest &&
+    (user?.needsTeam === true || (!user?.team_id && user?.id != null));
+  const isSuspended = user?.membership_status === 'suspended';
+
+  return {
+    user,
+    loading,
+    error,
+    refresh,
+    signOut,
+    setUser,
+    teamApproved,
+    needsTeam,
+    isSuspended,
+    hasPendingJoinRequest,
+  };
 }
