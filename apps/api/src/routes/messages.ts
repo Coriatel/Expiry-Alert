@@ -5,6 +5,8 @@ import { requireAuth } from "../middleware/auth.js";
 import {
   canSendPrivateToUser,
   countUnreadInboxMessagesForUser,
+  archiveMessageForUser,
+  deleteMessageForUser,
   createMessage,
   createMessageRecipientRows,
   createMessageReagentRows,
@@ -38,7 +40,7 @@ messagesRouter.get(
 
     const parsed = z
       .object({
-        box: z.enum(["inbox", "sent"]).optional(),
+        box: z.enum(["inbox", "sent", "archive"]).optional(),
         scope: z.enum(["all", "private", "team", "system"]).optional(),
       })
       .safeParse(req.query);
@@ -53,8 +55,8 @@ messagesRouter.get(
 
     const messages =
       box === "sent"
-        ? await listSentMessagesForUser(user.id, currentTeamId, scope)
-        : await listInboxMessagesForUser(user.id, currentTeamId, scope);
+        ? await listSentMessagesForUser(user.id, currentTeamId, scope, box as "sent")
+        : await listInboxMessagesForUser(user.id, currentTeamId, scope, box as "inbox" | "archive");
 
     return res.json({ messages });
   }),
@@ -214,3 +216,21 @@ messagesRouter.post(
     return res.status(204).send();
   }),
 );
+
+messagesRouter.post("/:id/archive", asyncHandler(async (req, res) => {
+  const user = req.user as Express.User;
+  if (!user?.id) return res.status(401).json({ error: "Unauthorized" });
+  const messageId = Number(req.params.id);
+  const isSender = req.body.isSender === true;
+  await archiveMessageForUser(messageId, user.id, isSender);
+  return res.status(204).send();
+}));
+
+messagesRouter.post("/:id/delete", asyncHandler(async (req, res) => {
+  const user = req.user as Express.User;
+  if (!user?.id) return res.status(401).json({ error: "Unauthorized" });
+  const messageId = Number(req.params.id);
+  const isSender = req.body.isSender === true;
+  await deleteMessageForUser(messageId, user.id, isSender);
+  return res.status(204).send();
+}));

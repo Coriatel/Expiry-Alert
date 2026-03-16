@@ -40,8 +40,8 @@ export async function addReagentsBulk(
 export async function updateReagent(
   id: number,
   data: ReagentFormData,
-): Promise<void> {
-  await apiFetch(`/api/reagents/${id}`, {
+): Promise<{ restored?: boolean }> {
+  return apiFetch(`/api/reagents/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -192,7 +192,7 @@ export type TeamMemberSummary = {
 };
 
 export type MessageScope = "private" | "team" | "system";
-export type MessageBox = "inbox" | "sent";
+export type MessageBox = "inbox" | "sent" | "archive";
 export type MessageScopeFilter = "all" | MessageScope;
 
 export type MessageAttachment = {
@@ -349,7 +349,9 @@ export async function getMessages(
 }
 
 export async function getUnreadMessageCount(): Promise<number> {
-  const response = await apiFetch<{ count: number }>("/api/messages/unread-count");
+  const response = await apiFetch<{ count: number }>(
+    "/api/messages/unread-count",
+  );
   return response.count ?? 0;
 }
 
@@ -386,4 +388,18 @@ export async function reviewTeamJoinRequest(
     },
   );
   return response.status;
+}
+
+export async function archiveMessage(messageId: number, isSender: boolean = false): Promise<void> {
+  await apiFetch(`/api/messages/${messageId}/archive`, {
+    method: "POST",
+    body: JSON.stringify({ isSender }),
+  });
+}
+
+export async function deleteMessage(messageId: number, isSender: boolean = false): Promise<void> {
+  await apiFetch(`/api/messages/${messageId}/delete`, {
+    method: "POST",
+    body: JSON.stringify({ isSender }),
+  });
 }

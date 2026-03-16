@@ -6,6 +6,12 @@ import {
   Send,
   UserRound,
   Users,
+  Archive,
+  Trash2,
+  Reply,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,6 +25,8 @@ import {
   getTeamMembers,
   markMessageAsRead,
   sendMessage,
+  archiveMessage,
+  deleteMessage,
   type MessageBox,
   type MessageScope,
   type MessageScopeFilter,
@@ -61,10 +69,11 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
   const [teamMembers, setTeamMembers] = useState<TeamMemberSummary[]>([]);
   const [reagents, setReagents] = useState<Reagent[]>([]);
   const [composeScope, setComposeScope] = useState<MessageScope>("private");
-  const [recipientUserId, setRecipientUserId] = useState("");
+  const [recipientUserId, setRecipientUserId] = useState("all_team");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [selectedReagentIds, setSelectedReagentIds] = useState<number[]>([]);
+  const [isReagentsExpanded, setIsReagentsExpanded] = useState(false);
   const [sending, setSending] = useState(false);
   const [expandedMessageId, setExpandedMessageId] = useState<number | null>(null);
 
@@ -123,7 +132,7 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
   }, [box, scopeFilter, showToast, t]);
 
   useEffect(() => {
-    if (!isSystemAdmin && composeScope === "system") {
+    if (!isSystemAdmin && composeScope !== "private") {
       setComposeScope("private");
     }
   }, [composeScope, isSystemAdmin]);
@@ -131,6 +140,49 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
   const activeTeamMembers = teamMembers.filter(
     (member) => member.status === "active" && member.user_id !== currentUserId,
   );
+
+  
+  async function handleArchive(message: UserMessage) {
+    try {
+      await archiveMessage(message.id, box === "sent");
+      showToast(t("success.messageArchived", "הודעה הועברה לארכיון"), "success");
+      await reloadMessages();
+    } catch (error) {
+      showToast(t("errors.archiveFailed", "שגיאה בארכיון"), "error");
+    }
+  }
+
+  async function handleDelete(message: UserMessage) {
+    try {
+      await deleteMessage(message.id, box === "sent");
+      showToast(t("success.messageDeleted", "הודעה נמחקה"), "success");
+      await reloadMessages();
+    } catch (error) {
+      showToast(t("errors.deleteFailed", "שגיאה במחיקה"), "error");
+    }
+  }
+
+  function handleReply(message: UserMessage) {
+    setComposeScope("private");
+    setRecipientUserId(message.sender.id.toString());
+    setTitle("Re: " + (message.title || ""));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function handleMarkReadAction(message: UserMessage) {
+    try {
+      await markMessageAsRead(message.id);
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === message.id ? { ...item, read_at: new Date().toISOString() } : item
+        )
+      );
+      emitMessagesUpdated();
+      showToast(t("success.messageRead", "סומן כנקרא"), "success");
+    } catch (error) {
+      showToast(t("messages.markReadFailed"), "error");
+    }
+  }
 
   async function reloadMessages() {
     setMessagesLoading(true);
@@ -160,9 +212,9 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
     setSending(true);
     try {
       await sendMessage({
-        scope: composeScope,
+        scope: composeScope === "private" && recipientUserId === "all_team" ? "team" : composeScope,
         recipientUserId:
-          composeScope === "private" ? Number(recipientUserId) : undefined,
+          composeScope === "private" && recipientUserId !== "all_team" ? Number(recipientUserId) : undefined,
         title: title.trim() || undefined,
         body: body.trim(),
         reagentIds:
@@ -225,7 +277,7 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
         ) : null}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="flex flex-col-reverse xl:grid xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
         <section className="bg-card rounded-xl border p-6 space-y-4">
           <div>
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -237,29 +289,29 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t("messages.scope")}</label>
-            <Select
-              value={composeScope}
-              onChange={(event) =>
-                setComposeScope(event.target.value as MessageScope)
-              }
-              disabled={sending}
-            >
-              <option value="private">{t("messages.scopePrivate")}</option>
-              <option value="team">{t("messages.scopeTeam")}</option>
-              {isSystemAdmin ? (
+          {isSystemAdmin ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("messages.scope")}</label>
+              <Select
+                value={composeScope}
+                onChange={(event) =>
+                  setComposeScope(event.target.value as MessageScope)
+                }
+                disabled={sending}
+              >
+                <option value="private">{t("messages.scopePrivate")}</option>
+                <option value="team">{t("messages.scopeTeam")}</option>
                 <option value="system">{t("messages.scopeSystem")}</option>
+              </Select>
+              {composeScope === "system" ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("messages.systemDescription")}
+                </p>
               ) : null}
-            </Select>
-            {composeScope === "system" ? (
-              <p className="text-xs text-muted-foreground">
-                {t("messages.systemDescription")}
-              </p>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
-          {composeScope === "private" ? (
+          {composeScope === "private" || (!isSystemAdmin && composeScope === "team") ? (
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 {t("messages.recipient")}
@@ -270,6 +322,7 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
                 disabled={sending || resourcesLoading || activeTeamMembers.length === 0}
               >
                 <option value="">{t("messages.selectRecipient")}</option>
+                <option value="all_team">{t("messages.allTeamMembers", "כל חברי הקבוצה")}</option>
                 {activeTeamMembers.map((member) => (
                   <option key={member.id} value={member.user_id}>
                     {member.name} ({member.email})
@@ -309,72 +362,86 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
+            <button
+              type="button"
+              onClick={() => setIsReagentsExpanded(!isReagentsExpanded)}
+              className="flex w-full items-center justify-between"
+            >
+              <div className="text-start">
                 <p className="text-sm font-medium">{t("messages.attachReagents")}</p>
                 <p className="text-xs text-muted-foreground">
                   {t("messages.attachDescription")}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedReagentIds(reagents.map((reagent) => reagent.id))}
-                  disabled={resourcesLoading || reagents.length === 0 || sending}
-                >
-                  {t("table.selectAll")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedReagentIds([])}
-                  disabled={resourcesLoading || selectedReagentIds.length === 0 || sending}
-                >
-                  {t("messages.clearSelection")}
-                </Button>
-              </div>
-            </div>
-
-            <div className="max-h-56 overflow-auto rounded-lg border p-3 space-y-2">
-              {resourcesLoading ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("actions.processing")}
-                </p>
-              ) : reagents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("messages.noReagents")}
-                </p>
+              {isReagentsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                reagents.map((reagent) => (
-                  <label
-                    key={reagent.id}
-                    className="flex items-start gap-3 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedReagentIds.includes(reagent.id)}
-                      onChange={() => toggleReagent(reagent.id)}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="font-medium">{reagent.name}</span>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        ({t("table.expiryDate")}: {reagent.expiry_date})
-                      </span>
-                      {reagent.is_archived ? (
-                        <span className="block text-xs text-muted-foreground">
-                          {t("messages.archived")}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                ))
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
-            </div>
+            </button>
+            
+            {isReagentsExpanded && (
+              <>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedReagentIds(reagents.map((reagent) => reagent.id))}
+                    disabled={resourcesLoading || reagents.length === 0 || sending}
+                  >
+                    {t("table.selectAll")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedReagentIds([])}
+                    disabled={resourcesLoading || selectedReagentIds.length === 0 || sending}
+                  >
+                    {t("messages.clearSelection")}
+                  </Button>
+                </div>
+
+                <div className="max-h-56 overflow-auto rounded-lg border p-3 space-y-2">
+                  {resourcesLoading ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("actions.processing")}
+                    </p>
+                  ) : reagents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("messages.noReagents")}
+                    </p>
+                  ) : (
+                    reagents.map((reagent) => (
+                      <label
+                        key={reagent.id}
+                        className="flex items-start gap-3 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedReagentIds.includes(reagent.id)}
+                          onChange={() => toggleReagent(reagent.id)}
+                          className="mt-1"
+                        />
+                        <span>
+                          <span className="font-medium">{reagent.name}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            ({t("table.expiryDate")}: {reagent.expiry_date})
+                          </span>
+                          {reagent.is_archived ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {t("messages.archived")}
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
             <p className="text-xs text-muted-foreground">
               {t("messages.selectedReagents", {
                 count: selectedReagentIds.length,
@@ -413,6 +480,14 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
                 <Send className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                 {t("messages.sentTab")}
               </Button>
+              <Button
+                variant={box === "archive" ? "default" : "outline"}
+                onClick={() => setBox("archive")}
+              >
+                <Archive className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                {t("messages.archiveTab", "ארכיון")}
+              </Button>
+
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -550,6 +625,29 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
                                         {attachment.snapshot_lot_number}
                                       </span>
                                     ) : null}
+                        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleReply(message); }}>
+                            <Reply className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {t("messages.replyButton", "השב")}
+                          </Button>
+                          {box === "inbox" && !message.read_at && (
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleMarkReadAction(message); }}>
+                              <Check className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                              {t("messages.markReadButton", "סמן כנקרא")}
+                            </Button>
+                          )}
+                          {box !== "archive" && (
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleArchive(message); }}>
+                              <Archive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                              {t("messages.archiveButton", "ארכיון")}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(message); }}>
+                            <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                            {t("messages.deleteButton", "מחק")}
+                          </Button>
+                        </div>
+
                                   </div>
                                   <p className="mt-2 text-xs text-muted-foreground">
                                     {attachment.live_accessible

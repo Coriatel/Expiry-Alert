@@ -15,7 +15,7 @@ import { ReagentTable } from "@/components/ReagentTable";
 import { ReagentCardList } from "@/components/ReagentCardList";
 import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
-import { GeneralNotes } from "@/components/GeneralNotes";
+import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
@@ -26,16 +26,14 @@ import { useStore } from "@/store/store";
 import { useToast } from "@/components/ui/Toast";
 import {
   getActiveReagents,
+  addReagent,
   addReagentsBulk,
   updateReagent,
   deleteReagent,
   deleteReagentsBulk,
   archiveReagent,
   archiveReagentsBulk,
-  getGeneralNotes,
-  addGeneralNote,
-  deleteGeneralNote,
-  getExpiringReagents,
+    getExpiringReagents,
   snoozeNotification,
   dismissNotification,
 } from "@/lib/tauri";
@@ -60,6 +58,9 @@ export function Dashboard() {
   );
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
+  const [duplicatingReagent, setDuplicatingReagent] = useState<Reagent | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
@@ -71,11 +72,9 @@ export function Dashboard() {
 
   const {
     reagents,
-    generalNotes,
     expiringReagents,
     selectedReagentIds,
     setReagents,
-    setGeneralNotes,
     setExpiringReagents,
     setSelectedReagentIds,
     toggleReagentSelection,
@@ -106,13 +105,11 @@ export function Dashboard() {
         if (!background) {
           setIsLoading(true);
         }
-        const [reagentsData, notesData, expiringData] = await Promise.all([
+        const [reagentsData, expiringData] = await Promise.all([
           getActiveReagents(),
-          getGeneralNotes(),
           getExpiringReagents(),
         ]);
         setReagents(reagentsData);
-        setGeneralNotes(notesData);
         setExpiringReagents(expiringData);
       } catch (error) {
         console.error("Failed to load data:", error);
@@ -125,7 +122,7 @@ export function Dashboard() {
         }
       }
     },
-    [setReagents, setGeneralNotes, setExpiringReagents, showToast, t],
+    [setReagents, setExpiringReagents, showToast, t],
   );
 
   useEffect(() => {
@@ -226,6 +223,16 @@ export function Dashboard() {
     showToast(t("success.reagentUpdated"), "success");
   };
 
+  const handleDuplicate = (reagent: Reagent) => {
+    setDuplicatingReagent(reagent);
+  };
+
+  const handleDuplicateSave = async (data: ReagentFormData) => {
+    await addReagent(data);
+    await loadData();
+    showToast(t("success.reagentDuplicated"), "success");
+  };
+
   const handleDelete = (id: number) => {
     const reagent = reagents.find((r) => r.id === id);
     setConfirmState({
@@ -303,33 +310,7 @@ export function Dashboard() {
     }
   };
 
-  const handleAddNote = async (content: string) => {
-    try {
-      await addGeneralNote(content);
-      const notes = await getGeneralNotes();
-      setGeneralNotes(notes);
-      showToast(t("success.noteAdded"), "success");
-    } catch (error) {
-      console.error("Failed to add note:", error);
-      showToast(
-        error instanceof Error ? error.message : t("errors.addNoteFailed"),
-        "error",
-      );
-    }
-  };
-
-  const handleDeleteNote = async (id: number) => {
-    try {
-      await deleteGeneralNote(id);
-      const notes = await getGeneralNotes();
-      setGeneralNotes(notes);
-      showToast(t("success.noteDeleted"), "success");
-    } catch (error) {
-      console.error("Failed to delete note:", error);
-      showToast(t("errors.deleteNoteFailed"), "error");
-    }
-  };
-
+  
   const handleSnooze = async (reagentId: number, days: number) => {
     try {
       await snoozeNotification(reagentId, days);
@@ -456,14 +437,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* General Notes */}
-      <div className="max-w-2xl">
-        <GeneralNotes
-          notes={generalNotes}
-          onAddNote={handleAddNote}
-          onDeleteNote={handleDeleteNote}
-        />
-      </div>
+      
 
       {/* Add Button */}
       {!showBulkAdd && (
@@ -507,6 +481,7 @@ export function Dashboard() {
           <ReagentCardList
             reagents={filteredReagents}
             onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
             onDelete={handleDelete}
             onArchive={handleArchive}
             selectedIds={selectedReagentIds}
@@ -517,6 +492,7 @@ export function Dashboard() {
           <ReagentTable
             reagents={filteredReagents}
             onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
             onDelete={handleDelete}
             onArchive={handleArchive}
             selectedIds={selectedReagentIds}
@@ -531,6 +507,7 @@ export function Dashboard() {
         <ReagentTable
           reagents={filteredReagents}
           onEdit={handleEdit}
+          onDuplicate={handleDuplicate}
           onDelete={handleDelete}
           onArchive={handleArchive}
           selectedIds={selectedReagentIds}
@@ -547,6 +524,14 @@ export function Dashboard() {
         open={editingReagent !== null}
         onClose={() => setEditingReagent(null)}
         onSave={handleEditSave}
+      />
+
+      {/* Duplicate Dialog */}
+      <DuplicateReagentDialog
+        reagent={duplicatingReagent}
+        open={duplicatingReagent !== null}
+        onClose={() => setDuplicatingReagent(null)}
+        onSave={handleDuplicateSave}
       />
 
       {/* Confirm Dialog */}

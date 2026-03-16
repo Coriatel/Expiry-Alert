@@ -20,6 +20,8 @@ export type MessageRecord = {
   title?: string | null;
   body: string;
   created_at?: string;
+  is_archived?: boolean;
+  is_deleted?: boolean;
 };
 
 export type MessageRecipientRecord = {
@@ -28,6 +30,8 @@ export type MessageRecipientRecord = {
   user: number;
   read_at?: string | null;
   created_at?: string;
+  is_archived?: boolean;
+  is_deleted?: boolean;
 };
 
 export type MessageReagentRecord = {
@@ -162,6 +166,8 @@ export async function createMessageRecipientRows(
       message: messageId,
       user: userId,
       read_at: null,
+      is_archived: false,
+      is_deleted: false,
       created_at: createdAt,
     })),
   );
@@ -373,11 +379,18 @@ export async function listInboxMessagesForUser(
   userId: number,
   currentTeamId: number | null,
   scope: MessageScopeFilter,
+  box: "inbox" | "archive" = "inbox",
 ) {
   const recipients = await listRecords<MessageRecipientRecord>(
     messageRecipientsCollection,
     {
-      filter: { user: { _eq: userId } },
+      filter: {
+        _and: [
+          { user: { _eq: userId } },
+          { is_deleted: { _neq: true } },
+          { is_archived: box === 'archive' ? { _eq: true } : { _neq: true } },
+        ]
+      },
       sort: ["-created_at"],
       limit: 500,
     },
@@ -409,12 +422,13 @@ export async function listSentMessagesForUser(
   userId: number,
   currentTeamId: number | null,
   scope: MessageScopeFilter,
+  box: "sent" | "archive" = "sent",
 ) {
   const filter =
     currentTeamId == null
       ? {
           _and: [
-            { sender: { _eq: userId } },
+            { sender: { _eq: userId } }, { is_deleted: { _neq: true } }, { is_archived: box === "archive" ? { _eq: true } : { _neq: true } }, { is_deleted: { _neq: true } }, { is_archived: box === "archive" ? { _eq: true } : { _neq: true } },
             { scope: { _eq: "system" } },
           ],
         }
@@ -453,7 +467,12 @@ export async function countUnreadInboxMessagesForUser(
     messageRecipientsCollection,
     {
       filter: {
-        _and: [{ user: { _eq: userId } }, { read_at: { _null: true } }],
+        _and: [
+          { user: { _eq: userId } },
+          { read_at: { _null: true } },
+          { is_deleted: { _neq: true } },
+          { is_archived: { _neq: true } }
+        ],
       },
       limit: 500,
     },
@@ -469,4 +488,24 @@ export async function countUnreadInboxMessagesForUser(
   return messages.filter((message) =>
     isMessageVisibleToViewer(message, currentTeamId),
   ).length;
+}
+
+export async function archiveMessageForUser(messageId: number, userId: number, isSender: boolean) {
+  if (isSender) {
+    const records = await listRecords(messagesCollection, { filter: { _and: [{ id: { _eq: messageId } }, { sender: { _eq: userId } }] }, limit: 1 });
+    if (records[0]) await updateSingleRecord(messagesCollection, messageId, { is_archived: true });
+  } else {
+    const recipient = await getMessageRecipientForUser(messageId, userId);
+    if (recipient) await updateSingleRecord(messageRecipientsCollection, recipient.id, { is_archived: true });
+  }
+}
+
+export async function deleteMessageForUser(messageId: number, userId: number, isSender: boolean) {
+  if (isSender) {
+    const records = await listRecords(messagesCollection, { filter: { _and: [{ id: { _eq: messageId } }, { sender: { _eq: userId } }] }, limit: 1 });
+    if (records[0]) await updateSingleRecord(messagesCollection, messageId, { is_deleted: true });
+  } else {
+    const recipient = await getMessageRecipientForUser(messageId, userId);
+    if (recipient) await updateSingleRecord(messageRecipientsCollection, recipient.id, { is_deleted: true });
+  }
 }

@@ -95,9 +95,9 @@
   },
   "status": {
     "expired": "פג תוקף",
-    "expiresToday": "היום",
+    "expiresToday": "פג תוקף היום",
     "expiresIn": "בעוד {{days}} ימים",
-    "expiresInOneDay": "בעוד יום"
+    "expiresInOneDay": "מחר"
   },
   "actions": {
     "edit": "ערוך",
@@ -113,7 +113,8 @@
     "bulkDelete": "מחק את הנבחרים",
     "bulkArchive": "העבר לארכיון",
     "retry": "נסה שוב",
-    "print": "הדפס"
+    "print": "הדפס",
+    "duplicate": "שכפל"
   },
   "form": {
     "name": "שם",
@@ -129,7 +130,9 @@
     "required": "שדה חובה"
   },
   "dialog": {
-    "editReagent": "עריכת ריאגנט"
+    "editReagent": "עריכת ריאגנט",
+    "duplicateReagent": "שכפול ריאגנט",
+    "duplicateExpiryHint": "הזן תאריך תפוגה חדש לריאגנט המשוכפל"
   },
   "archive": {
     "title": "ריאגנטים בארכיון",
@@ -238,8 +241,8 @@
     "compose": "הודעה חדשה",
     "composeDescription": "ההודעה נשלחת לפי הצוות הפעיל כרגע. שידור מערכת זמין רק לאדמין המערכת.",
     "scope": "סוג הודעה",
-    "scopePrivate": "פרטית",
-    "scopeTeam": "הודעת צוות",
+    "scopePrivate": "הודעה אישית",
+    "scopeTeam": "לכל חברי הקבוצה",
     "scopeSystem": "שידור מערכת",
     "systemDescription": "הודעה זו תהיה גלויה לכל המשתמשים הפעילים במערכת.",
     "systemAdminEnabled": "שידור מערכת זמין לחשבון זה.",
@@ -299,7 +302,8 @@
     "reagentsDeleted": "{{count}} ריאגנטים נמחקו בהצלחה",
     "reagentArchived": "הריאגנט הועבר לארכיון בהצלחה",
     "reagentsArchived": "{{count}} ריאגנטים הועברו לארכיון בהצלחה",
-    "reagentRestored": "הריאגנט שוחזר בהצלחה",
+    "reagentRestored": "הריאגנט עודכן ושוחזר לפעילים",
+    "reagentDuplicated": "הריאגנט שוכפל בהצלחה",
     "noteAdded": "ההערה נוספה בהצלחה",
     "noteDeleted": "ההערה נמחקה בהצלחה",
     "notificationSnoozed": "ההתראה נדחתה"

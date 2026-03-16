@@ -112,8 +112,9 @@
     "processing": "Processing...",
     "bulkDelete": "Delete Selected",
     "bulkArchive": "Archive Selected",
-    "retry": "Try again"
-    ,"print": "Print"
+    "retry": "Try again",
+    "print": "Print",
+    "duplicate": "Duplicate"
   },
   "form": {
     "name": "Name",
@@ -129,7 +130,9 @@
     "required": "Required field"
   },
   "dialog": {
-    "editReagent": "Edit Reagent"
+    "editReagent": "Edit Reagent",
+    "duplicateReagent": "Duplicate Reagent",
+    "duplicateExpiryHint": "Enter a new expiry date for the duplicated reagent"
   },
   "archive": {
     "title": "Archived Reagents",
@@ -238,8 +241,8 @@
     "compose": "New message",
     "composeDescription": "Use the current team context to send a private or team message. System broadcast is available only to the system admin.",
     "scope": "Message type",
-    "scopePrivate": "Private",
-    "scopeTeam": "Team announcement",
+    "scopePrivate": "Private Message",
+    "scopeTeam": "All Team Members",
     "scopeSystem": "System broadcast",
     "systemDescription": "This message will be visible to all active users in the system.",
     "systemAdminEnabled": "System broadcast is enabled for this account.",
@@ -299,7 +302,8 @@
     "reagentsDeleted": "{{count}} reagents deleted successfully",
     "reagentArchived": "Reagent archived successfully",
     "reagentsArchived": "{{count}} reagents archived successfully",
-    "reagentRestored": "Reagent restored successfully",
+    "reagentRestored": "Reagent updated and restored to active",
+    "reagentDuplicated": "Reagent duplicated successfully",
     "noteAdded": "Note added successfully",
     "noteDeleted": "Note deleted successfully",
     "notificationSnoozed": "Notification snoozed"
