@@ -22,6 +22,7 @@ import { emitMessagesUpdated } from "@/lib/messageEvents";
 import {
   getAllReagents,
   getMessages,
+  getMessageReplies,
   getTeamMembers,
   markMessageAsRead,
   sendMessage,
@@ -76,6 +77,11 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
   const [isReagentsExpanded, setIsReagentsExpanded] = useState(false);
   const [sending, setSending] = useState(false);
   const [expandedMessageId, setExpandedMessageId] = useState<number | null>(null);
+  const [replyingToId, setReplyingToId] = useState<number | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [repliesMap, setRepliesMap] = useState<Record<number, UserMessage[]>>({});
+  const [loadingRepliesFor, setLoadingRepliesFor] = useState<number | null>(null);
+  const [expandedRepliesFor, setExpandedRepliesFor] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,10 +169,58 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
   }
 
   function handleReply(message: UserMessage) {
-    setComposeScope("private");
-    setRecipientUserId(message.sender.id.toString());
-    setTitle("Re: " + (message.title || ""));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setReplyingToId(replyingToId === message.id ? null : message.id);
+    setReplyBody("");
+  }
+
+  async function handleSendReply(parentMessage: UserMessage) {
+    if (!replyBody.trim()) return;
+    setSending(true);
+    try {
+      await sendMessage({
+        scope: parentMessage.scope,
+        parentMessageId: parentMessage.id,
+        recipientUserId: parentMessage.scope === "private" ? parentMessage.sender.id : undefined,
+        title: parentMessage.title ? "Re: " + parentMessage.title.replace(/^Re: /i, "") : undefined,
+        body: replyBody.trim(),
+      });
+      setReplyBody("");
+      setReplyingToId(null);
+      showToast(t("messages.sent"), "success");
+      // Reload replies for this message
+      await loadReplies(parentMessage.id);
+      if (box === "sent") {
+        await reloadMessages();
+      }
+    } catch (error: any) {
+      showToast(error.message || t("messages.sendFailed"), "error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function loadReplies(messageId: number) {
+    setLoadingRepliesFor(messageId);
+    try {
+      const replies = await getMessageReplies(messageId);
+      setRepliesMap((prev) => ({ ...prev, [messageId]: replies }));
+    } catch (error) {
+      console.error(error);
+      showToast(t("messages.loadFailed"), "error");
+    } finally {
+      setLoadingRepliesFor(null);
+    }
+  }
+
+  async function toggleReplies(messageId: number) {
+    if (expandedRepliesFor === messageId) {
+      setExpandedRepliesFor(null);
+      return;
+    }
+    setExpandedRepliesFor(messageId);
+    if (!repliesMap[messageId]) {
+      await loadReplies(messageId);
+    }
   }
 
   async function handleMarkReadAction(message: UserMessage) {
@@ -512,11 +566,13 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
             </div>
           </div>
 
-          {messagesLoading ? (
+          {(() => {
+            const topLevelMessages = messages.filter((m) => !m.parent_message);
+            return messagesLoading ? (
             <p className="text-sm text-muted-foreground">
               {t("actions.processing")}
             </p>
-          ) : messages.length === 0 ? (
+          ) : topLevelMessages.length === 0 ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
               {box === "inbox"
                 ? t("messages.emptyInbox")
@@ -524,7 +580,7 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {messages.map((message) => {
+              {topLevelMessages.map((message) => {
                 const isExpanded = expandedMessageId === message.id;
                 const isUnread = box === "inbox" && !message.read_at;
 
@@ -625,11 +681,37 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
                                         {attachment.snapshot_lot_number}
                                       </span>
                                     ) : null}
-                        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+                                  </div>
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    {attachment.live_accessible
+                                      ? attachment.live
+                                        ? attachment.live.is_archived
+                                          ? t("messages.liveArchived")
+                                          : t("messages.liveAvailable")
+                                        : t("messages.liveMissing")
+                                      : t("messages.snapshotOnly")}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center gap-2 pt-4 border-t">
                           <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleReply(message); }}>
                             <Reply className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                             {t("messages.replyButton", "השב")}
                           </Button>
+                          {message.reply_count > 0 && (
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); void toggleReplies(message.id); }}>
+                              <ChevronDown className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                              {t("messages.viewReplies", {
+                                count: message.reply_count,
+                                defaultValue: `${message.reply_count} תגובות`,
+                              })}
+                            </Button>
+                          )}
                           {box === "inbox" && !message.read_at && (
                             <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleMarkReadAction(message); }}>
                               <Check className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
@@ -648,28 +730,92 @@ export function Messages({ currentUserId, isSystemAdmin }: MessagesProps) {
                           </Button>
                         </div>
 
-                                  </div>
-                                  <p className="mt-2 text-xs text-muted-foreground">
-                                    {attachment.live_accessible
-                                      ? attachment.live
-                                        ? attachment.live.is_archived
-                                          ? t("messages.liveArchived")
-                                          : t("messages.liveAvailable")
-                                        : t("messages.liveMissing")
-                                      : t("messages.snapshotOnly")}
-                                  </p>
-                                </div>
-                              ))}
+                        {/* Inline reply form */}
+                        {replyingToId === message.id && (
+                          <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                            <p className="text-sm font-medium">
+                              {message.scope === "team"
+                                ? t("messages.replyToTeam", "תגובה לכל הקבוצה")
+                                : message.scope === "system"
+                                  ? t("messages.replyToAll", "תגובה לכולם")
+                                  : t("messages.replyToSender", {
+                                      name: message.sender.name || message.sender.email,
+                                      defaultValue: `תגובה ל${message.sender.name || message.sender.email}`,
+                                    })}
+                            </p>
+                            <Textarea
+                              value={replyBody}
+                              onChange={(e) => setReplyBody(e.target.value)}
+                              placeholder={t("messages.replyPlaceholder", "כתוב תגובה...")}
+                              disabled={sending}
+                              maxLength={2000}
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); void handleSendReply(message); }}
+                                disabled={sending || !replyBody.trim()}
+                              >
+                                <Send className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                {sending ? t("actions.processing") : t("messages.send")}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => { e.stopPropagation(); setReplyingToId(null); setReplyBody(""); }}
+                                disabled={sending}
+                              >
+                                {t("actions.cancel", "ביטול")}
+                              </Button>
                             </div>
                           </div>
-                        ) : null}
+                        )}
+
+                        {/* Replies thread */}
+                        {expandedRepliesFor === message.id && (
+                          <div className="space-y-3 ltr:border-l-2 rtl:border-r-2 border-primary/30 ltr:pl-4 rtl:pr-4">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              {t("messages.replies", "תגובות")}
+                            </h4>
+                            {loadingRepliesFor === message.id ? (
+                              <p className="text-sm text-muted-foreground">{t("actions.processing")}</p>
+                            ) : (repliesMap[message.id] ?? []).length === 0 ? (
+                              <p className="text-sm text-muted-foreground">
+                                {t("messages.noReplies", "אין תגובות עדיין")}
+                              </p>
+                            ) : (
+                              (repliesMap[message.id] ?? []).map((reply) => (
+                                <div
+                                  key={reply.id}
+                                  className={`rounded-lg border p-3 text-sm space-y-1 ${
+                                    reply.read_at ? "" : "border-primary/40 bg-primary/5"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium">
+                                      {reply.sender.name || reply.sender.email}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatMessageDate(reply.created_at)}
+                                    </span>
+                                  </div>
+                                  <p className="whitespace-pre-wrap break-words text-muted-foreground">
+                                    {reply.body}
+                                  </p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </article>
                 );
               })}
             </div>
-          )}
+          );
+          })()}
         </section>
       </div>
     </div>

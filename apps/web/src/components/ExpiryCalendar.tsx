@@ -63,7 +63,10 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
     ? ["א", "ב", "ג", "ד", "ה", "ו", "ש"]
     : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const monthName = new Intl.DateTimeFormat(isRTL ? "he-IL" : "en-US", { month: "long", year: "numeric" }).format(currentDate);
+  const monthName = new Intl.DateTimeFormat(isRTL ? "he-IL" : "en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(currentDate);
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -75,7 +78,9 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
 
     // Get unique statuses
     const statuses = new Set(items.map((r) => getExpiryStatus(r.expiry_date)));
-    return Array.from(statuses).map((s) => STATUS_COLORS[s] ?? STATUS_COLORS.ok);
+    return Array.from(statuses).map(
+      (s) => STATUS_COLORS[s] ?? STATUS_COLORS.ok,
+    );
   };
 
   const handleDayClick = (day: number) => {
@@ -83,7 +88,9 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
     setSelectedDay(selectedDay === dateStr ? null : dateStr);
   };
 
-  const selectedReagents = selectedDay ? reagentsByDate.get(selectedDay) ?? [] : [];
+  const selectedReagents = selectedDay
+    ? (reagentsByDate.get(selectedDay) ?? [])
+    : [];
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -91,19 +98,37 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
     <div className="space-y-3">
       {/* Month nav */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={isRTL ? nextMonth : prevMonth}>
-          {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={isRTL ? nextMonth : prevMonth}
+        >
+          {isRTL ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
         </Button>
         <span className="font-medium">{monthName}</span>
-        <Button variant="ghost" size="sm" onClick={isRTL ? prevMonth : nextMonth}>
-          {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={isRTL ? prevMonth : nextMonth}
+        >
+          {isRTL ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
         </Button>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-7 gap-0 text-center text-xs">
         {dayNames.map((d) => (
-          <div key={d} className="py-1 font-medium text-muted-foreground">{d}</div>
+          <div key={d} className="py-1 font-medium text-muted-foreground">
+            {d}
+          </div>
         ))}
         {weeks.flat().map((day, i) => {
           if (day === null) return <div key={`e-${i}`} className="py-2" />;
@@ -118,7 +143,8 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
               onClick={() => handleDayClick(day)}
               className={cn(
                 "py-2 rounded-lg transition-colors relative",
-                isToday && "font-bold",
+                isToday &&
+                  "font-extrabold text-primary ring-2 ring-primary/30 rounded-lg",
                 isSelected && "bg-primary text-primary-foreground",
                 !isSelected && "hover:bg-muted",
               )}
@@ -127,7 +153,10 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
               {dots && (
                 <div className="flex gap-0.5 justify-center mt-0.5">
                   {dots.slice(0, 3).map((color, j) => (
-                    <span key={j} className={cn("h-1.5 w-1.5 rounded-full", color)} />
+                    <span
+                      key={j}
+                      className={cn("h-1.5 w-1.5 rounded-full", color)}
+                    />
                   ))}
                 </div>
               )}
@@ -138,14 +167,26 @@ export function ExpiryCalendar({ reagents }: ExpiryCalendarProps) {
 
       {/* Selected day details */}
       {selectedDay && selectedReagents.length > 0 && (
-        <div className="border rounded-lg p-3 space-y-1">
+        <div className="border rounded-lg p-3 space-y-2 mt-2">
+          <div className="text-sm font-semibold border-b pb-2 mb-2">
+            {t("calendar.selectedCount", { count: selectedReagents.length, defaultValue: `${selectedReagents.length} reagents` })}
+          </div>
           {selectedReagents.map((r) => {
             const status = getExpiryStatus(r.expiry_date);
             const dotColor = STATUS_COLORS[status] ?? STATUS_COLORS.ok;
             return (
-              <div key={r.id} className="flex items-center gap-2 text-sm">
-                <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />
-                <span className="truncate">{r.name}</span>
+              <div key={r.id} className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 text-sm">
+                  <span
+                    className={cn("h-2 w-2 rounded-full shrink-0", dotColor)}
+                  />
+                  <span className="font-medium truncate">{r.name}</span>
+                </div>
+                {r.notes && (
+                  <div className="text-xs text-muted-foreground ltr:ml-4 rtl:mr-4 break-words whitespace-pre-wrap">
+                    {r.notes}
+                  </div>
+                )}
               </div>
             );
           })}

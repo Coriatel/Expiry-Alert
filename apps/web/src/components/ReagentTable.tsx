@@ -8,8 +8,16 @@ import {
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
-import { Pencil, Trash2, Archive, CheckSquare, Square } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Archive,
+  CheckSquare,
+  Square,
+  Copy,
+} from "lucide-react";
 import type { Reagent } from "@/types";
+import { NewInStockDot } from "@/components/NewInStockDot";
 import { Button } from "@/components/ui/Button";
 import {
   getDaysUntilExpiry,
@@ -22,6 +30,7 @@ import { cn } from "@/lib/utils";
 interface ReagentTableProps {
   reagents: Reagent[];
   onEdit: (reagent: Reagent) => void;
+  onDuplicate?: (reagent: Reagent) => void;
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
   selectedIds: number[];
@@ -37,6 +46,7 @@ const columnHelper = createColumnHelper<Reagent>();
 export function ReagentTable({
   reagents,
   onEdit,
+  onDuplicate,
   onDelete,
   onArchive,
   selectedIds,
@@ -81,7 +91,15 @@ export function ReagentTable({
       columnHelper.accessor("name", {
         header: t("table.name"),
         cell: (info) => (
-          <span className="font-medium break-words">{info.getValue()}</span>
+          <span className="font-medium break-words">
+            {info.getValue()}
+            {info.row.original.replaced_by != null && (
+              <>
+                {" "}
+                <NewInStockDot />
+              </>
+            )}
+          </span>
         ),
       }),
       columnHelper.accessor("category", {
@@ -146,6 +164,16 @@ export function ReagentTable({
             >
               <Pencil className="h-4 w-4" />
             </Button>
+            {onDuplicate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDuplicate(row.original)}
+                title={t("actions.duplicate")}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -174,6 +202,7 @@ export function ReagentTable({
       onToggleSelect,
       onSelectAll,
       onEdit,
+      onDuplicate,
       onArchive,
       onDelete,
     ],

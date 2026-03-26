@@ -1,15 +1,24 @@
-import { Router } from 'express';
-import { z } from 'zod';
-import { requireAuth } from '../middleware/auth.js';
-import { getTeamId } from '../utils/team.js';
-import { bulkUpdate, createReagent, listReagents, removeReagent, updateReagent } from '../services/reagents.js';
-import { getNotificationSettings } from '../services/settings.js';
+import { Router } from "express";
+import { z } from "zod";
+import { requireAuth } from "../middleware/auth.js";
+import { getTeamId } from "../utils/team.js";
+import {
+  bulkUpdate,
+  createReagent,
+  duplicateReagent,
+  listReagents,
+  removeReagent,
+  updateReagent,
+} from "../services/reagents.js";
+import { findOne } from "../services/directus.js";
+import { config } from "../config.js";
+import { getNotificationSettings } from "../services/settings.js";
 
 export const reagentsRouter = Router();
 
 const reagentSchema = z.object({
   name: z.string().min(1),
-  category: z.enum(['reagents', 'beads']),
+  category: z.enum(["reagents", "beads"]),
   expiryDate: z.string().min(1),
   lotNumber: z.string().optional().nullable(),
   receivedDate: z.string().optional().nullable(),
@@ -32,22 +41,22 @@ const isDateAfter = (value: string | null | undefined, compareTo: Date) => {
 
 reagentsRouter.use(requireAuth);
 
-reagentsRouter.get('/', async (req, res) => {
+reagentsRouter.get("/", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
-  const scope = String(req.query.scope ?? 'active');
+  const scope = String(req.query.scope ?? "active");
   const reagents = await listReagents(teamId);
 
-  if (scope === 'all') {
+  if (scope === "all") {
     return res.json(reagents);
   }
 
-  if (scope === 'archived') {
+  if (scope === "archived") {
     return res.json(reagents.filter((r) => r.is_archived));
   }
 
-  if (scope === 'expiring') {
+  if (scope === "expiring") {
     const settings = await getNotificationSettings(teamId);
     const remindDays = Math.min(settings?.remind_in_days ?? 7, 7);
     const now = new Date();
@@ -67,12 +76,13 @@ reagentsRouter.get('/', async (req, res) => {
   return res.json(reagents.filter((r) => !r.is_archived));
 });
 
-reagentsRouter.post('/', async (req, res) => {
+reagentsRouter.post("/", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const parsed = reagentSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
 
   await createReagent(teamId, {
     name: parsed.data.name,
@@ -84,15 +94,16 @@ reagentsRouter.post('/', async (req, res) => {
     is_archived: false,
   });
 
-  res.status(201).json({ status: 'created' });
+  res.status(201).json({ status: "created" });
 });
 
-reagentsRouter.post('/bulk', async (req, res) => {
+reagentsRouter.post("/bulk", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const parsed = bulkSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
 
   for (const reagent of parsed.data.reagents) {
     await createReagent(teamId, {
@@ -106,18 +117,29 @@ reagentsRouter.post('/bulk', async (req, res) => {
     });
   }
 
-  res.status(201).json({ status: 'ok' });
+  res.status(201).json({ status: "ok" });
 });
 
-reagentsRouter.put('/:id', async (req, res) => {
+reagentsRouter.put("/:id", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-  
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
+
   const parsed = reagentSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
+
+  const reagentCollection = config.directus.collections.reagents as any;
+  const current = await findOne<{ is_archived: boolean }>(reagentCollection, {
+    id: { _eq: id },
+  });
+
+  const today = new Date();
+  const shouldRestore =
+    current?.is_archived === true && isDateAfter(parsed.data.expiryDate, today);
 
   await updateReagent(id, {
     name: parsed.data.name,
@@ -126,27 +148,30 @@ reagentsRouter.put('/:id', async (req, res) => {
     lot_number: parsed.data.lotNumber ?? null,
     received_date: parsed.data.receivedDate ?? null,
     notes: parsed.data.notes ?? null,
+    ...(shouldRestore ? { is_archived: false } : {}),
   });
 
-  res.status(204).send();
+  res.status(200).json({ restored: shouldRestore });
 });
 
-reagentsRouter.delete('/:id', async (req, res) => {
+reagentsRouter.delete("/:id", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
   await removeReagent(id);
   res.status(204).send();
 });
 
-reagentsRouter.post('/delete', async (req, res) => {
+reagentsRouter.post("/delete", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const parsed = idsSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
 
   for (const id of parsed.data.ids) {
     await removeReagent(id);
@@ -155,12 +180,13 @@ reagentsRouter.post('/delete', async (req, res) => {
   res.status(204).send();
 });
 
-reagentsRouter.post('/archive', async (req, res) => {
+reagentsRouter.post("/archive", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const parsed = idsSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
 
   await bulkUpdate(parsed.data.ids, {
     is_archived: true,
@@ -169,12 +195,38 @@ reagentsRouter.post('/archive', async (req, res) => {
   res.status(204).send();
 });
 
-reagentsRouter.post('/:id/archive', async (req, res) => {
+reagentsRouter.post("/:id/duplicate", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
+
+  const originalId = Number(req.params.id);
+  if (!Number.isFinite(originalId))
+    return res.status(400).json({ error: "Invalid id" });
+
+  const parsed = reagentSchema.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
+
+  const created = await duplicateReagent(teamId, originalId, {
+    name: parsed.data.name,
+    category: parsed.data.category,
+    expiry_date: parsed.data.expiryDate,
+    lot_number: parsed.data.lotNumber ?? null,
+    received_date: parsed.data.receivedDate ?? null,
+    notes: parsed.data.notes ?? null,
+    is_archived: false,
+  });
+
+  res.status(201).json({ status: "created", id: created.id });
+});
+
+reagentsRouter.post("/:id/archive", async (req, res) => {
+  const teamId = getTeamId(req);
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
   await updateReagent(id, {
     is_archived: true,
   });
@@ -182,12 +234,13 @@ reagentsRouter.post('/:id/archive', async (req, res) => {
   res.status(204).send();
 });
 
-reagentsRouter.post('/:id/restore', async (req, res) => {
+reagentsRouter.post("/:id/restore", async (req, res) => {
   const teamId = getTeamId(req);
-  if (!teamId) return res.status(400).json({ error: 'Missing team' });
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
   await updateReagent(id, {
     is_archived: false,
   });

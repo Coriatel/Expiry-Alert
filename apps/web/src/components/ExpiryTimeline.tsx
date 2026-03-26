@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { parseISO } from "date-fns";
 import { getExpiryStatus, getDaysUntilExpiry, cn } from "@/lib/utils";
 import type { Reagent } from "@/types";
 
@@ -43,11 +44,13 @@ export function ExpiryTimeline({ reagents }: ExpiryTimelineProps) {
     ];
 
     const sorted = [...reagents].sort(
-      (a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
+      (a, b) =>
+        new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime(),
     );
 
     for (const r of sorted) {
-      const expiryDate = new Date(r.expiry_date);
+      const expiryDate = parseISO(r.expiry_date);
+      expiryDate.setHours(0, 0, 0, 0);
       const days = getDaysUntilExpiry(r.expiry_date);
 
       if (days <= 0 || expiryDate <= endOfToday) {
@@ -74,7 +77,9 @@ export function ExpiryTimeline({ reagents }: ExpiryTimelineProps) {
     <div className="space-y-4">
       {groups.map((group) => (
         <div key={group.label}>
-          <h4 className="text-sm font-semibold mb-2 text-muted-foreground">{group.label}</h4>
+          <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
+            {group.label}
+          </h4>
           <div className="space-y-1.5">
             {group.items.map((r) => {
               const status = getExpiryStatus(r.expiry_date);
@@ -83,14 +88,18 @@ export function ExpiryTimeline({ reagents }: ExpiryTimelineProps) {
 
               return (
                 <div key={r.id} className="flex items-center gap-2 text-sm">
-                  <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />
+                  <span
+                    className={cn("h-2 w-2 rounded-full shrink-0", dotColor)}
+                  />
                   <span className="truncate flex-1">{r.name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {days <= 0
+                    {days < 0
                       ? t("status.expired")
-                      : days === 1
-                        ? t("status.expiresInOneDay")
-                        : t("status.expiresIn", { days })}
+                      : days === 0
+                        ? t("status.expiresToday")
+                        : days === 1
+                          ? t("status.expiresInOneDay")
+                          : t("status.expiresIn", { days })}
                   </span>
                 </div>
               );

@@ -19,6 +19,7 @@ export type MessageRecord = {
   sender: number;
   title?: string | null;
   body: string;
+  parent_message?: number | null;
   created_at?: string;
   is_archived?: boolean;
   is_deleted?: boolean;
@@ -75,6 +76,8 @@ export type MessageView = {
   };
   title: string | null;
   body: string;
+  parent_message: number | null;
+  reply_count: number;
   created_at: string | null;
   read_at: string | null;
   recipient_count?: number;
@@ -142,6 +145,7 @@ export async function createMessage(input: {
   senderId: number;
   title?: string | null;
   body: string;
+  parentMessageId?: number | null;
 }) {
   return createRecord<MessageRecord>(messagesCollection, {
     scope: input.scope,
@@ -149,6 +153,7 @@ export async function createMessage(input: {
     sender: input.senderId,
     title: input.title?.trim() || null,
     body: input.body.trim(),
+    parent_message: input.parentMessageId ?? null,
     created_at: new Date().toISOString(),
   });
 }
@@ -263,6 +268,69 @@ async function listMessageRecipientRows(messageIds: number[]) {
   });
 }
 
+export async function listRepliesForMessage(
+  parentMessageId: number,
+  currentTeamId: number | null,
+  userId: number,
+) {
+  const replies = await listRecords<MessageRecord>(messagesCollection, {
+    filter: {
+      _and: [
+        { parent_message: { _eq: parentMessageId } },
+        { is_deleted: { _neq: true } },
+      ],
+    },
+    sort: ["created_at"],
+    limit: 200,
+  });
+
+  const visibleReplies = replies.filter((message) =>
+    isMessageVisibleToViewer(message, currentTeamId),
+  );
+
+  const recipients = await listRecords<MessageRecipientRecord>(
+    messageRecipientsCollection,
+    {
+      filter: {
+        _and: [
+          { message: { _in: visibleReplies.map((r) => r.id) } },
+          { user: { _eq: userId } },
+        ],
+      },
+      limit: 200,
+    },
+  );
+  const readByMessageId = recipients.reduce((acc, recipient) => {
+    acc.set(recipient.message, recipient.read_at ?? null);
+    return acc;
+  }, new Map<number, string | null>());
+
+  return buildMessageViews(visibleReplies, {
+    currentTeamId,
+    readByMessageId,
+  });
+}
+
+async function countRepliesByMessageIds(messageIds: number[]) {
+  if (messageIds.length === 0) return new Map<number, number>();
+  const replies = await listRecords<MessageRecord>(messagesCollection, {
+    filter: {
+      _and: [
+        { parent_message: { _in: messageIds } },
+        { is_deleted: { _neq: true } },
+      ],
+    },
+    limit: 5000,
+  });
+  const counts = new Map<number, number>();
+  for (const reply of replies) {
+    if (reply.parent_message != null) {
+      counts.set(reply.parent_message, (counts.get(reply.parent_message) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 async function buildMessageViews(
   messages: MessageRecord[],
   options: {
@@ -321,6 +389,8 @@ async function buildMessageViews(
     }, new Map<number, number>());
   }
 
+  const replyCountByMessageId = await countRepliesByMessageIds(messageIds);
+
   return orderedMessages.map((message) => {
     const sender = senderById.get(message.sender);
     const readAt = options.readByMessageId?.get(message.id) ?? null;
@@ -365,6 +435,8 @@ async function buildMessageViews(
       },
       title: message.title?.trim() || null,
       body: message.body,
+      parent_message: message.parent_message ?? null,
+      reply_count: replyCountByMessageId.get(message.id) ?? 0,
       created_at: message.created_at ?? null,
       read_at: readAt,
       recipient_count: options.includeRecipientCount

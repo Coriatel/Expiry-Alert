@@ -410,6 +410,9 @@
     "testSent": "התראת בדיקה נשלחה",
     "testFailed": "שליחת התראת הבדיקה נכשלה"
   },
+  "indicator": {
+    "newInStock": "חדש במלאי"
+  },
   "calendar": {
     "title": "לוח שנה",
     "timeline": "ציר זמן",
@@ -418,6 +421,7 @@
     "nextWeek": "שבוע הבא",
     "later": "בהמשך",
     "noItems": "אין פריטים",
-    "legend": "מקרא"
+    "legend": "מקרא",
+    "selectedCount": "{{count}} ריאגנטים בתאריך זה"
   }
 }

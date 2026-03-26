@@ -9,7 +9,10 @@ interface RegisterFormProps {
   onSwitchToLogin: () => void;
 }
 
-export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
+export function RegisterForm({
+  onSuccess,
+  onSwitchToLogin,
+}: RegisterFormProps) {
   const { t } = useTranslation();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -40,7 +43,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       });
       onSuccess(user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.unexpectedError"));
+      setError(
+        err instanceof Error ? err.message : t("errors.unexpectedError"),
+      );
     } finally {
       setLoading(false);
     }
@@ -48,12 +53,17 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
   return (
     <div className="max-w-md w-full bg-card border rounded-2xl p-8 shadow-sm">
+      <div className="flex justify-center mb-4">
+        <img
+          src="/logo-icon-v2.png"
+          alt="Expiry Alert"
+          className={`h-16 w-16 object-contain ${loading ? "logo-thinking" : "logo-entrance"}`}
+        />
+      </div>
       <h1 className="text-2xl font-bold mb-2">{t("auth.register")}</h1>
       <p className="text-muted-foreground mb-6">{t("auth.signInSubtitle")}</p>
 
-      {error && (
-        <div className="mb-4 text-sm text-destructive">{error}</div>
-      )}
+      {error && <div className="mb-4 text-sm text-destructive">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
@@ -87,7 +97,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           />
         </div>
         <div>
-          <label className="text-sm font-medium">{t("auth.phoneOptional")}</label>
+          <label className="text-sm font-medium">
+            {t("auth.phoneOptional")}
+          </label>
           <Input
             type="tel"
             value={phone}
@@ -107,7 +119,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           />
         </div>
         <div>
-          <label className="text-sm font-medium">{t("auth.confirmPassword")}</label>
+          <label className="text-sm font-medium">
+            {t("auth.confirmPassword")}
+          </label>
           <Input
             type="password"
             value={confirmPassword}

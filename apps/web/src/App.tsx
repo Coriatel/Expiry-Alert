@@ -152,8 +152,15 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">{t("auth.loading")}</div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <img
+          src="/logo-icon-v2.png"
+          alt="Expiry Alert"
+          className="h-20 w-20 object-contain logo-entrance"
+        />
+        <div className="text-muted-foreground splash-text">
+          {t("auth.loading")}
+        </div>
       </div>
     );
   }
@@ -184,7 +191,10 @@ function App() {
   }
 
   // Authenticated but needs team
-  if (hasPendingJoinRequest || (!teamApproved && authScreen === "pending-approval")) {
+  if (
+    hasPendingJoinRequest ||
+    (!teamApproved && authScreen === "pending-approval")
+  ) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <PendingApproval
@@ -310,7 +320,7 @@ function App() {
                   <img
                     src="/logo-icon-v2.png"
                     alt="Expiry Alert"
-                    className="h-8 w-8 object-contain"
+                    className="h-8 w-8 object-contain logo-entrance"
                   />
                   <h1 className="text-xl md:text-2xl font-bold truncate">
                     {t("app.title")}
@@ -339,9 +349,7 @@ function App() {
                       {t("nav.archive")}
                     </Button>
                     <Button
-                      variant={
-                        currentPage === "messages" ? "default" : "ghost"
-                      }
+                      variant={currentPage === "messages" ? "default" : "ghost"}
                       onClick={() => navigateTo("messages")}
                       className="flex items-center gap-2"
                     >

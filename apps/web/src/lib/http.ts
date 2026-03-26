@@ -5,6 +5,7 @@ type ApiErrorPayload = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+export const AUTH_EXPIRED_EVENT = "expiry-alert:auth-expired";
 
 function tryParseJson(text: string, contentType: string): unknown | null {
   if (!text.trim()) return null;
@@ -78,6 +79,15 @@ export async function apiFetch<T>(
     ...options,
     headers,
   });
+
+  if (
+    response.status === 401 &&
+    typeof window !== "undefined" &&
+    path !== "/api/auth/login" &&
+    path !== "/api/auth/register"
+  ) {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
 
   return parseApiResponse<T>(response);
 }

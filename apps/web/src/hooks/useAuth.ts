@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchMe, logout, type AuthUser } from '@/lib/auth';
+import { AUTH_EXPIRED_EVENT } from '@/lib/http';
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -35,6 +36,19 @@ export function useAuth() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setError(null);
+      setLoading(false);
+      setUser(null);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    };
+  }, []);
 
   const hasPendingJoinRequest = Boolean(user?.pending_join_request);
   const teamApproved = user?.team_approved !== false;

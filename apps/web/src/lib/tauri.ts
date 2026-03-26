@@ -73,6 +73,20 @@ export async function restoreReagent(id: number): Promise<void> {
   await apiFetch(`/api/reagents/${id}/restore`, { method: "POST" });
 }
 
+export async function duplicateReagent(
+  originalId: number,
+  data: ReagentFormData,
+): Promise<number> {
+  const result = await apiFetch<{ id: number }>(
+    `/api/reagents/${originalId}/duplicate`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+  return result.id;
+}
+
 // General notes operations
 export async function getGeneralNotes(): Promise<GeneralNote[]> {
   return apiFetch("/api/notes");
@@ -223,6 +237,8 @@ export type UserMessage = {
   };
   title: string | null;
   body: string;
+  parent_message: number | null;
+  reply_count: number;
   created_at: string | null;
   read_at: string | null;
   recipient_count?: number;
@@ -358,6 +374,7 @@ export async function getUnreadMessageCount(): Promise<number> {
 export async function sendMessage(input: {
   scope: MessageScope;
   recipientUserId?: number;
+  parentMessageId?: number;
   title?: string;
   body: string;
   reagentIds?: number[];
@@ -367,6 +384,13 @@ export async function sendMessage(input: {
     body: JSON.stringify(input),
   });
   return response.id;
+}
+
+export async function getMessageReplies(messageId: number): Promise<UserMessage[]> {
+  const response = await apiFetch<{ replies: UserMessage[] }>(
+    `/api/messages/${messageId}/replies`,
+  );
+  return response.replies ?? [];
 }
 
 export async function markMessageAsRead(messageId: number): Promise<void> {
@@ -390,14 +414,20 @@ export async function reviewTeamJoinRequest(
   return response.status;
 }
 
-export async function archiveMessage(messageId: number, isSender: boolean = false): Promise<void> {
+export async function archiveMessage(
+  messageId: number,
+  isSender: boolean = false,
+): Promise<void> {
   await apiFetch(`/api/messages/${messageId}/archive`, {
     method: "POST",
     body: JSON.stringify({ isSender }),
   });
 }
 
-export async function deleteMessage(messageId: number, isSender: boolean = false): Promise<void> {
+export async function deleteMessage(
+  messageId: number,
+  isSender: boolean = false,
+): Promise<void> {
   await apiFetch(`/api/messages/${messageId}/delete`, {
     method: "POST",
     body: JSON.stringify({ isSender }),

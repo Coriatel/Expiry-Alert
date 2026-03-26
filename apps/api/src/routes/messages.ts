@@ -14,6 +14,7 @@ import {
   getMessageRecipientForUser,
   isMessageVisibleToViewer,
   listInboxMessagesForUser,
+  listRepliesForMessage,
   listSentMessagesForUser,
   markMessageRead,
   type MessageScopeFilter,
@@ -78,12 +79,13 @@ const createMessageSchema = z
   .object({
     scope: z.enum(["private", "team", "system"]),
     recipientUserId: z.coerce.number().int().positive().optional(),
+    parentMessageId: z.coerce.number().int().positive().optional(),
     title: z.string().trim().max(120).optional(),
     body: z.string().trim().min(1).max(2000),
     reagentIds: z.array(z.coerce.number().int().positive()).max(25).optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.scope === "private" && value.recipientUserId == null) {
+    if (value.scope === "private" && value.recipientUserId == null && value.parentMessageId == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["recipientUserId"],
@@ -108,11 +110,26 @@ messagesRouter.post(
     const currentTeamId = getTeamId(req) ?? null;
     const isSystemAdmin = isSystemAdminEmail(user.email);
 
-    if (parsed.data.scope === "system" && !isSystemAdmin) {
+    // When replying, validate and inherit from parent message
+    let parentMessage = null;
+    if (parsed.data.parentMessageId) {
+      parentMessage = await getMessageById(parsed.data.parentMessageId);
+      if (!parentMessage) {
+        return res.status(404).json({ error: "Parent message not found" });
+      }
+      if (!isMessageVisibleToViewer(parentMessage, currentTeamId)) {
+        return res.status(404).json({ error: "Parent message not found" });
+      }
+    }
+
+    // For replies, use the parent's scope if not explicitly overridden
+    const effectiveScope = parentMessage ? parentMessage.scope : parsed.data.scope;
+
+    if (effectiveScope === "system" && !isSystemAdmin) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    if (parsed.data.scope !== "system" && currentTeamId == null) {
+    if (effectiveScope !== "system" && currentTeamId == null) {
       return res.status(400).json({ error: "Missing team" });
     }
 
@@ -128,11 +145,14 @@ messagesRouter.post(
 
     let recipientUserIds: number[] = [];
 
-    if (parsed.data.scope === "private" || parsed.data.scope === "team") {
+    if (effectiveScope === "private" || effectiveScope === "team") {
       const memberships = await listMembershipsByTeam(currentTeamId!);
 
-      if (parsed.data.scope === "private") {
-        const recipientUserId = parsed.data.recipientUserId!;
+      if (effectiveScope === "private") {
+        // For private replies, send to the original sender
+        const recipientUserId = parentMessage
+          ? parentMessage.sender
+          : parsed.data.recipientUserId!;
         if (!canSendPrivateToUser(memberships, user.id, recipientUserId)) {
           return res
             .status(403)
@@ -140,6 +160,7 @@ messagesRouter.post(
         }
         recipientUserIds = [recipientUserId];
       } else {
+        // For team replies, broadcast to all team members (same as team message)
         recipientUserIds = [...new Set(
           memberships
             .filter((membership) => membership.status !== "suspended")
@@ -176,17 +197,42 @@ messagesRouter.post(
     }
 
     const message = await createMessage({
-      scope: parsed.data.scope,
+      scope: effectiveScope,
       teamId: currentTeamId,
       senderId: user.id,
       title: parsed.data.title,
       body: parsed.data.body,
+      parentMessageId: parsed.data.parentMessageId,
     });
 
     await createMessageRecipientRows(message.id, recipientUserIds);
     await createMessageReagentRows(message.id, attachedReagents);
 
     return res.status(201).json({ id: message.id });
+  }),
+);
+
+messagesRouter.get(
+  "/:id/replies",
+  asyncHandler(async (req, res) => {
+    const user = req.user as Express.User | undefined;
+    if (!user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+    const messageId = Number(req.params.id);
+    if (!Number.isFinite(messageId)) {
+      return res.status(400).json({ error: "Invalid message" });
+    }
+
+    const message = await getMessageById(messageId);
+    if (!message) return res.status(404).json({ error: "Message not found" });
+
+    const currentTeamId = getTeamId(req) ?? null;
+    if (!isMessageVisibleToViewer(message, currentTeamId)) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    const replies = await listRepliesForMessage(messageId, currentTeamId, user.id);
+    return res.json({ replies });
   }),
 );
 

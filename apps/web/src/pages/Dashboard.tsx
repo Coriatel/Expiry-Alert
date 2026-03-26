@@ -26,16 +26,16 @@ import { useStore } from "@/store/store";
 import { useToast } from "@/components/ui/Toast";
 import {
   getActiveReagents,
-  addReagent,
   addReagentsBulk,
   updateReagent,
   deleteReagent,
   deleteReagentsBulk,
   archiveReagent,
   archiveReagentsBulk,
-    getExpiringReagents,
+  getExpiringReagents,
   snoozeNotification,
   dismissNotification,
+  duplicateReagent,
 } from "@/lib/tauri";
 import { getExpiryStatus, getDaysUntilExpiry } from "@/lib/utils";
 import type { Reagent, ReagentFormData } from "@/types";
@@ -47,6 +47,10 @@ interface ConfirmState {
   message: string;
   onConfirm: () => void;
   variant: "danger" | "warning" | "default";
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message === "Unauthorized";
 }
 
 export function Dashboard() {
@@ -113,7 +117,7 @@ export function Dashboard() {
         setExpiringReagents(expiringData);
       } catch (error) {
         console.error("Failed to load data:", error);
-        if (!background) {
+        if (!background && !isUnauthorizedError(error)) {
           showToast(t("errors.loadFailed"), "error");
         }
       } finally {
@@ -138,7 +142,9 @@ export function Dashboard() {
       const data = await getExpiringReagents();
       setExpiringReagents(data);
     } catch (error) {
-      console.error("Failed to load expiring reagents:", error);
+      if (!isUnauthorizedError(error)) {
+        console.error("Failed to load expiring reagents:", error);
+      }
     }
   };
 
@@ -227,8 +233,11 @@ export function Dashboard() {
     setDuplicatingReagent(reagent);
   };
 
-  const handleDuplicateSave = async (data: ReagentFormData) => {
-    await addReagent(data);
+  const handleDuplicateSave = async (
+    data: ReagentFormData,
+    originalId: number,
+  ) => {
+    await duplicateReagent(originalId, data);
     await loadData();
     showToast(t("success.reagentDuplicated"), "success");
   };
@@ -310,7 +319,6 @@ export function Dashboard() {
     }
   };
 
-  
   const handleSnooze = async (reagentId: number, days: number) => {
     try {
       await snoozeNotification(reagentId, days);
@@ -436,8 +444,6 @@ export function Dashboard() {
           )}
         </div>
       </div>
-
-      
 
       {/* Add Button */}
       {!showBulkAdd && (

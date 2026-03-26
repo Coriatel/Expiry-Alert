@@ -21,6 +21,7 @@ import {
   updateUser,
   verifyUserPassword,
 } from "../services/users.js";
+import { listReagents } from "../services/reagents.js";
 import {
   createJoinRequest,
   getPendingJoinRequestByUserAndTeam,
@@ -54,6 +55,41 @@ type SessionAuthUser = ReturnType<typeof toAuthUser> & {
   } | null;
 };
 
+async function pickPreferredTeamId(
+  activeMemberships: Awaited<ReturnType<typeof listMembershipsByUser>>,
+  requestedTeamId: number | null,
+) {
+  const teamIds = activeMemberships
+    .map((membership) => membership.team)
+    .filter((teamId): teamId is number => Number.isFinite(teamId));
+
+  if (teamIds.length === 0) {
+    return null;
+  }
+
+  const activeReagentCount = async (teamId: number) => {
+    const reagents = await listReagents(teamId);
+    return reagents.filter((reagent) => !reagent.is_archived).length;
+  };
+
+  if (requestedTeamId && teamIds.includes(requestedTeamId)) {
+    if ((await activeReagentCount(requestedTeamId)) > 0) {
+      return requestedTeamId;
+    }
+  }
+
+  for (const teamId of teamIds) {
+    if (teamId === requestedTeamId) continue;
+    if ((await activeReagentCount(teamId)) > 0) {
+      return teamId;
+    }
+  }
+
+  return requestedTeamId && teamIds.includes(requestedTeamId)
+    ? requestedTeamId
+    : teamIds[0];
+}
+
 async function buildSessionAuthUser(
   req: Parameters<typeof requireAuth>[0],
   userId: number,
@@ -73,8 +109,9 @@ async function buildSessionAuthUser(
     teamId = null;
   }
 
-  if (!teamId && activeMemberships[0]?.team) {
-    teamId = activeMemberships[0].team;
+  const preferredTeamId = await pickPreferredTeamId(activeMemberships, teamId);
+  if (preferredTeamId && preferredTeamId !== teamId) {
+    teamId = preferredTeamId;
     req.session.teamId = teamId;
   }
 
@@ -485,6 +522,14 @@ authRouter.post("/logout", requireAuth, (req, res, next) => {
 authRouter.get(
   "/me",
   asyncHandler(async (req, res) => {
+    delete req.headers["if-none-match"];
+    delete req.headers["if-modified-since"];
+    res.set({
+      "Cache-Control": "private, no-store, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
+    });
+
     if (!(req.isAuthenticated && req.isAuthenticated()) || !req.user) {
       return res.json(null);
     }

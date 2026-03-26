@@ -410,6 +410,9 @@
     "testSent": "Test notification sent",
     "testFailed": "Failed to send a test notification"
   },
+  "indicator": {
+    "newInStock": "New in stock"
+  },
   "calendar": {
     "title": "Calendar",
     "timeline": "Timeline",
@@ -418,6 +421,7 @@
     "nextWeek": "Next Week",
     "later": "Later",
     "noItems": "No items",
-    "legend": "Legend"
+    "legend": "Legend",
+    "selectedCount": "{{count}} reagents on this date"
   }
 }

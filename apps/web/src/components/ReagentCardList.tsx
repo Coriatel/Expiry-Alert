@@ -1,11 +1,12 @@
-import { useTranslation } from 'react-i18next';
-import { CheckSquare, Square } from 'lucide-react';
-import { ReagentCard } from '@/components/ReagentCard';
-import type { Reagent } from '@/types';
+import { useTranslation } from "react-i18next";
+import { CheckSquare, Square } from "lucide-react";
+import { ReagentCard } from "@/components/ReagentCard";
+import type { Reagent } from "@/types";
 
 interface ReagentCardListProps {
   reagents: Reagent[];
   onEdit: (reagent: Reagent) => void;
+  onDuplicate?: (reagent: Reagent) => void;
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
   selectedIds: number[];
@@ -16,6 +17,7 @@ interface ReagentCardListProps {
 export function ReagentCardList({
   reagents,
   onEdit,
+  onDuplicate,
   onDelete,
   onArchive,
   selectedIds,
@@ -27,7 +29,7 @@ export function ReagentCardList({
   if (reagents.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        {t('dashboard.noReagents')}
+        {t("dashboard.noReagents")}
       </div>
     );
   }
@@ -44,9 +46,11 @@ export function ReagentCardList({
         ) : (
           <Square className="h-4 w-4" />
         )}
-        {t('table.selectAll')}
+        {t("table.selectAll")}
         {selectedIds.length > 0 && (
-          <span className="text-xs">({t('table.selected', { count: selectedIds.length })})</span>
+          <span className="text-xs">
+            ({t("table.selected", { count: selectedIds.length })})
+          </span>
         )}
       </button>
 
@@ -58,6 +62,7 @@ export function ReagentCardList({
           isSelected={selectedIds.includes(reagent.id)}
           onToggleSelect={onToggleSelect}
           onEdit={onEdit}
+          onDuplicate={onDuplicate}
           onDelete={onDelete}
           onArchive={onArchive}
         />

@@ -22,7 +22,13 @@
     <title>Reagent Expiry Tracker</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-React splash (removed once React mounts) -->
+      <div id="splash" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;gap:16px">
+        <img src="/logo-icon-v2.png" alt="" width="80" height="80" style="animation:splashPulse 1.2s ease-in-out infinite" />
+        <style>@keyframes splashPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:.85}}</style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
