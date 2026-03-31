@@ -24,6 +24,9 @@ export type ReagentRecord = {
   date_created: string;
   date_updated: string;
   quantity?: string | null;
+  supplier_id?: number | null;
+  supplier_name?: string | null;
+  catalog_reagent_id?: number | null;
 };
 
 const collection = config.directus.collections.reagents as any;
