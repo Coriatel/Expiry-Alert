@@ -5,6 +5,8 @@
   "nav": {
     "dashboard": "לוח בקרה",
     "archive": "ארכיון",
+    "batchHistory": "היסטוריית אצוות",
+    "duplicationHistory": "היסטוריית שכפולים",
     "messages": "הודעות",
     "settings": "הגדרות"
   },
@@ -423,5 +425,68 @@
     "noItems": "אין פריטים",
     "legend": "מקרא",
     "selectedCount": "{{count}} ריאגנטים בתאריך זה"
+  },
+  "batchHistory": {
+    "title": "היסטוריית אצוות",
+    "destructionDate": "תאריך השמדה",
+    "reagentName": "שם ריאגנט",
+    "supplier": "ספק",
+    "lotNumber": "מספר אצווה",
+    "expiryDate": "תאריך תפוגה",
+    "quantityOriginal": "כמות מקורית",
+    "quantityDestroyed": "כמות שהושמדה",
+    "performedBy": "בוצע ע\"י",
+    "destroyedOnly": "אצוות שהושמדו בלבד",
+    "lastMonth": "חודש אחרון",
+    "previousMonth": "חודש קודם",
+    "last3Months": "3 חודשים",
+    "lastHalfYear": "חצי שנה",
+    "lastYear": "שנה אחרונה",
+    "customRange": "טווח מותאם",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "noRecords": "אין רשומות"
+  },
+  "duplicationHistory": {
+    "title": "היסטוריית שכפולים",
+    "receivedDate": "תאריך קבלה",
+    "reagentName": "שם ריאגנט",
+    "supplier": "ספק",
+    "lotNumber": "מספר אצווה",
+    "expiryDate": "תאריך תפוגה",
+    "quantity": "כמות",
+    "performedBy": "בוצע ע\"י",
+    "noRecords": "אין רשומות"
+  },
+  "destruction": {
+    "title": "השמדה",
+    "question": "המוצר פג תוקף. האם נשארו במלאי יחידות שיש להשמיד?",
+    "unitsDestroyed": "כמות שהושמדה",
+    "noneDestroyed": "לא הושמדו",
+    "confirm": "אישור השמדה"
+  },
+  "newShipment": {
+    "title": "משלוח חדש",
+    "sameQuantity": "האם זו אותה כמות?",
+    "lotNumber": "מספר אצווה",
+    "expiryDate": "תאריך תפוגה",
+    "quantity": "כמות"
+  },
+  "catalog": {
+    "supplier": "ספק",
+    "selectSupplier": "בחר ספק",
+    "selectReagent": "בחר ריאגנט",
+    "addSupplier": "הוסף ספק",
+    "addReagent": "הוסף ריאגנט לקטלוג",
+    "deleteSupplier": "מחק ספק",
+    "deleteReagent": "מחק ריאגנט",
+    "deleteSupplierConfirm": "מחיקת ספק תמחק גם את כל הריאגנטים שלו. להמשיך?",
+    "manageCatalog": "ניהול קטלוג"
+  },
+  "import": {
+    "title": "ייבוא לצוות אחר",
+    "copyTo": "העתק ל-{{team}}",
+    "confirmMessage": "להעתיק {{count}} ריאגנטים ל-{{team}}?",
+    "success": "הועתקו {{count}} ריאגנטים בהצלחה"
   }
 }

@@ -5,6 +5,8 @@
   "nav": {
     "dashboard": "Dashboard",
     "archive": "Archive",
+    "batchHistory": "Batch History",
+    "duplicationHistory": "Duplication History",
     "messages": "Messages",
     "settings": "Settings"
   },
@@ -423,5 +425,68 @@
     "noItems": "No items",
     "legend": "Legend",
     "selectedCount": "{{count}} reagents on this date"
+  },
+  "batchHistory": {
+    "title": "Batch History",
+    "destructionDate": "Destruction Date",
+    "reagentName": "Reagent Name",
+    "supplier": "Supplier",
+    "lotNumber": "Lot Number",
+    "expiryDate": "Expiry Date",
+    "quantityOriginal": "Original Quantity",
+    "quantityDestroyed": "Quantity Destroyed",
+    "performedBy": "Performed By",
+    "destroyedOnly": "Destroyed batches only",
+    "lastMonth": "Last Month",
+    "previousMonth": "Previous Month",
+    "last3Months": "3 Months",
+    "lastHalfYear": "Half Year",
+    "lastYear": "Last Year",
+    "customRange": "Custom Range",
+    "from": "From",
+    "to": "To",
+    "noRecords": "No records"
+  },
+  "duplicationHistory": {
+    "title": "Duplication History",
+    "receivedDate": "Date Received",
+    "reagentName": "Reagent Name",
+    "supplier": "Supplier",
+    "lotNumber": "Lot Number",
+    "expiryDate": "Expiry Date",
+    "quantity": "Quantity",
+    "performedBy": "Performed By",
+    "noRecords": "No records"
+  },
+  "destruction": {
+    "title": "Destruction",
+    "question": "Product expired. Are there remaining units in stock to destroy?",
+    "unitsDestroyed": "Units Destroyed",
+    "noneDestroyed": "None Destroyed",
+    "confirm": "Confirm Destruction"
+  },
+  "newShipment": {
+    "title": "New Shipment",
+    "sameQuantity": "Is this the same quantity?",
+    "lotNumber": "Lot Number",
+    "expiryDate": "Expiry Date",
+    "quantity": "Quantity"
+  },
+  "catalog": {
+    "supplier": "Supplier",
+    "selectSupplier": "Select Supplier",
+    "selectReagent": "Select Reagent",
+    "addSupplier": "Add Supplier",
+    "addReagent": "Add Reagent to Catalog",
+    "deleteSupplier": "Delete Supplier",
+    "deleteReagent": "Delete Reagent",
+    "deleteSupplierConfirm": "Deleting supplier will also delete all its reagents. Continue?",
+    "manageCatalog": "Manage Catalog"
+  },
+  "import": {
+    "title": "Import to Other Team",
+    "copyTo": "Copy to {{team}}",
+    "confirmMessage": "Copy {{count}} reagents to {{team}}?",
+    "success": "Successfully copied {{count}} reagents"
   }
 }
