@@ -6,6 +6,7 @@ import {
   Menu,
 } from "lucide-react";
 import { Dashboard } from "@/pages/Dashboard";
+import { BatchHistory } from "@/pages/BatchHistory";
 import { Messages } from "@/pages/Messages";
 import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
@@ -419,14 +420,10 @@ function App() {
               {currentPage === "dashboard" ? (
                 <Dashboard />
               ) : currentPage === "batch-history" ? (
-                <div className="container mx-auto p-6">
-                  <h1 className="text-2xl font-bold">
-                    {t("batchHistory.title")}
-                  </h1>
-                  <p className="text-muted-foreground mt-2">
-                    {t("batchHistory.noRecords")}
-                  </p>
-                </div>
+                <BatchHistory
+                  teamName={currentTeamName}
+                  userName={userLabel}
+                />
               ) : currentPage === "duplication-history" ? (
                 <div className="container mx-auto p-6">
                   <h1 className="text-2xl font-bold">

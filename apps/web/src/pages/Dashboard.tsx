@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Plus,
   Trash2,
-  Archive,
+  Flame,
   Printer,
   Calendar,
   ChevronDown,
@@ -16,6 +16,7 @@ import { ReagentCardList } from "@/components/ReagentCardList";
 import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
+import { DestructionDialog } from "@/components/DestructionDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
@@ -30,8 +31,8 @@ import {
   updateReagent,
   deleteReagent,
   deleteReagentsBulk,
-  archiveReagent,
   archiveReagentsBulk,
+  destroyReagent,
   getExpiringReagents,
   snoozeNotification,
   dismissNotification,
@@ -63,6 +64,9 @@ export function Dashboard() {
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
   const [duplicatingReagent, setDuplicatingReagent] = useState<Reagent | null>(
+    null,
+  );
+  const [destroyingReagent, setDestroyingReagent] = useState<Reagent | null>(
     null,
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -290,14 +294,32 @@ export function Dashboard() {
     });
   };
 
-  const handleArchive = async (id: number) => {
+  const handleDestroy = (reagent: Reagent) => {
+    setDestroyingReagent(reagent);
+  };
+
+  const handleDestroyConfirm = async (
+    reagentId: number,
+    quantityDestroyed: number,
+  ) => {
+    const reagent = reagents.find((r) => r.id === reagentId);
+    if (!reagent) return;
     try {
-      await archiveReagent(id);
+      await destroyReagent({
+        reagent_id: reagentId,
+        reagent_name: reagent.name,
+        supplier_name: reagent.supplier_name ?? undefined,
+        lot_number: reagent.lot_number ?? undefined,
+        expiry_date: reagent.expiry_date,
+        quantity_original: reagent.quantity ?? undefined,
+        quantity_destroyed: quantityDestroyed,
+      });
+      setDestroyingReagent(null);
       await loadData();
       clearSelection();
       showToast(t("success.reagentArchived"), "success");
     } catch (error) {
-      console.error("Failed to archive reagent:", error);
+      console.error("Failed to destroy reagent:", error);
       showToast(t("errors.archiveFailed"), "error");
     }
   };
@@ -428,7 +450,7 @@ export function Dashboard() {
                 disabled={isLoading}
                 className="print:hidden"
               >
-                <Archive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkArchive")} ({selectedReagentIds.length})
               </Button>
               <Button
@@ -489,7 +511,10 @@ export function Dashboard() {
             onEdit={handleEdit}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
-            onArchive={handleArchive}
+            onArchive={(id) => {
+              const r = reagents.find((x) => x.id === id);
+              if (r) handleDestroy(r);
+            }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
@@ -500,7 +525,10 @@ export function Dashboard() {
             onEdit={handleEdit}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
-            onArchive={handleArchive}
+            onArchive={(id) => {
+              const r = reagents.find((x) => x.id === id);
+              if (r) handleDestroy(r);
+            }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
@@ -515,7 +543,10 @@ export function Dashboard() {
           onEdit={handleEdit}
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
-          onArchive={handleArchive}
+          onArchive={(id) => {
+            const r = reagents.find((x) => x.id === id);
+            if (r) handleDestroy(r);
+          }}
           selectedIds={selectedReagentIds}
           onToggleSelect={toggleReagentSelection}
           onSelectAll={handleSelectAll}
@@ -538,6 +569,14 @@ export function Dashboard() {
         open={duplicatingReagent !== null}
         onClose={() => setDuplicatingReagent(null)}
         onSave={handleDuplicateSave}
+      />
+
+      {/* Destruction Dialog */}
+      <DestructionDialog
+        reagent={destroyingReagent}
+        open={destroyingReagent !== null}
+        onClose={() => setDestroyingReagent(null)}
+        onConfirm={handleDestroyConfirm}
       />
 
       {/* Confirm Dialog */}

@@ -116,7 +116,8 @@
     "bulkArchive": "העבר לארכיון",
     "retry": "נסה שוב",
     "print": "הדפס",
-    "duplicate": "שכפל"
+    "duplicate": "שכפל",
+    "search": "חפש"
   },
   "form": {
     "name": "שם",
