@@ -321,6 +321,7 @@
     "addNoteFailed": "שגיאה בהוספת ההערה. נא לנסות שוב.",
     "deleteNoteFailed": "שגיאה במחיקת ההערה. נא לנסות שוב.",
     "snoozeFailed": "שגיאה בדחיית ההתראה. נא לנסות שוב.",
+    "importFailed": "שגיאה בייבוא הריאגנטים. נא לנסות שוב.",
     "somethingWentWrong": "משהו השתבש",
     "unexpectedError": "אירעה שגיאה בלתי צפויה. נא לנסות שוב.",
     "technicalDetails": "פרטים טכניים"

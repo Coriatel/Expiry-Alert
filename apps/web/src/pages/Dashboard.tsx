@@ -37,7 +37,10 @@ import {
   snoozeNotification,
   dismissNotification,
   duplicateReagent,
+  importReagentsToTeam,
+  getTeams,
 } from "@/lib/tauri";
+import type { TeamSummary } from "@/lib/tauri";
 import { getExpiryStatus, getDaysUntilExpiry } from "@/lib/utils";
 import type { Reagent, ReagentFormData } from "@/types";
 import type { SortingState } from "@tanstack/react-table";
@@ -54,7 +57,11 @@ function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message === "Unauthorized";
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  teamName?: string;
+}
+
+export function Dashboard({ teamName }: DashboardProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const isMobile = useIsMobile();
@@ -77,6 +84,9 @@ export function Dashboard() {
     onConfirm: () => {},
     variant: "default",
   });
+
+  const [teams, setTeams] = useState<TeamSummary[]>([]);
+  const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
 
   const {
     reagents,
@@ -140,6 +150,49 @@ export function Dashboard() {
     }, 15000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  // Load teams for import feature
+  useEffect(() => {
+    getTeams()
+      .then((data) => {
+        setTeams(data.teams);
+        setCurrentTeamId(data.currentTeamId);
+      })
+      .catch(console.error);
+  }, []);
+
+  const otherTeams = useMemo(
+    () => teams.filter((team) => team.id !== currentTeamId),
+    [teams, currentTeamId],
+  );
+
+  const handleImportToTeam = (team: TeamSummary) => {
+    setConfirmState({
+      open: true,
+      title: t("import.title"),
+      message: t("import.confirmMessage", {
+        count: selectedReagentIds.length,
+        team: team.name,
+      }),
+      variant: "default",
+      onConfirm: async () => {
+        try {
+          const result = await importReagentsToTeam(
+            team.id,
+            selectedReagentIds,
+          );
+          clearSelection();
+          showToast(
+            t("import.success", { count: result.copied }),
+            "success",
+          );
+        } catch (error) {
+          console.error("Failed to import:", error);
+          showToast(t("errors.importFailed") || "Import failed", "error");
+        }
+      },
+    });
+  };
 
   const loadExpiringReagents = async () => {
     try {
@@ -401,6 +454,7 @@ export function Dashboard() {
         reagents={expiringReagents}
         onSnooze={handleSnooze}
         onDismiss={handleDismiss}
+        teamName={teamName}
       />
 
       {/* Expiry Calendar & Timeline */}
@@ -462,6 +516,17 @@ export function Dashboard() {
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkDelete")} ({selectedReagentIds.length})
               </Button>
+              {otherTeams.map((team) => (
+                <Button
+                  key={team.id}
+                  variant="outline"
+                  onClick={() => handleImportToTeam(team)}
+                  disabled={isLoading}
+                  className="print:hidden"
+                >
+                  {t("import.copyTo", { team: team.name })}
+                </Button>
+              ))}
             </>
           )}
         </div>

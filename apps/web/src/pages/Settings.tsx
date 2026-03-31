@@ -9,6 +9,7 @@ import {
   ChevronUp,
   Download,
   Link2,
+  List,
   Unlink,
   Users,
   UserPlus,
@@ -16,6 +17,7 @@ import {
   LockKeyhole,
   KeyRound,
   Mail,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -48,6 +50,14 @@ import {
   switchTeam,
   type TeamSummary,
   type GoogleCalendarMode,
+  type Supplier,
+  type ReagentCatalogItem,
+  getSuppliers,
+  createNewSupplier,
+  deleteSupplierById,
+  getReagentCatalog,
+  createReagentCatalogItem,
+  deleteReagentCatalogItem,
 } from "@/lib/tauri";
 import { googleCalendarConnectUrl } from "@/lib/auth";
 import type { Reagent } from "@/types";
@@ -93,6 +103,19 @@ export function Settings() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [googleCalendarOpen, setGoogleCalendarOpen] = useState(false);
   const [calendarExportOpen, setCalendarExportOpen] = useState(false);
+  // Catalog management state
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierReagents, setSupplierReagents] = useState<
+    Record<number, ReagentCatalogItem[]>
+  >({});
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<number>>(
+    new Set(),
+  );
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newReagentName, setNewReagentName] = useState<
+    Record<number, string>
+  >({});
   const showIosIconRefreshNote =
     typeof window !== "undefined" &&
     typeof navigator !== "undefined" &&
@@ -480,6 +503,101 @@ export function Settings() {
 
   const handleConnectGoogleCalendar = () => {
     window.location.href = googleCalendarConnectUrl;
+  };
+
+  // --- Catalog Management Handlers ---
+  const loadSuppliers = useCallback(async () => {
+    try {
+      const data = await getSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      console.error("Failed to load suppliers:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (catalogOpen && suppliers.length === 0) {
+      void loadSuppliers();
+    }
+  }, [catalogOpen, suppliers.length, loadSuppliers]);
+
+  const loadSupplierReagents = useCallback(async (supplierId: number) => {
+    try {
+      const items = await getReagentCatalog(supplierId);
+      setSupplierReagents((prev) => ({ ...prev, [supplierId]: items }));
+    } catch (error) {
+      console.error("Failed to load supplier reagents:", error);
+    }
+  }, []);
+
+  const toggleSupplierExpanded = (id: number) => {
+    setExpandedSuppliers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        void loadSupplierReagents(id);
+      }
+      return next;
+    });
+  };
+
+  const handleAddSupplier = async () => {
+    const name = newSupplierName.trim();
+    if (!name) return;
+    try {
+      await createNewSupplier(name);
+      setNewSupplierName("");
+      await loadSuppliers();
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t("errors.unexpectedError"), "error");
+    }
+  };
+
+  const handleDeleteSupplier = (id: number, _name: string) => {
+    if (!window.confirm(t("catalog.deleteSupplierConfirm"))) return;
+    void (async () => {
+      try {
+        await deleteSupplierById(id);
+        setExpandedSuppliers((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        await loadSuppliers();
+      } catch (error: any) {
+        console.error(error);
+        showToast(error.message || t("errors.unexpectedError"), "error");
+      }
+    })();
+  };
+
+  const handleAddReagent = async (supplierId: number) => {
+    const name = (newReagentName[supplierId] ?? "").trim();
+    if (!name) return;
+    try {
+      await createReagentCatalogItem(name, supplierId);
+      setNewReagentName((prev) => ({ ...prev, [supplierId]: "" }));
+      await loadSupplierReagents(supplierId);
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t("errors.unexpectedError"), "error");
+    }
+  };
+
+  const handleDeleteReagent = async (
+    reagentId: number,
+    supplierId: number,
+  ) => {
+    try {
+      await deleteReagentCatalogItem(reagentId);
+      await loadSupplierReagents(supplierId);
+    } catch (error: any) {
+      console.error(error);
+      showToast(error.message || t("errors.unexpectedError"), "error");
+    }
   };
 
   const handleCalendarExport = async () => {
@@ -1049,6 +1167,122 @@ export function Settings() {
                 )}
               </Button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Catalog Management */}
+      <div className="bg-card border rounded-xl">
+        <button
+          type="button"
+          onClick={() => setCatalogOpen(!catalogOpen)}
+          className="w-full flex items-center justify-between p-6 text-start"
+        >
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <List className="h-5 w-5" />
+            {t("catalog.manageCatalog")}
+          </h2>
+          {catalogOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </button>
+        {catalogOpen && (
+          <div className="px-6 pb-6 space-y-4">
+            {/* Add Supplier Form */}
+            <div className="flex gap-2">
+              <Input
+                placeholder={t("catalog.addSupplier")}
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+              />
+              <Button
+                onClick={handleAddSupplier}
+                disabled={!newSupplierName.trim()}
+              >
+                <Plus className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
+                {t("catalog.addSupplier")}
+              </Button>
+            </div>
+
+            {/* Supplier List with Reagents */}
+            {suppliers.map((supplier) => (
+              <div key={supplier.id} className="border rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50">
+                  <button
+                    type="button"
+                    onClick={() => toggleSupplierExpanded(supplier.id)}
+                    className="flex items-center gap-2 font-medium text-sm"
+                  >
+                    {expandedSuppliers.has(supplier.id) ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    {supplier.name}
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      handleDeleteSupplier(supplier.id, supplier.name)
+                    }
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                {expandedSuppliers.has(supplier.id) && (
+                  <div className="p-3 space-y-2">
+                    {/* Reagents list */}
+                    {(supplierReagents[supplier.id] ?? []).map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span>
+                          {r.name}{" "}
+                          {r.catalog_number ? `(${r.catalog_number})` : ""}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleDeleteReagent(r.id, supplier.id)
+                          }
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    {/* Add reagent form */}
+                    <div className="flex gap-2 pt-2">
+                      <Input
+                        placeholder={t("catalog.addReagent")}
+                        value={newReagentName[supplier.id] ?? ""}
+                        onChange={(e) =>
+                          setNewReagentName((prev) => ({
+                            ...prev,
+                            [supplier.id]: e.target.value,
+                          }))
+                        }
+                        className="text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddReagent(supplier.id)}
+                        disabled={
+                          !(newReagentName[supplier.id] ?? "").trim()
+                        }
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -321,6 +321,7 @@
     "addNoteFailed": "Failed to add note. Please try again.",
     "deleteNoteFailed": "Failed to delete note. Please try again.",
     "snoozeFailed": "Failed to snooze notification. Please try again.",
+    "importFailed": "Failed to import reagents. Please try again.",
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "technicalDetails": "Technical details"

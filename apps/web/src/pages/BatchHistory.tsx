@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PrintHeader } from "@/components/PrintHeader";
 import { getDestructionLog } from "@/lib/tauri";
 import type { DestructionLogEntry } from "@/lib/tauri";
 
@@ -107,11 +108,6 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
   const [sortField, setSortField] = useState<SortField>("destruction_date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // Print timestamp
-  const [printTimestamp, setPrintTimestamp] = useState(() =>
-    new Date().toLocaleString(),
-  );
-
   const loadData = useCallback(
     async (from?: string, to?: string) => {
       setIsLoading(true);
@@ -182,7 +178,6 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
   };
 
   const handlePrint = () => {
-    setPrintTimestamp(new Date().toLocaleString());
     window.print();
   };
 
@@ -213,20 +208,11 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Print header - visible only in print */}
-      <div className="hidden print:block border-b pb-3 mb-4">
-        <div className="flex items-center gap-3">
-          <img src="/logo-icon-v2.png" alt="" className="h-8 w-8" />
-          <div>
-            <h1 className="text-2xl font-bold">
-              {t("batchHistory.title")} - {teamName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {userName} | {printTimestamp}
-            </p>
-            <p className="text-sm text-muted-foreground">{activePeriodLabel}</p>
-          </div>
-        </div>
-      </div>
+      <PrintHeader
+        teamName={teamName}
+        userName={userName}
+        filterLabel={activePeriodLabel}
+      />
 
       {/* Page header */}
       <div className="flex items-center justify-between print:hidden">

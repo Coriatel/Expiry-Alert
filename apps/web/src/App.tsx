@@ -419,7 +419,7 @@ function App() {
             {/* Page content */}
             <main className="flex-1">
               {currentPage === "dashboard" ? (
-                <Dashboard />
+                <Dashboard teamName={currentTeamName} />
               ) : currentPage === "batch-history" ? (
                 <BatchHistory
                   teamName={currentTeamName}
