@@ -105,9 +105,19 @@ export function ReagentCard({
         </div>
       </div>
 
-      {/* Lot number + notes */}
-      {(reagent.lot_number || reagent.notes) && (
+      {/* Supplier, quantity, lot number + notes */}
+      {(reagent.supplier_name || reagent.quantity != null || reagent.lot_number || reagent.notes) && (
         <div className="mt-2 text-sm text-muted-foreground space-y-1">
+          {reagent.supplier_name && (
+            <p>
+              {t("catalog.supplier")}: {reagent.supplier_name}
+            </p>
+          )}
+          {reagent.quantity != null && (
+            <p>
+              {t("newShipment.quantity")}: {reagent.quantity}
+            </p>
+          )}
           {reagent.lot_number && <p>{reagent.lot_number}</p>}
           {reagent.notes && <p className="break-words">{reagent.notes}</p>}
         </div>

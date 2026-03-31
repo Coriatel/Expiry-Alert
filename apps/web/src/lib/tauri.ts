@@ -433,3 +433,129 @@ export async function deleteMessage(
     body: JSON.stringify({ isSender }),
   });
 }
+
+// --- Suppliers ---
+export type Supplier = {
+  id: number;
+  team: number;
+  name: string;
+  short_code?: string | null;
+  is_active: boolean;
+};
+
+export async function getSuppliers(): Promise<Supplier[]> {
+  const res = await apiFetch<{ suppliers: Supplier[] }>("/api/suppliers");
+  return res.suppliers ?? [];
+}
+
+export async function createNewSupplier(name: string, shortCode?: string): Promise<Supplier> {
+  return apiFetch<Supplier>("/api/suppliers", {
+    method: "POST",
+    body: JSON.stringify({ name, short_code: shortCode }),
+  });
+}
+
+export async function deleteSupplierById(id: number): Promise<void> {
+  await apiFetch(`/api/suppliers/${id}`, { method: "DELETE" });
+}
+
+// --- Reagent Catalog ---
+export type ReagentCatalogItem = {
+  id: number;
+  team: number;
+  name: string;
+  catalog_number?: string | null;
+  supplier_id: number;
+  is_active: boolean;
+};
+
+export async function getReagentCatalog(supplierId?: number): Promise<ReagentCatalogItem[]> {
+  const params = supplierId ? `?supplier_id=${supplierId}` : "";
+  const res = await apiFetch<{ items: ReagentCatalogItem[] }>(`/api/reagent-catalog${params}`);
+  return res.items ?? [];
+}
+
+export async function createReagentCatalogItem(
+  name: string,
+  supplierId: number,
+  catalogNumber?: string,
+): Promise<ReagentCatalogItem> {
+  return apiFetch<ReagentCatalogItem>("/api/reagent-catalog", {
+    method: "POST",
+    body: JSON.stringify({ name, supplier_id: supplierId, catalog_number: catalogNumber }),
+  });
+}
+
+export async function deleteReagentCatalogItem(id: number): Promise<void> {
+  await apiFetch(`/api/reagent-catalog/${id}`, { method: "DELETE" });
+}
+
+// --- Destruction Log ---
+export type DestructionLogEntry = {
+  id: number;
+  team: number;
+  reagent_name: string;
+  supplier_name?: string | null;
+  lot_number?: string | null;
+  expiry_date?: string | null;
+  quantity_original?: number | null;
+  quantity_destroyed: number;
+  destroyed_by_name?: string | null;
+  destruction_date: string;
+  notes?: string | null;
+};
+
+export async function getDestructionLog(from?: string, to?: string): Promise<DestructionLogEntry[]> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await apiFetch<{ log: DestructionLogEntry[] }>(`/api/destruction-log${qs}`);
+  return res.log ?? [];
+}
+
+export async function destroyReagent(data: {
+  reagent_id: number;
+  reagent_name: string;
+  supplier_name?: string;
+  lot_number?: string;
+  expiry_date?: string;
+  quantity_original?: number;
+  quantity_destroyed: number;
+  notes?: string;
+}): Promise<void> {
+  await apiFetch("/api/destruction-log", { method: "POST", body: JSON.stringify(data) });
+}
+
+// --- Duplication Log ---
+export type DuplicationLogEntry = {
+  id: number;
+  team: number;
+  reagent_name: string;
+  supplier_name?: string | null;
+  lot_number?: string | null;
+  expiry_date?: string | null;
+  quantity?: number | null;
+  received_by_name?: string | null;
+  received_date: string;
+};
+
+export async function getDuplicationLog(from?: string, to?: string): Promise<DuplicationLogEntry[]> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await apiFetch<{ log: DuplicationLogEntry[] }>(`/api/duplication-log${qs}`);
+  return res.log ?? [];
+}
+
+// --- Import ---
+export async function importReagentsToTeam(
+  targetTeamId: number,
+  reagentIds: number[],
+): Promise<{ copied: number; ids: number[] }> {
+  return apiFetch("/api/import/reagents", {
+    method: "POST",
+    body: JSON.stringify({ targetTeamId, reagentIds }),
+  });
+}

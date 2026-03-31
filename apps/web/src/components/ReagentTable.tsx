@@ -102,6 +102,10 @@ export function ReagentTable({
           </span>
         ),
       }),
+      columnHelper.accessor("supplier_name", {
+        header: t("catalog.supplier"),
+        cell: (info) => info.getValue() || "\u2014",
+      }),
       columnHelper.accessor("category", {
         header: t("table.category"),
         cell: (info) => {
@@ -142,6 +146,13 @@ export function ReagentTable({
       columnHelper.accessor("lot_number", {
         header: t("table.lotNumber"),
         cell: (info) => info.getValue() || "-",
+      }),
+      columnHelper.accessor("quantity", {
+        header: t("newShipment.quantity"),
+        cell: (info) => {
+          const val = info.getValue();
+          return val != null ? val : "\u2014";
+        },
       }),
       columnHelper.accessor("notes", {
         header: t("table.notes"),
