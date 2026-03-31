@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Dashboard } from "@/pages/Dashboard";
 import { BatchHistory } from "@/pages/BatchHistory";
+import { DuplicationHistory } from "@/pages/DuplicationHistory";
 import { Messages } from "@/pages/Messages";
 import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
@@ -425,14 +426,10 @@ function App() {
                   userName={userLabel}
                 />
               ) : currentPage === "duplication-history" ? (
-                <div className="container mx-auto p-6">
-                  <h1 className="text-2xl font-bold">
-                    {t("duplicationHistory.title")}
-                  </h1>
-                  <p className="text-muted-foreground mt-2">
-                    {t("duplicationHistory.noRecords")}
-                  </p>
-                </div>
+                <DuplicationHistory
+                  teamName={currentTeamName}
+                  userName={userLabel}
+                />
               ) : currentPage === "messages" ? (
                 <Messages
                   currentUserId={user.id}
