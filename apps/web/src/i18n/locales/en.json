@@ -4,6 +4,8 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "controlPanel": "Control Panel",
+    "monitoring": "Monitoring",
     "archive": "Archive",
     "batchHistory": "Batch History",
     "duplicationHistory": "Duplication History",
@@ -87,6 +89,7 @@
     "lotNumber": "LOT Number",
     "receivedDate": "Received Date",
     "notes": "Notes",
+    "manufacturerCol": "Manufacturer",
     "actions": "Actions",
     "selectAll": "Select All",
     "selected": "{{count}} selected"
@@ -99,12 +102,16 @@
     "expired": "Expired",
     "expiresToday": "Expires Today",
     "expiresIn": "Expires in {{days}} days",
-    "expiresInOneDay": "Expires in 1 day"
+    "expiresInOneDay": "Expires in 1 day",
+    "inTreatment": "In Treatment"
   },
   "actions": {
     "edit": "Edit",
     "delete": "Delete",
     "archive": "Archive",
+    "destroy": "Destroy",
+    "inTreatment": "Mark In Treatment",
+    "removeInTreatment": "Remove In Treatment",
     "restore": "Restore",
     "save": "Save",
     "saving": "Saving...",
@@ -130,6 +137,10 @@
     "receivedDate": "Received Date",
     "notes": "Notes",
     "notesPlaceholder": "Enter notes",
+    "manufacturer": "Manufacturer",
+    "manufacturerPlaceholder": "e.g. BIORAD",
+    "description": "Material description",
+    "descriptionPlaceholder": "e.g. QC beads",
     "required": "Required field"
   },
   "dialog": {
@@ -483,12 +494,31 @@
     "deleteSupplier": "Delete Supplier",
     "deleteReagent": "Delete Reagent",
     "deleteSupplierConfirm": "Deleting supplier will also delete all its reagents. Continue?",
-    "manageCatalog": "Manage Catalog"
+    "manageCatalog": "Manage Catalog",
+    "importFromCatalog": "Import Reagents from Catalog",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "importSelected": "Import {{count}} Selected",
+    "importSuccess": "Successfully imported {{count}} reagents",
+    "noItemsSelected": "No reagents selected",
+    "importing": "Importing..."
   },
   "import": {
     "title": "Import to Other Team",
     "copyTo": "Copy to {{team}}",
     "confirmMessage": "Copy {{count}} reagents to {{team}}?",
     "success": "Successfully copied {{count}} reagents"
+  },
+  "controlPanel": {
+    "title": "Control Panel",
+    "totalReagents": "Active Reagents",
+    "expired": "Expired",
+    "expiringSoon": "Expiring Soon",
+    "unreadMessages": "Unread Messages",
+    "tasks": "Daily Tasks",
+    "addTask": "Add a task...",
+    "clearCompleted": "Clear completed",
+    "noTasks": "No tasks yet. Add your first task!",
+    "tasksDone": "{{done}} of {{total}} completed"
   }
 }

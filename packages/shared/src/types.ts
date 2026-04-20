@@ -17,6 +17,7 @@ export interface Reagent {
   catalog_reagent_id?: number | null;
   manufacturer?: string | null;
   description?: string | null;
+  in_treatment?: boolean | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Save, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
@@ -29,6 +30,8 @@ const emptyRow = (): BulkRow => ({
   expiryDate: '',
   lotNumber: '',
   notes: '',
+  manufacturer: '',
+  description: '',
 });
 
 export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
@@ -147,7 +150,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
         {rows.map((row, index) => (
           <div
             key={index}
-            className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-background border rounded-lg"
+            className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-7 gap-3 p-4 bg-background border rounded-lg"
           >
             {/* Supplier dropdown */}
             <div>
@@ -218,6 +221,26 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
                   const val = e.target.value ? Number(e.target.value) : undefined;
                   updateField(index, 'quantity', val);
                 }}
+              />
+            </div>
+
+            {/* Manufacturer */}
+            <div>
+              <Input
+                placeholder={t('form.manufacturer')}
+                value={row.manufacturer ?? ''}
+                onChange={(e) => updateField(index, 'manufacturer', e.target.value)}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <Textarea
+                placeholder={t('form.description')}
+                value={row.description ?? ''}
+                onChange={(e) => updateField(index, 'description', e.target.value)}
+                rows={1}
+                className="resize-none"
               />
             </div>
           </div>

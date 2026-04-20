@@ -4,6 +4,8 @@
   },
   "nav": {
     "dashboard": "לוח בקרה",
+    "controlPanel": "לוח בקרה",
+    "monitoring": "מסך מעקב",
     "archive": "ארכיון",
     "batchHistory": "היסטוריית אצוות",
     "duplicationHistory": "היסטוריית שכפולים",
@@ -87,6 +89,7 @@
     "lotNumber": "מספר אצווה",
     "receivedDate": "תאריך קבלה",
     "notes": "הערות",
+    "manufacturerCol": "יצרן",
     "actions": "פעולות",
     "selectAll": "בחר הכל",
     "selected": "{{count}} נבחרו"
@@ -99,12 +102,16 @@
     "expired": "פג תוקף",
     "expiresToday": "פג תוקף היום",
     "expiresIn": "בעוד {{days}} ימים",
-    "expiresInOneDay": "מחר"
+    "expiresInOneDay": "מחר",
+    "inTreatment": "בטיפול"
   },
   "actions": {
     "edit": "ערוך",
     "delete": "מחק",
     "archive": "העבר לארכיון",
+    "destroy": "השמדה",
+    "inTreatment": "סמן בטיפול",
+    "removeInTreatment": "הסר בטיפול",
     "restore": "שחזר",
     "save": "שמור",
     "saving": "שומר...",
@@ -130,6 +137,10 @@
     "receivedDate": "תאריך קבלה",
     "notes": "הערות",
     "notesPlaceholder": "הכנס הערות",
+    "manufacturer": "יצרן",
+    "manufacturerPlaceholder": "למשל: BIORAD",
+    "description": "תיאור חומר",
+    "descriptionPlaceholder": "למשל: כדוריות לבקרת איכות",
     "required": "שדה חובה"
   },
   "dialog": {
@@ -303,8 +314,8 @@
     "reagentUpdated": "הריאגנט עודכן בהצלחה",
     "reagentDeleted": "הריאגנט נמחק בהצלחה",
     "reagentsDeleted": "{{count}} ריאגנטים נמחקו בהצלחה",
-    "reagentArchived": "הריאגנט הועבר לארכיון בהצלחה",
-    "reagentsArchived": "{{count}} ריאגנטים הועברו לארכיון בהצלחה",
+    "reagentArchived": "הריאגנט הושמד בהצלחה",
+    "reagentsArchived": "{{count}} ריאגנטים הושמדו בהצלחה",
     "reagentRestored": "הריאגנט עודכן ושוחזר לפעילים",
     "reagentDuplicated": "הריאגנט שוכפל בהצלחה",
     "noteAdded": "ההערה נוספה בהצלחה",
@@ -483,12 +494,31 @@
     "deleteSupplier": "מחק ספק",
     "deleteReagent": "מחק ריאגנט",
     "deleteSupplierConfirm": "מחיקת ספק תמחק גם את כל הריאגנטים שלו. להמשיך?",
-    "manageCatalog": "ניהול קטלוג"
+    "manageCatalog": "ניהול קטלוג",
+    "importFromCatalog": "ייבוא ריאגנטים מהקטלוג",
+    "selectAll": "בחר הכל",
+    "deselectAll": "בטל הכל",
+    "importSelected": "ייבא {{count}} נבחרים",
+    "importSuccess": "יובאו {{count}} ריאגנטים בהצלחה",
+    "noItemsSelected": "לא נבחרו ריאגנטים",
+    "importing": "מייבא..."
   },
   "import": {
     "title": "ייבוא לצוות אחר",
     "copyTo": "העתק ל-{{team}}",
     "confirmMessage": "להעתיק {{count}} ריאגנטים ל-{{team}}?",
     "success": "הועתקו {{count}} ריאגנטים בהצלחה"
+  },
+  "controlPanel": {
+    "title": "לוח בקרה",
+    "totalReagents": "ריאגנטים פעילים",
+    "expired": "פגי תוקף",
+    "expiringSoon": "פגי תוקף בקרוב",
+    "unreadMessages": "הודעות שלא נקראו",
+    "tasks": "משימות יומיות",
+    "addTask": "הוסף משימה...",
+    "clearCompleted": "נקה שהושלמו",
+    "noTasks": "אין משימות. הוסף את המשימה הראשונה שלך!",
+    "tasksDone": "{{done}} מתוך {{total}} הושלמו"
   }
 }

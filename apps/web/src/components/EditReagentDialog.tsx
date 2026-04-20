@@ -26,6 +26,8 @@ export function EditReagentDialog({ reagent, open, onClose, onSave }: EditReagen
     expiryDate: '',
     lotNumber: '',
     notes: '',
+    manufacturer: '',
+    description: '',
   });
 
   // Update form when reagent changes
@@ -37,6 +39,8 @@ export function EditReagentDialog({ reagent, open, onClose, onSave }: EditReagen
         expiryDate: reagent.expiry_date,
         lotNumber: reagent.lot_number || '',
         notes: reagent.notes || '',
+        manufacturer: reagent.manufacturer || '',
+        description: reagent.description || '',
       });
       setError(null);
     }
@@ -84,7 +88,7 @@ export function EditReagentDialog({ reagent, open, onClose, onSave }: EditReagen
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">{t('form.name')} *</label>
             <Input
@@ -122,6 +126,25 @@ export function EditReagentDialog({ reagent, open, onClose, onSave }: EditReagen
               value={formData.lotNumber}
               onChange={(e) => handleChange('lotNumber', e.target.value)}
               placeholder={t('form.lotNumberPlaceholder')}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('form.manufacturer')}</label>
+            <Input
+              value={formData.manufacturer ?? ''}
+              onChange={(e) => handleChange('manufacturer', e.target.value)}
+              placeholder={t('form.manufacturerPlaceholder')}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium mb-1">{t('form.description')}</label>
+            <Textarea
+              value={formData.description ?? ''}
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder={t('form.descriptionPlaceholder')}
+              rows={2}
             />
           </div>
 

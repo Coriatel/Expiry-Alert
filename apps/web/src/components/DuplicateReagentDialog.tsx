@@ -31,6 +31,8 @@ export function DuplicateReagentDialog({
     expiryDate: "",
     lotNumber: "",
     notes: "",
+    manufacturer: "",
+    description: "",
   });
 
   useEffect(() => {
@@ -44,6 +46,8 @@ export function DuplicateReagentDialog({
         supplier_name: reagent.supplier_name ?? undefined,
         supplier_id: reagent.supplier_id ?? undefined,
         quantity: reagent.quantity ?? undefined,
+        manufacturer: reagent.manufacturer || "",
+        description: reagent.description || "",
       });
       setError(null);
     }
@@ -89,7 +93,7 @@ export function DuplicateReagentDialog({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Reagent name — read-only */}
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">
@@ -157,6 +161,30 @@ export function DuplicateReagentDialog({
               <HelpCircle className="h-4 w-4" />
               {t("newShipment.sameQuantity")}
             </p>
+          </div>
+
+          {/* Manufacturer — pre-filled, editable */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t("form.manufacturer")}
+            </label>
+            <Input
+              value={formData.manufacturer ?? ""}
+              onChange={(e) => handleChange("manufacturer", e.target.value)}
+              placeholder={t("form.manufacturerPlaceholder")}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              {t("form.description")}
+            </label>
+            <Textarea
+              value={formData.description ?? ""}
+              onChange={(e) => handleChange("description", e.target.value)}
+              placeholder={t("form.descriptionPlaceholder")}
+              rows={2}
+            />
           </div>
 
           <div className="col-span-2">
