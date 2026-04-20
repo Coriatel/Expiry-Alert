@@ -17,7 +17,7 @@ import { createDuplicationEntry } from "../services/duplicationLog.js";
 
 export const reagentsRouter = Router();
 
-const reagentSchema = z.object({
+export const reagentSchema = z.object({
   name: z.string().min(1),
   category: z.enum(["reagents", "beads"]),
   expiryDate: z.string().min(1),
@@ -27,7 +27,27 @@ const reagentSchema = z.object({
   supplier_id: z.number().int().optional().nullable(),
   supplier_name: z.string().optional().nullable(),
   quantity: z.number().int().optional().nullable(),
+  manufacturer: z.string().trim().max(255).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
 });
+
+export type ReagentInput = z.infer<typeof reagentSchema>;
+
+export function buildReagentData(input: ReagentInput) {
+  return {
+    name: input.name,
+    category: input.category,
+    expiry_date: input.expiryDate,
+    lot_number: input.lotNumber ?? null,
+    received_date: input.receivedDate ?? null,
+    notes: input.notes ?? null,
+    supplier_id: input.supplier_id ?? null,
+    supplier_name: input.supplier_name ?? null,
+    quantity: input.quantity != null ? String(input.quantity) : null,
+    manufacturer: input.manufacturer ?? null,
+    description: input.description ?? null,
+  };
+}
 
 const bulkSchema = z.object({
   reagents: z.array(reagentSchema),
@@ -89,16 +109,8 @@ reagentsRouter.post("/", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   await createReagent(teamId, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
+    ...buildReagentData(parsed.data),
     is_archived: false,
-    supplier_id: parsed.data.supplier_id ?? null,
-    supplier_name: parsed.data.supplier_name ?? null,
-    quantity: parsed.data.quantity != null ? String(parsed.data.quantity) : null,
   });
 
   res.status(201).json({ status: "created" });
@@ -114,16 +126,8 @@ reagentsRouter.post("/bulk", async (req, res) => {
 
   for (const reagent of parsed.data.reagents) {
     await createReagent(teamId, {
-      name: reagent.name,
-      category: reagent.category,
-      expiry_date: reagent.expiryDate,
-      lot_number: reagent.lotNumber ?? null,
-      received_date: reagent.receivedDate ?? null,
-      notes: reagent.notes ?? null,
+      ...buildReagentData(reagent),
       is_archived: false,
-      supplier_id: reagent.supplier_id ?? null,
-      supplier_name: reagent.supplier_name ?? null,
-      quantity: reagent.quantity != null ? String(reagent.quantity) : null,
     });
   }
 
@@ -152,15 +156,7 @@ reagentsRouter.put("/:id", async (req, res) => {
     current?.is_archived === true && isDateAfter(parsed.data.expiryDate, today);
 
   await updateReagent(id, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
-    supplier_id: parsed.data.supplier_id ?? null,
-    supplier_name: parsed.data.supplier_name ?? null,
-    quantity: parsed.data.quantity != null ? String(parsed.data.quantity) : null,
+    ...buildReagentData(parsed.data),
     ...(shouldRestore ? { is_archived: false } : {}),
   });
 
@@ -221,16 +217,8 @@ reagentsRouter.post("/:id/duplicate", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   const created = await duplicateReagent(teamId, originalId, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
+    ...buildReagentData(parsed.data),
     is_archived: false,
-    supplier_id: parsed.data.supplier_id ?? null,
-    supplier_name: parsed.data.supplier_name ?? null,
-    quantity: parsed.data.quantity != null ? String(parsed.data.quantity) : null,
   });
 
   const user = (req as any).user;
