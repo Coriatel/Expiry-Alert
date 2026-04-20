@@ -15,6 +15,8 @@ export interface Reagent {
   supplier_name?: string | null;
   quantity?: number | null;
   catalog_reagent_id?: number | null;
+  manufacturer?: string | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +45,8 @@ export interface ReagentFormData {
   supplier_id?: number;
   supplier_name?: string;
   quantity?: number;
+  manufacturer?: string | null;
+  description?: string | null;
 }
 
 export type ExpiryStatus = "expired" | "expiring-soon" | "expiring-week" | "ok";
