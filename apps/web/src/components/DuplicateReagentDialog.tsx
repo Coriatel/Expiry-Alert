@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { DateInput } from "@/components/ui/DateInput";
 import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
+import { getSuppliers, type Supplier } from "@/lib/tauri";
+import { normalizeReagentCategory } from "@/lib/reagentCategory";
 import type { Reagent, ReagentFormData } from "@/types";
 
 interface DuplicateReagentDialogProps {
@@ -24,6 +27,7 @@ export function DuplicateReagentDialog({
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [formData, setFormData] = useState<ReagentFormData>({
     name: "",
@@ -39,19 +43,27 @@ export function DuplicateReagentDialog({
     if (reagent) {
       setFormData({
         name: reagent.name,
-        category: reagent.category ?? "reagents",
+        category: normalizeReagentCategory(reagent.category),
         expiryDate: "",
         lotNumber: "",
         notes: reagent.notes || "",
         supplier_name: reagent.supplier_name ?? undefined,
         supplier_id: reagent.supplier_id ?? undefined,
-        quantity: reagent.quantity ?? undefined,
+        quantity: reagent.quantity != null ? Number(reagent.quantity) : undefined,
         manufacturer: reagent.manufacturer || "",
         description: reagent.description || "",
       });
       setError(null);
     }
   }, [reagent]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    getSuppliers()
+      .then(setSuppliers)
+      .catch(() => setSuppliers([]));
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +88,61 @@ export function DuplicateReagentDialog({
 
   const handleChange = (field: keyof ReagentFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  const supplierOptions = [...suppliers];
+  const hasLegacySupplier =
+    !!formData.supplier_name &&
+    !suppliers.some((supplier) => supplier.id === formData.supplier_id) &&
+    !suppliers.some((supplier) => supplier.name === formData.supplier_name);
+
+  if (hasLegacySupplier) {
+    supplierOptions.unshift({
+      id: -1,
+      team: 0,
+      name: formData.supplier_name!,
+      short_code: null,
+      is_active: false,
+    });
+  }
+
+  const supplierValue =
+    formData.supplier_id != null
+      ? String(formData.supplier_id)
+      : hasLegacySupplier && formData.supplier_name
+        ? `legacy:${formData.supplier_name}`
+        : "";
+
+  const handleSupplierChange = (value: string) => {
+    if (!value) {
+      setFormData((prev) => ({
+        ...prev,
+        supplier_id: undefined,
+        supplier_name: undefined,
+      }));
+      setError(null);
+      return;
+    }
+
+    if (value.startsWith("legacy:")) {
+      const legacyName = value.slice("legacy:".length);
+      setFormData((prev) => ({
+        ...prev,
+        supplier_id: undefined,
+        supplier_name: legacyName || undefined,
+      }));
+      setError(null);
+      return;
+    }
+
+    const supplierId = Number(value);
+    const supplier = suppliers.find((item) => item.id === supplierId);
+    setFormData((prev) => ({
+      ...prev,
+      supplier_id: supplier?.id,
+      supplier_name: supplier?.name,
+    }));
     setError(null);
   };
 
@@ -104,17 +171,30 @@ export function DuplicateReagentDialog({
             </div>
           </div>
 
-          {/* Supplier — read-only (if available) */}
-          {reagent?.supplier_name && (
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                {t("duplicationHistory.supplier")}
-              </label>
-              <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm">
-                {reagent.supplier_name}
-              </div>
-            </div>
-          )}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              {t("catalog.supplier")}
+            </label>
+            <Select
+              aria-label={t("catalog.supplier")}
+              value={supplierValue}
+              onChange={(e) => handleSupplierChange(e.target.value)}
+            >
+              <option value="">{t("catalog.selectSupplier")}</option>
+              {supplierOptions.map((supplier) => (
+                <option
+                  key={
+                    supplier.id > 0 ? String(supplier.id) : `legacy:${supplier.name}`
+                  }
+                  value={
+                    supplier.id > 0 ? String(supplier.id) : `legacy:${supplier.name}`
+                  }
+                >
+                  {supplier.name}
+                </option>
+              ))}
+            </Select>
+          </div>
 
           {/* Lot number — empty, user must enter */}
           <div>
@@ -150,12 +230,11 @@ export function DuplicateReagentDialog({
               type="number"
               min={0}
               value={formData.quantity ?? ""}
-              onChange={(e) =>
-                handleChange(
-                  "quantity",
-                  e.target.value === "" ? "" : Number(e.target.value),
-                )
-              }
+              onChange={(e) => {
+                const val = e.target.value === "" ? undefined : Number(e.target.value);
+                setFormData((prev) => ({ ...prev, quantity: val }));
+                setError(null);
+              }}
             />
             <p className="text-sm mt-1 flex items-center gap-1" style={{ color: "#2d6a4f" }}>
               <HelpCircle className="h-4 w-4" />
