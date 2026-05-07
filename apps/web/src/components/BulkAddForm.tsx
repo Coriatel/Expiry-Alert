@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Save, X } from 'lucide-react';
+import { Plus, Save, X, PlusCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -13,6 +13,7 @@ import {
   type Supplier,
   type ReagentCatalogItem,
 } from '@/lib/tauri';
+import { CreateCatalogItemDialog } from './CreateCatalogItemDialog';
 
 interface BulkAddFormProps {
   onSave: (reagents: ReagentFormData[]) => void;
@@ -43,6 +44,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
     emptyRow(),
   ]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [createDialogRowIndex, setCreateDialogRowIndex] = useState<number | null>(null);
 
   useEffect(() => {
     getSuppliers()
@@ -110,6 +112,28 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
     [suppliers],
   );
 
+  const handleCatalogItemCreated = useCallback(
+    (newItem: ReagentCatalogItem) => {
+      if (createDialogRowIndex === null) return;
+      const supplier = suppliers.find((s) => s.id === newItem.supplier_id);
+      setRows((prev) => {
+        const next = [...prev];
+        const row = next[createDialogRowIndex];
+        next[createDialogRowIndex] = {
+          ...row,
+          _supplierId: newItem.supplier_id,
+          _catalogItems: [...(row._catalogItems ?? []), newItem],
+          name: newItem.name,
+          supplier_id: supplier?.id,
+          supplier_name: supplier?.name,
+        };
+        return next;
+      });
+      setCreateDialogRowIndex(null);
+    },
+    [createDialogRowIndex, suppliers],
+  );
+
   const updateField = (index: number, field: keyof ReagentFormData, value: string | number | undefined) => {
     const updated = [...rows];
     updated[index] = { ...updated[index], [field]: value };
@@ -171,7 +195,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
             </div>
 
             {/* Reagent dropdown (populated after supplier selected) */}
-            <div>
+            <div className="flex gap-1">
               <Select
                 value={
                   row._catalogItems?.find((c) => c.name === row.name)?.id ?? ''
@@ -180,7 +204,8 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
                   const val = e.target.value ? Number(e.target.value) : undefined;
                   handleReagentSelect(index, val);
                 }}
-                disabled={!row._supplierId || !row._catalogItems?.length}
+                disabled={!row._supplierId}
+                className="flex-1"
               >
                 <option value="">{t('catalog.selectReagent')}</option>
                 {(row._catalogItems ?? []).map((item) => (
@@ -190,6 +215,16 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
                   </option>
                 ))}
               </Select>
+              {row._supplierId && (
+                <button
+                  type="button"
+                  title={t('catalog.createNewReagent')}
+                  onClick={() => setCreateDialogRowIndex(index)}
+                  className="shrink-0 text-muted-foreground hover:text-primary"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </button>
+              )}
             </div>
 
             {/* Expiry date */}
@@ -246,6 +281,18 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
           </div>
         ))}
       </div>
+
+      <CreateCatalogItemDialog
+        open={createDialogRowIndex !== null}
+        onClose={() => setCreateDialogRowIndex(null)}
+        onCreated={handleCatalogItemCreated}
+        suppliers={suppliers}
+        defaultSupplierId={
+          createDialogRowIndex !== null
+            ? rows[createDialogRowIndex]._supplierId
+            : undefined
+        }
+      />
     </div>
   );
 }

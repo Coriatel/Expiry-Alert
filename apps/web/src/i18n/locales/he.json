@@ -178,6 +178,11 @@
     "notificationsDisabled": "התראות דחיפה כובו",
     "subtitle": "ניהול העדפות",
     "iconRefreshNote": "אם אייקון האפליקציה במסך הבית באייפון עדיין נראה ישן, מחק את האפליקציה ממסך הבית והוסף אותה שוב פעם אחת.",
+    "languageTitle": "שפה",
+    "languageDescription": "בחר את שפת הממשק של האפליקציה.",
+    "languageLabel": "שפת האפליקציה",
+    "languageHebrew": "עברית",
+    "languageEnglish": "English",
     "teamWorkspace": "סביבת צוות",
     "teamWorkspaceDescription": "בחר את סביבת העבודה שבה הדפדפן הזה עובד כרגע.",
     "teamAutoAssignHelp": "משתמשים חדשים יכולים ליצור צוות מיידית, להצטרף עם סיסמה, או לבקש גישה לצוות קיים.",
@@ -247,7 +252,26 @@
     "googleCalendarEventsCreated": "נוצרו {{count}} אירועים ב-Google Calendar",
     "selectAlertDateTime": "בחר תאריך ושעת התראה",
     "invalidAlertDateTime": "תאריך או שעה לא תקינים",
-    "selectAtLeastOneReagent": "יש לבחור לפחות ריאגנט אחד"
+    "selectAtLeastOneReagent": "יש לבחור לפחות ריאגנט אחד",
+    "groupImportTitle": "ייבוא אצוות מצוות אחר",
+    "groupImportDescription": "מנהלים יכולים לעבור על צוות נגיש אחר ולייבא אצוות נבחרות אל הצוות הנוכחי.",
+    "groupImportDetails": "הייבוא שומר את כל פרטי האצווה, כולל מספר אצווה, ספק, יצרן, תיאור, הערות, כמות ושאר המידע הקיים ברשומה.",
+    "groupImportAdminOnly": "רק בעלי צוות או מנהלים יכולים לייבא אצוות בין צוותים.",
+    "groupImportNoTeams": "אין צוותים נגישים אחרים זמינים לייבוא.",
+    "groupImportSourceTeam": "צוות מקור",
+    "groupImportAction": "ייבא {{count}} נבחרים",
+    "groupImportSelectedCount": "{{count}} נבחרו לייבוא",
+    "groupImportPageLabel": "עמוד {{page}} מתוך {{total}}",
+    "groupImportBatchLabel": "אצווה {{lot}}",
+    "groupImportBatchMissing": "ללא מספר אצווה",
+    "groupImportSupplierLabel": "ספק",
+    "groupImportQuantityLabel": "כמות",
+    "groupImportNoItems": "לא נמצאו אצוות פעילות בצוות זה.",
+    "groupImportPrevious": "העמוד הקודם",
+    "groupImportNext": "העמוד הבא",
+    "groupImportLoadFailed": "טעינת נתוני הייבוא נכשלה",
+    "groupImportSuccess": "{{count}} פריטי אצווה יובאו בהצלחה",
+    "groupImportFailed": "ייבוא האצוות שנבחרו נכשל"
   },
   "messages": {
     "title": "הודעות",
@@ -501,7 +525,12 @@
     "importSelected": "ייבא {{count}} נבחרים",
     "importSuccess": "יובאו {{count}} ריאגנטים בהצלחה",
     "noItemsSelected": "לא נבחרו ריאגנטים",
-    "importing": "מייבא..."
+    "importing": "מייבא...",
+    "createNewReagent": "צור ריאגנט חדש",
+    "reagentName": "שם ריאגנט",
+    "catalogNumber": "מספר קטלוג",
+    "creating": "יוצר...",
+    "createError": "שגיאה ביצירת ריאגנט"
   },
   "import": {
     "title": "ייבוא לצוות אחר",
@@ -519,6 +548,16 @@
     "addTask": "הוסף משימה...",
     "clearCompleted": "נקה שהושלמו",
     "noTasks": "אין משימות. הוסף את המשימה הראשונה שלך!",
-    "tasksDone": "{{done}} מתוך {{total}} הושלמו"
+    "tasksDone": "{{done}} מתוך {{total}} הושלמו",
+    "carryForwardNote": "משימות שהושלמו עוברות להיסטוריה. משימות שלא הושלמו ממשיכות ליום הבא עבור המשתמש הנוכחי.",
+    "tasksSummary": "{{pending}} לביצוע, {{history}} בהיסטוריה",
+    "pendingBadge": "{{count}} לביצוע",
+    "loadingTasks": "טוען משימות...",
+    "historyTitle": "היסטוריית משימות",
+    "noHistory": "עדיין אין משימות שהושלמו.",
+    "markDone": "סמן משימה כהושלמה",
+    "createdAt": "נוצרה {{date}}",
+    "completedAt": "הושלמה {{date}}",
+    "restoreTask": "החזר משימה"
   }
 }

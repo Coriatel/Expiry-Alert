@@ -178,6 +178,11 @@
     "notificationsDisabled": "Push notifications disabled",
     "subtitle": "Manage your preferences",
     "iconRefreshNote": "If the Home Screen icon still looks old on iPhone, remove the app from the Home Screen and add it again once.",
+    "languageTitle": "Language",
+    "languageDescription": "Choose the language used in the app interface.",
+    "languageLabel": "App language",
+    "languageHebrew": "Hebrew",
+    "languageEnglish": "English",
     "teamWorkspace": "Team Workspace",
     "teamWorkspaceDescription": "Choose the workspace this browser is currently working on.",
     "teamAutoAssignHelp": "New users can create a team instantly, join with a password, or request access to an existing team.",
@@ -247,7 +252,26 @@
     "googleCalendarEventsCreated": "{{count}} event(s) created in Google Calendar",
     "selectAlertDateTime": "Please choose an alert date and time",
     "invalidAlertDateTime": "Invalid alert date and time",
-    "selectAtLeastOneReagent": "Select at least one reagent"
+    "selectAtLeastOneReagent": "Select at least one reagent",
+    "groupImportTitle": "Import Batches From Another Team",
+    "groupImportDescription": "Admins can browse another accessible team and import selected batches into the current team.",
+    "groupImportDetails": "Imported items keep the full batch record, including lot number, supplier, manufacturer, description, notes, quantity, and the rest of the existing metadata.",
+    "groupImportAdminOnly": "Only team owners or admins can import batches between teams.",
+    "groupImportNoTeams": "No other accessible teams are available for import.",
+    "groupImportSourceTeam": "Source team",
+    "groupImportAction": "Import {{count}} selected",
+    "groupImportSelectedCount": "{{count}} selected for import",
+    "groupImportPageLabel": "Page {{page}} of {{total}}",
+    "groupImportBatchLabel": "Batch {{lot}}",
+    "groupImportBatchMissing": "Batch not specified",
+    "groupImportSupplierLabel": "Supplier",
+    "groupImportQuantityLabel": "Quantity",
+    "groupImportNoItems": "No active batches found in this team.",
+    "groupImportPrevious": "Previous page",
+    "groupImportNext": "Next page",
+    "groupImportLoadFailed": "Failed to load import data",
+    "groupImportSuccess": "Imported {{count}} batch items successfully",
+    "groupImportFailed": "Failed to import selected batches"
   },
   "messages": {
     "title": "Messages",
@@ -501,7 +525,12 @@
     "importSelected": "Import {{count}} Selected",
     "importSuccess": "Successfully imported {{count}} reagents",
     "noItemsSelected": "No reagents selected",
-    "importing": "Importing..."
+    "importing": "Importing...",
+    "createNewReagent": "Create New Reagent",
+    "reagentName": "Reagent Name",
+    "catalogNumber": "Catalog Number",
+    "creating": "Creating...",
+    "createError": "Error creating reagent"
   },
   "import": {
     "title": "Import to Other Team",
@@ -519,6 +548,16 @@
     "addTask": "Add a task...",
     "clearCompleted": "Clear completed",
     "noTasks": "No tasks yet. Add your first task!",
-    "tasksDone": "{{done}} of {{total}} completed"
+    "tasksDone": "{{done}} of {{total}} completed",
+    "carryForwardNote": "Completed tasks move to history. Unfinished tasks continue into the next day for the current user.",
+    "tasksSummary": "{{pending}} pending, {{history}} in history",
+    "pendingBadge": "{{count}} pending",
+    "loadingTasks": "Loading tasks...",
+    "historyTitle": "Task History",
+    "noHistory": "No completed tasks yet.",
+    "markDone": "Mark task as done",
+    "createdAt": "Created {{date}}",
+    "completedAt": "Completed {{date}}",
+    "restoreTask": "Restore task"
   }
 }
