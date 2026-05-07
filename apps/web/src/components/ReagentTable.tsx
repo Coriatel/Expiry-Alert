@@ -11,10 +11,10 @@ import {
 import {
   Pencil,
   Trash2,
-  Archive,
   CheckSquare,
   Square,
   Copy,
+  Stethoscope,
 } from "lucide-react";
 import type { Reagent } from "@/types";
 import { NewInStockDot } from "@/components/NewInStockDot";
@@ -33,6 +33,7 @@ interface ReagentTableProps {
   onDuplicate?: (reagent: Reagent) => void;
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
+  onToggleInTreatment?: (id: number, value: boolean) => void;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onSelectAll: () => void;
@@ -49,6 +50,7 @@ export function ReagentTable({
   onDuplicate,
   onDelete,
   onArchive,
+  onToggleInTreatment,
   selectedIds,
   onToggleSelect,
   onSelectAll,
@@ -102,6 +104,10 @@ export function ReagentTable({
           </span>
         ),
       }),
+      columnHelper.accessor("supplier_name", {
+        header: t("catalog.supplier"),
+        cell: (info) => info.getValue() || "\u2014",
+      }),
       columnHelper.accessor("category", {
         header: t("table.category"),
         cell: (info) => {
@@ -120,22 +126,30 @@ export function ReagentTable({
         cell: ({ row }) => {
           const days = getDaysUntilExpiry(row.original.expiry_date);
           const status = getExpiryStatus(row.original.expiry_date);
+          const inTreatment = row.original.in_treatment === true;
 
           return (
-            <span
-              className={cn(
-                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap",
-                getStatusColor(status),
+            <div className="flex items-center gap-1 flex-wrap">
+              <span
+                className={cn(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap",
+                  getStatusColor(status),
+                )}
+              >
+                {days < 0
+                  ? t("status.expired")
+                  : days === 0
+                    ? t("status.expiresToday")
+                    : days === 1
+                      ? t("status.expiresInOneDay")
+                      : t("status.expiresIn", { days })}
+              </span>
+              {inTreatment && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-amber-300 bg-amber-100 text-amber-800 whitespace-nowrap">
+                  {t("status.inTreatment")}
+                </span>
               )}
-            >
-              {days < 0
-                ? t("status.expired")
-                : days === 0
-                  ? t("status.expiresToday")
-                  : days === 1
-                    ? t("status.expiresInOneDay")
-                    : t("status.expiresIn", { days })}
-            </span>
+            </div>
           );
         },
       }),
@@ -143,55 +157,97 @@ export function ReagentTable({
         header: t("table.lotNumber"),
         cell: (info) => info.getValue() || "-",
       }),
+      columnHelper.accessor("manufacturer", {
+        header: t("table.manufacturerCol"),
+        cell: (info) => info.getValue() || "\u2014",
+      }),
+      columnHelper.accessor("quantity", {
+        header: t("newShipment.quantity"),
+        cell: (info) => {
+          const val = info.getValue();
+          return val != null ? val : "\u2014";
+        },
+      }),
       columnHelper.accessor("notes", {
         header: t("table.notes"),
-        cell: (info) => (
-          <div className="max-w-xs line-clamp-2" title={info.getValue() || ""}>
-            {info.getValue() || "-"}
-          </div>
-        ),
+        cell: (info) => {
+          const notes = info.getValue() || "";
+          const description = info.row.original.description || "";
+          const titleAttr = [description, notes].filter(Boolean).join(" | ");
+          return (
+            <div className="max-w-xs line-clamp-2" title={titleAttr || undefined}>
+              {notes || "-"}
+            </div>
+          );
+        },
       }),
       columnHelper.display({
         id: "actions",
         header: t("table.actions"),
-        cell: ({ row }) => (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(row.original)}
-              title={t("actions.edit")}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            {onDuplicate && (
+        cell: ({ row }) => {
+          const isExpired =
+            getExpiryStatus(row.original.expiry_date) === "expired";
+          const inTreatment = row.original.in_treatment === true;
+          return (
+            <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onDuplicate(row.original)}
-                title={t("actions.duplicate")}
+                onClick={() => onEdit(row.original)}
+                title={t("actions.edit")}
               >
-                <Copy className="h-4 w-4" />
+                <Pencil className="h-4 w-4" />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onArchive(row.original.id)}
-              title={t("actions.archive")}
-            >
-              <Archive className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(row.original.id)}
-              title={t("actions.delete")}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ),
+              {onDuplicate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDuplicate(row.original)}
+                  title={t("actions.duplicate")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              )}
+              {isExpired && onToggleInTreatment && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    onToggleInTreatment(row.original.id, !inTreatment)
+                  }
+                  title={
+                    inTreatment
+                      ? t("actions.removeInTreatment")
+                      : t("actions.inTreatment")
+                  }
+                >
+                  <Stethoscope
+                    className={cn(
+                      "h-4 w-4",
+                      inTreatment ? "text-amber-600" : "",
+                    )}
+                  />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onArchive(row.original.id)}
+                title={t("actions.destroy")}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(row.original.id)}
+                title={t("actions.delete")}
+              >
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          );
+        },
         size: 120,
       }),
     ],
@@ -205,6 +261,7 @@ export function ReagentTable({
       onDuplicate,
       onArchive,
       onDelete,
+      onToggleInTreatment,
     ],
   );
 

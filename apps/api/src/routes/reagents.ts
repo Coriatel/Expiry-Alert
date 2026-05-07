@@ -13,17 +13,41 @@ import {
 import { findOne } from "../services/directus.js";
 import { config } from "../config.js";
 import { getNotificationSettings } from "../services/settings.js";
+import { createDuplicationEntry } from "../services/duplicationLog.js";
 
 export const reagentsRouter = Router();
 
-const reagentSchema = z.object({
+export const reagentSchema = z.object({
   name: z.string().min(1),
   category: z.enum(["reagents", "beads"]),
   expiryDate: z.string().min(1),
   lotNumber: z.string().optional().nullable(),
   receivedDate: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  supplier_id: z.number().int().optional().nullable(),
+  supplier_name: z.string().optional().nullable(),
+  quantity: z.number().int().optional().nullable(),
+  manufacturer: z.string().trim().max(255).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
 });
+
+export type ReagentInput = z.infer<typeof reagentSchema>;
+
+export function buildReagentData(input: ReagentInput) {
+  return {
+    name: input.name,
+    category: input.category,
+    expiry_date: input.expiryDate,
+    lot_number: input.lotNumber ?? null,
+    received_date: input.receivedDate ?? null,
+    notes: input.notes ?? null,
+    supplier_id: input.supplier_id ?? null,
+    supplier_name: input.supplier_name ?? null,
+    quantity: input.quantity != null ? String(input.quantity) : null,
+    manufacturer: input.manufacturer ?? null,
+    description: input.description ?? null,
+  };
+}
 
 const bulkSchema = z.object({
   reagents: z.array(reagentSchema),
@@ -85,12 +109,7 @@ reagentsRouter.post("/", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   await createReagent(teamId, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
+    ...buildReagentData(parsed.data),
     is_archived: false,
   });
 
@@ -107,12 +126,7 @@ reagentsRouter.post("/bulk", async (req, res) => {
 
   for (const reagent of parsed.data.reagents) {
     await createReagent(teamId, {
-      name: reagent.name,
-      category: reagent.category,
-      expiry_date: reagent.expiryDate,
-      lot_number: reagent.lotNumber ?? null,
-      received_date: reagent.receivedDate ?? null,
-      notes: reagent.notes ?? null,
+      ...buildReagentData(reagent),
       is_archived: false,
     });
   }
@@ -142,12 +156,7 @@ reagentsRouter.put("/:id", async (req, res) => {
     current?.is_archived === true && isDateAfter(parsed.data.expiryDate, today);
 
   await updateReagent(id, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
+    ...buildReagentData(parsed.data),
     ...(shouldRestore ? { is_archived: false } : {}),
   });
 
@@ -208,13 +217,24 @@ reagentsRouter.post("/:id/duplicate", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   const created = await duplicateReagent(teamId, originalId, {
-    name: parsed.data.name,
-    category: parsed.data.category,
-    expiry_date: parsed.data.expiryDate,
-    lot_number: parsed.data.lotNumber ?? null,
-    received_date: parsed.data.receivedDate ?? null,
-    notes: parsed.data.notes ?? null,
+    ...buildReagentData(parsed.data),
     is_archived: false,
+  });
+
+  const user = (req as any).user;
+  const userName = user?.name || user?.email || "Unknown";
+  await createDuplicationEntry({
+    team: teamId,
+    original_reagent_id: originalId,
+    new_reagent_id: created.id,
+    reagent_name: parsed.data.name,
+    supplier_name: (req.body as any).supplier_name ?? null,
+    lot_number: parsed.data.lotNumber ?? null,
+    expiry_date: parsed.data.expiryDate ?? null,
+    quantity: (req.body as any).quantity != null ? Number((req.body as any).quantity) : null,
+    received_by: user?.id ?? null,
+    received_by_name: userName,
+    received_date: new Date().toISOString(),
   });
 
   res.status(201).json({ status: "created", id: created.id });

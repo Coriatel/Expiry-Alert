@@ -19,6 +19,11 @@ import { teamsRouter } from "./routes/teams.js";
 import { pushRouter } from "./routes/push.js";
 import { calendarRouter } from "./routes/calendar.js";
 import { messagesRouter } from "./routes/messages.js";
+import { suppliersRouter } from "./routes/suppliers.js";
+import { reagentCatalogRouter } from "./routes/reagentCatalog.js";
+import { destructionLogRouter } from "./routes/destructionLog.js";
+import { duplicationLogRouter } from "./routes/duplicationLog.js";
+import { importRouter } from "./routes/import.js";
 import { initCron } from "./services/cron.js";
 
 warnMissingConfig();
@@ -89,6 +94,11 @@ app.use("/api/teams", teamsRouter);
 app.use("/api/push", pushRouter);
 app.use("/api/calendar", calendarRouter);
 app.use("/api/messages", messagesRouter);
+app.use("/api/suppliers", suppliersRouter);
+app.use("/api/reagent-catalog", reagentCatalogRouter);
+app.use("/api/destruction-log", destructionLogRouter);
+app.use("/api/duplication-log", duplicationLogRouter);
+app.use("/api/import", importRouter);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(__dirname, "../../web/dist");

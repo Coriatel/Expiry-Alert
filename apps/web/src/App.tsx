@@ -1,35 +1,34 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Archive as ArchiveIcon,
-  LayoutDashboard,
   Globe,
   LogOut,
-  MessageSquare,
-  Settings as SettingsIcon,
   Menu,
-  X,
 } from "lucide-react";
 import { Dashboard } from "@/pages/Dashboard";
-import { Archive } from "@/pages/Archive";
+import { BatchHistory } from "@/pages/BatchHistory";
+import { DuplicationHistory } from "@/pages/DuplicationHistory";
 import { Messages } from "@/pages/Messages";
 import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
 import { Button } from "@/components/ui/Button";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { Sidebar } from "@/components/Sidebar";
+import type { SidebarPage } from "@/components/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "@/components/LoginForm";
 import { RegisterForm } from "@/components/RegisterForm";
 import { TeamSelection } from "@/components/TeamSelection";
 import { PendingApproval } from "@/components/PendingApproval";
 import { getTeams, switchTeam } from "@/lib/tauri";
+import type { TeamSummary } from "@/lib/tauri";
 import type { AuthUser } from "@/lib/auth";
 
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 
-type Page = "dashboard" | "archive" | "messages" | "settings";
+type Page = "dashboard" | "batch-history" | "duplication-history" | "messages" | "settings";
 type PublicPage = "privacy" | "terms" | null;
 type AuthScreen = "login" | "register" | "team-select" | "pending-approval";
 
@@ -43,7 +42,8 @@ function resolvePublicPage(pathname: string): PublicPage {
 function App() {
   const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [teams, setTeams] = useState<TeamSummary[]>([]);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const {
     user,
     loading,
@@ -71,14 +71,24 @@ function App() {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
 
+  const currentTeamName = teams.find((t) => t.id === user?.team_id)?.name ?? "";
+
   const toggleLanguage = () => {
     const newLang = i18n.language === "he" ? "en" : "he";
     i18n.changeLanguage(newLang);
   };
 
-  const navigateTo = (page: Page) => {
-    setCurrentPage(page);
-    setMobileMenuOpen(false);
+  // Load teams when user is authenticated
+  useEffect(() => {
+    if (!user?.team_id) return;
+    getTeams().then((data) => setTeams(data.teams)).catch(console.error);
+  }, [user?.team_id]);
+
+  const handleSwitchTeam = async (teamId: number) => {
+    await switchTeam(teamId);
+    window.localStorage.setItem("expiry-alert.preferredTeamId", String(teamId));
+    await refresh();
+    setMobileSidebarOpen(false);
   };
 
   useEffect(() => {
@@ -311,233 +321,127 @@ function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <div className="min-h-screen bg-background pb-16 md:pb-0">
-          {/* Header */}
-          <header className="border-b bg-card sticky top-0 z-40">
-            <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
-              <div className="flex items-center justify-between">
+        <div className="min-h-screen bg-background flex">
+          {/* Sidebar */}
+          <Sidebar
+            currentPage={currentPage as SidebarPage}
+            onNavigate={(page) => {
+              setCurrentPage(page);
+              setMobileSidebarOpen(false);
+            }}
+            teams={teams}
+            currentTeamId={user?.team_id ?? null}
+            currentTeamName={currentTeamName}
+            onSwitchTeam={handleSwitchTeam}
+            unreadMessageCount={unreadMessageCount}
+            mobileOpen={mobileSidebarOpen}
+            onMobileClose={() => setMobileSidebarOpen(false)}
+          />
+
+          {/* Main content area */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Mobile header */}
+            <header className="md:hidden border-b bg-card sticky top-0 z-40">
+              <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
+                  <button onClick={() => setMobileSidebarOpen(true)}>
+                    <Menu className="h-5 w-5" />
+                  </button>
                   <img
                     src="/logo-icon-v2.png"
                     alt="Expiry Alert"
-                    className="h-8 w-8 object-contain logo-entrance"
+                    className="h-7 w-7 object-contain"
                   />
-                  <h1 className="text-xl md:text-2xl font-bold truncate">
-                    {t("app.title")}
-                  </h1>
+                  <span className="font-semibold text-sm truncate">
+                    {currentTeamName}
+                  </span>
                 </div>
-
-                {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-4">
-                  <nav className="flex gap-2">
-                    <Button
-                      variant={
-                        currentPage === "dashboard" ? "default" : "ghost"
-                      }
-                      onClick={() => navigateTo("dashboard")}
-                      className="flex items-center gap-2"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      {t("nav.dashboard")}
-                    </Button>
-                    <Button
-                      variant={currentPage === "archive" ? "default" : "ghost"}
-                      onClick={() => navigateTo("archive")}
-                      className="flex items-center gap-2"
-                    >
-                      <ArchiveIcon className="h-4 w-4" />
-                      {t("nav.archive")}
-                    </Button>
-                    <Button
-                      variant={currentPage === "messages" ? "default" : "ghost"}
-                      onClick={() => navigateTo("messages")}
-                      className="flex items-center gap-2"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      {t("nav.messages")}
-                      {unreadMessageCount > 0 ? (
-                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[11px] font-semibold text-destructive-foreground">
-                          {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-                        </span>
-                      ) : null}
-                    </Button>
-                    <Button
-                      variant={currentPage === "settings" ? "default" : "ghost"}
-                      onClick={() => navigateTo("settings")}
-                      className="flex items-center gap-2"
-                    >
-                      <SettingsIcon className="h-4 w-4" />
-                      {t("nav.settings")}
-                    </Button>
-                  </nav>
-
-                  {/* Language Toggle & User */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleLanguage}
-                    >
-                      <Globe className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                      {i18n.language === "he" ? "English" : "עברית"}
-                    </Button>
-                    <div className="flex items-center gap-2 border rounded-full px-2 py-1">
-                      {user.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={userLabel}
-                          className="h-7 w-7 rounded-full"
-                        />
-                      ) : (
-                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                          {userInitial}
-                        </div>
-                      )}
-                      <span className="text-sm font-medium">{userLabel}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          await signOut();
-                          setAuthScreen("login");
-                        }}
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile Menu Button */}
-                <div className="flex md:hidden items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleLanguage}
+                  >
                     <Globe className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    onClick={async () => {
+                      await signOut();
+                      setAuthScreen("login");
+                    }}
                   >
-                    {mobileMenuOpen ? (
-                      <X className="h-5 w-5" />
-                    ) : (
-                      <Menu className="h-5 w-5" />
-                    )}
+                    <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
+            </header>
 
-              {/* Mobile Dropdown Menu */}
-              {mobileMenuOpen && (
-                <div className="md:hidden border-t mt-3 pt-3 space-y-2 animate-in slide-in-from-top-2">
-                  <div className="flex items-center gap-3 pb-3 border-b">
-                    {user.avatar_url ? (
-                      <img
-                        src={user.avatar_url}
-                        alt={userLabel}
-                        className="h-10 w-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-medium">
-                        {userInitial}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{userLabel}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.email}
-                      </p>
+            {/* Desktop header (minimal - user info + language) */}
+            <header className="hidden md:block border-b bg-card sticky top-0 z-40">
+              <div className="flex items-center justify-end px-6 py-2 gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleLanguage}
+                >
+                  <Globe className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                  {i18n.language === "he" ? "English" : "עברית"}
+                </Button>
+                <div className="flex items-center gap-2 border rounded-full px-2 py-1">
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={userLabel}
+                      className="h-7 w-7 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                      {userInitial}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        await signOut();
-                        setAuthScreen("login");
-                      }}
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  )}
+                  <span className="text-sm font-medium">{userLabel}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      await signOut();
+                      setAuthScreen("login");
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
                 </div>
+              </div>
+            </header>
+
+            {/* Page content */}
+            <main className="flex-1">
+              {currentPage === "dashboard" ? (
+                <Dashboard teamName={currentTeamName} />
+              ) : currentPage === "batch-history" ? (
+                <BatchHistory
+                  teamName={currentTeamName}
+                  userName={userLabel}
+                />
+              ) : currentPage === "duplication-history" ? (
+                <DuplicationHistory
+                  teamName={currentTeamName}
+                  userName={userLabel}
+                />
+              ) : currentPage === "messages" ? (
+                <Messages
+                  currentUserId={user.id}
+                  isSystemAdmin={user.is_system_admin === true}
+                />
+              ) : (
+                <Settings />
               )}
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <main className="min-h-[calc(100vh-8rem)]">
-            {currentPage === "dashboard" ? (
-              <Dashboard />
-            ) : currentPage === "archive" ? (
-              <Archive />
-            ) : currentPage === "messages" ? (
-              <Messages
-                currentUserId={user.id}
-                isSystemAdmin={user.is_system_admin === true}
-              />
-            ) : (
-              <Settings />
-            )}
-          </main>
-
-          {/* Mobile Bottom Navigation */}
-          <nav className="md:hidden fixed bottom-0 inset-x-0 bg-card border-t z-50 safe-area-bottom">
-            <div className="flex justify-around items-center h-16">
-              <button
-                onClick={() => navigateTo("dashboard")}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[64px] transition-colors ${
-                  currentPage === "dashboard"
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <LayoutDashboard className="h-5 w-5" />
-                <span className="text-xs mt-1">{t("nav.dashboard")}</span>
-              </button>
-              <button
-                onClick={() => navigateTo("archive")}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[64px] transition-colors ${
-                  currentPage === "archive"
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <ArchiveIcon className="h-5 w-5" />
-                <span className="text-xs mt-1">{t("nav.archive")}</span>
-              </button>
-              <button
-                onClick={() => navigateTo("messages")}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[64px] transition-colors ${
-                  currentPage === "messages"
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <div className="relative">
-                  <MessageSquare className="h-5 w-5" />
-                  {unreadMessageCount > 0 ? (
-                    <span className="absolute -top-2 -end-3 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
-                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="text-xs mt-1">{t("nav.messages")}</span>
-              </button>
-              <button
-                onClick={() => navigateTo("settings")}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[64px] transition-colors ${
-                  currentPage === "settings"
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <SettingsIcon className="h-5 w-5" />
-                <span className="text-xs mt-1">{t("nav.settings")}</span>
-              </button>
-            </div>
-          </nav>
-          <InstallPrompt />
+            </main>
+          </div>
         </div>
+        <InstallPrompt />
       </ToastProvider>
     </ErrorBoundary>
   );

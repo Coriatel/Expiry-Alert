@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Plus,
   Trash2,
-  Archive,
+  Flame,
   Printer,
   Calendar,
   ChevronDown,
@@ -16,6 +16,7 @@ import { ReagentCardList } from "@/components/ReagentCardList";
 import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
+import { DestructionDialog } from "@/components/DestructionDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
@@ -30,13 +31,16 @@ import {
   updateReagent,
   deleteReagent,
   deleteReagentsBulk,
-  archiveReagent,
   archiveReagentsBulk,
+  destroyReagent,
   getExpiringReagents,
   snoozeNotification,
   dismissNotification,
   duplicateReagent,
+  importReagentsToTeam,
+  getTeams,
 } from "@/lib/tauri";
+import type { TeamSummary } from "@/lib/tauri";
 import { getExpiryStatus, getDaysUntilExpiry } from "@/lib/utils";
 import type { Reagent, ReagentFormData } from "@/types";
 import type { SortingState } from "@tanstack/react-table";
@@ -53,7 +57,11 @@ function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message === "Unauthorized";
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  teamName?: string;
+}
+
+export function Dashboard({ teamName }: DashboardProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const isMobile = useIsMobile();
@@ -65,6 +73,9 @@ export function Dashboard() {
   const [duplicatingReagent, setDuplicatingReagent] = useState<Reagent | null>(
     null,
   );
+  const [destroyingReagent, setDestroyingReagent] = useState<Reagent | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
@@ -73,6 +84,9 @@ export function Dashboard() {
     onConfirm: () => {},
     variant: "default",
   });
+
+  const [teams, setTeams] = useState<TeamSummary[]>([]);
+  const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
 
   const {
     reagents,
@@ -136,6 +150,49 @@ export function Dashboard() {
     }, 15000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  // Load teams for import feature
+  useEffect(() => {
+    getTeams()
+      .then((data) => {
+        setTeams(data.teams);
+        setCurrentTeamId(data.currentTeamId);
+      })
+      .catch(console.error);
+  }, []);
+
+  const otherTeams = useMemo(
+    () => teams.filter((team) => team.id !== currentTeamId),
+    [teams, currentTeamId],
+  );
+
+  const handleImportToTeam = (team: TeamSummary) => {
+    setConfirmState({
+      open: true,
+      title: t("import.title"),
+      message: t("import.confirmMessage", {
+        count: selectedReagentIds.length,
+        team: team.name,
+      }),
+      variant: "default",
+      onConfirm: async () => {
+        try {
+          const result = await importReagentsToTeam(
+            team.id,
+            selectedReagentIds,
+          );
+          clearSelection();
+          showToast(
+            t("import.success", { count: result.copied }),
+            "success",
+          );
+        } catch (error) {
+          console.error("Failed to import:", error);
+          showToast(t("errors.importFailed") || "Import failed", "error");
+        }
+      },
+    });
+  };
 
   const loadExpiringReagents = async () => {
     try {
@@ -290,14 +347,32 @@ export function Dashboard() {
     });
   };
 
-  const handleArchive = async (id: number) => {
+  const handleDestroy = (reagent: Reagent) => {
+    setDestroyingReagent(reagent);
+  };
+
+  const handleDestroyConfirm = async (
+    reagentId: number,
+    quantityDestroyed: number,
+  ) => {
+    const reagent = reagents.find((r) => r.id === reagentId);
+    if (!reagent) return;
     try {
-      await archiveReagent(id);
+      await destroyReagent({
+        reagent_id: reagentId,
+        reagent_name: reagent.name,
+        supplier_name: reagent.supplier_name ?? undefined,
+        lot_number: reagent.lot_number ?? undefined,
+        expiry_date: reagent.expiry_date,
+        quantity_original: reagent.quantity ?? undefined,
+        quantity_destroyed: quantityDestroyed,
+      });
+      setDestroyingReagent(null);
       await loadData();
       clearSelection();
       showToast(t("success.reagentArchived"), "success");
     } catch (error) {
-      console.error("Failed to archive reagent:", error);
+      console.error("Failed to destroy reagent:", error);
       showToast(t("errors.archiveFailed"), "error");
     }
   };
@@ -379,6 +454,7 @@ export function Dashboard() {
         reagents={expiringReagents}
         onSnooze={handleSnooze}
         onDismiss={handleDismiss}
+        teamName={teamName}
       />
 
       {/* Expiry Calendar & Timeline */}
@@ -428,7 +504,7 @@ export function Dashboard() {
                 disabled={isLoading}
                 className="print:hidden"
               >
-                <Archive className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkArchive")} ({selectedReagentIds.length})
               </Button>
               <Button
@@ -440,6 +516,17 @@ export function Dashboard() {
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkDelete")} ({selectedReagentIds.length})
               </Button>
+              {otherTeams.map((team) => (
+                <Button
+                  key={team.id}
+                  variant="outline"
+                  onClick={() => handleImportToTeam(team)}
+                  disabled={isLoading}
+                  className="print:hidden"
+                >
+                  {t("import.copyTo", { team: team.name })}
+                </Button>
+              ))}
             </>
           )}
         </div>
@@ -489,7 +576,10 @@ export function Dashboard() {
             onEdit={handleEdit}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
-            onArchive={handleArchive}
+            onArchive={(id) => {
+              const r = reagents.find((x) => x.id === id);
+              if (r) handleDestroy(r);
+            }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
@@ -500,7 +590,10 @@ export function Dashboard() {
             onEdit={handleEdit}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
-            onArchive={handleArchive}
+            onArchive={(id) => {
+              const r = reagents.find((x) => x.id === id);
+              if (r) handleDestroy(r);
+            }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
@@ -515,7 +608,10 @@ export function Dashboard() {
           onEdit={handleEdit}
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
-          onArchive={handleArchive}
+          onArchive={(id) => {
+            const r = reagents.find((x) => x.id === id);
+            if (r) handleDestroy(r);
+          }}
           selectedIds={selectedReagentIds}
           onToggleSelect={toggleReagentSelection}
           onSelectAll={handleSelectAll}
@@ -538,6 +634,14 @@ export function Dashboard() {
         open={duplicatingReagent !== null}
         onClose={() => setDuplicatingReagent(null)}
         onSave={handleDuplicateSave}
+      />
+
+      {/* Destruction Dialog */}
+      <DestructionDialog
+        reagent={destroyingReagent}
+        open={destroyingReagent !== null}
+        onClose={() => setDestroyingReagent(null)}
+        onConfirm={handleDestroyConfirm}
       />
 
       {/* Confirm Dialog */}

@@ -1,48 +1,155 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Save, X } from 'lucide-react';
+import { Plus, Save, X, PlusCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
 import { Select } from '@/components/ui/Select';
 import type { ReagentFormData } from '@/types';
+import {
+  getSuppliers,
+  getReagentCatalog,
+  type Supplier,
+  type ReagentCatalogItem,
+} from '@/lib/tauri';
+import { CreateCatalogItemDialog } from './CreateCatalogItemDialog';
 
 interface BulkAddFormProps {
   onSave: (reagents: ReagentFormData[]) => void;
   onCancel: () => void;
 }
 
-const emptyReagent = (): ReagentFormData => ({
+interface BulkRow extends ReagentFormData {
+  _supplierId?: number;
+  _catalogItems?: ReagentCatalogItem[];
+}
+
+const emptyRow = (): BulkRow => ({
   name: '',
   category: 'reagents',
   expiryDate: '',
   lotNumber: '',
   notes: '',
+  manufacturer: '',
+  description: '',
 });
 
 export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
   const { t } = useTranslation();
-  const [reagents, setReagents] = useState<ReagentFormData[]>([
-    emptyReagent(),
-    emptyReagent(),
-    emptyReagent(),
-    emptyReagent(),
+  const [rows, setRows] = useState<BulkRow[]>([
+    emptyRow(),
+    emptyRow(),
+    emptyRow(),
+    emptyRow(),
   ]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [createDialogRowIndex, setCreateDialogRowIndex] = useState<number | null>(null);
 
-  const updateReagent = (index: number, field: keyof ReagentFormData, value: string) => {
-    const updated = [...reagents];
+  useEffect(() => {
+    getSuppliers()
+      .then(setSuppliers)
+      .catch(() => setSuppliers([]));
+  }, []);
+
+  const handleSupplierChange = useCallback(
+    async (index: number, supplierId: number | undefined) => {
+      const updated = [...rows];
+      updated[index] = {
+        ...updated[index],
+        _supplierId: supplierId,
+        _catalogItems: undefined,
+        // Reset reagent selection when supplier changes
+        name: '',
+        supplier_id: undefined,
+        supplier_name: undefined,
+      };
+      setRows(updated);
+
+      if (supplierId) {
+        try {
+          const items = await getReagentCatalog(supplierId);
+          setRows((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], _catalogItems: items };
+            return next;
+          });
+        } catch {
+          // ignore — catalog stays empty
+        }
+      }
+    },
+    [rows],
+  );
+
+  const handleReagentSelect = useCallback(
+    (index: number, catalogItemId: number | undefined) => {
+      setRows((prev) => {
+        const next = [...prev];
+        const row = next[index];
+        if (!catalogItemId) {
+          next[index] = {
+            ...row,
+            name: '',
+            supplier_id: undefined,
+            supplier_name: undefined,
+          };
+          return next;
+        }
+        const catalogItem = row._catalogItems?.find((c) => c.id === catalogItemId);
+        const supplier = suppliers.find((s) => s.id === row._supplierId);
+        if (catalogItem) {
+          next[index] = {
+            ...row,
+            name: catalogItem.name,
+            supplier_id: supplier?.id,
+            supplier_name: supplier?.name,
+          };
+        }
+        return next;
+      });
+    },
+    [suppliers],
+  );
+
+  const handleCatalogItemCreated = useCallback(
+    (newItem: ReagentCatalogItem) => {
+      if (createDialogRowIndex === null) return;
+      const supplier = suppliers.find((s) => s.id === newItem.supplier_id);
+      setRows((prev) => {
+        const next = [...prev];
+        const row = next[createDialogRowIndex];
+        next[createDialogRowIndex] = {
+          ...row,
+          _supplierId: newItem.supplier_id,
+          _catalogItems: [...(row._catalogItems ?? []), newItem],
+          name: newItem.name,
+          supplier_id: supplier?.id,
+          supplier_name: supplier?.name,
+        };
+        return next;
+      });
+      setCreateDialogRowIndex(null);
+    },
+    [createDialogRowIndex, suppliers],
+  );
+
+  const updateField = (index: number, field: keyof ReagentFormData, value: string | number | undefined) => {
+    const updated = [...rows];
     updated[index] = { ...updated[index], [field]: value };
-    setReagents(updated);
+    setRows(updated);
   };
 
   const handleSave = () => {
-    const validReagents = reagents.filter((r) => r.name && r.expiryDate);
+    const validReagents: ReagentFormData[] = rows
+      .filter((r) => r.name && r.expiryDate)
+      .map(({ _supplierId: _, _catalogItems: __, ...formData }) => formData);
     if (validReagents.length > 0) {
       onSave(validReagents);
     }
   };
 
-  const isValid = reagents.some((r) => r.name && r.expiryDate);
+  const isValid = rows.some((r) => r.name && r.expiryDate);
 
   return (
     <div className="space-y-4 p-6 bg-muted/30 border rounded-lg">
@@ -64,53 +171,128 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
       </div>
 
       <div className="space-y-3">
-        {reagents.map((reagent, index) => (
+        {rows.map((row, index) => (
           <div
             key={index}
-            className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-background border rounded-lg"
+            className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-7 gap-3 p-4 bg-background border rounded-lg"
           >
-            <div>
-              <Input
-                placeholder={t('form.name')}
-                value={reagent.name}
-                onChange={(e) => updateReagent(index, 'name', e.target.value)}
-              />
-            </div>
+            {/* Supplier dropdown */}
             <div>
               <Select
-                value={reagent.category}
-                onChange={(e) =>
-                  updateReagent(index, 'category', e.target.value as 'reagents' | 'beads')
-                }
+                value={row._supplierId ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : undefined;
+                  handleSupplierChange(index, val);
+                }}
               >
-                <option value="reagents">{t('category.reagents')}</option>
-                <option value="beads">{t('category.beads')}</option>
+                <option value="">{t('catalog.selectSupplier')}</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
               </Select>
             </div>
+
+            {/* Reagent dropdown (populated after supplier selected) */}
+            <div className="flex gap-1">
+              <Select
+                value={
+                  row._catalogItems?.find((c) => c.name === row.name)?.id ?? ''
+                }
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : undefined;
+                  handleReagentSelect(index, val);
+                }}
+                disabled={!row._supplierId}
+                className="flex-1"
+              >
+                <option value="">{t('catalog.selectReagent')}</option>
+                {(row._catalogItems ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                    {item.catalog_number ? ` (${item.catalog_number})` : ''}
+                  </option>
+                ))}
+              </Select>
+              {row._supplierId && (
+                <button
+                  type="button"
+                  title={t('catalog.createNewReagent')}
+                  onClick={() => setCreateDialogRowIndex(index)}
+                  className="shrink-0 text-muted-foreground hover:text-primary"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Expiry date */}
             <div>
               <DateInput
-                value={reagent.expiryDate}
-                onChange={(e) => updateReagent(index, 'expiryDate', e.target.value)}
+                value={row.expiryDate}
+                onChange={(e) => updateField(index, 'expiryDate', e.target.value)}
                 placeholderText={t('form.expiryDatePlaceholder')}
               />
             </div>
+
+            {/* Lot number */}
             <div>
               <Input
                 placeholder={t('form.lotNumber')}
-                value={reagent.lotNumber}
-                onChange={(e) => updateReagent(index, 'lotNumber', e.target.value)}
+                value={row.lotNumber}
+                onChange={(e) => updateField(index, 'lotNumber', e.target.value)}
               />
             </div>
+
+            {/* Quantity */}
             <div>
               <Input
-                placeholder={t('form.notes')}
-                value={reagent.notes}
-                onChange={(e) => updateReagent(index, 'notes', e.target.value)}
+                type="number"
+                min={0}
+                placeholder={t('newShipment.quantity')}
+                value={row.quantity ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : undefined;
+                  updateField(index, 'quantity', val);
+                }}
+              />
+            </div>
+
+            {/* Manufacturer */}
+            <div>
+              <Input
+                placeholder={t('form.manufacturer')}
+                value={row.manufacturer ?? ''}
+                onChange={(e) => updateField(index, 'manufacturer', e.target.value)}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <Textarea
+                placeholder={t('form.description')}
+                value={row.description ?? ''}
+                onChange={(e) => updateField(index, 'description', e.target.value)}
+                rows={1}
+                className="resize-none"
               />
             </div>
           </div>
         ))}
       </div>
+
+      <CreateCatalogItemDialog
+        open={createDialogRowIndex !== null}
+        onClose={() => setCreateDialogRowIndex(null)}
+        onCreated={handleCatalogItemCreated}
+        suppliers={suppliers}
+        defaultSupplierId={
+          createDialogRowIndex !== null
+            ? rows[createDialogRowIndex]._supplierId
+            : undefined
+        }
+      />
     </div>
   );
 }

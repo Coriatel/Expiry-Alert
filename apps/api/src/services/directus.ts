@@ -25,6 +25,10 @@ interface Schema {
   settings: any[];
   push_subscriptions: any[];
   notification_log: any[];
+  ea_suppliers: any[];
+  ea_reagent_catalog: any[];
+  ea_destruction_log: any[];
+  ea_duplication_log: any[];
 }
 
 const url = config.directus.url || "http://localhost:8055";

@@ -9,6 +9,7 @@ interface ExpiryAlertSectionProps {
   reagents: Reagent[];
   onSnooze: (reagentId: number, days: number) => void;
   onDismiss: (reagentId: number, alertType?: string) => void;
+  teamName?: string;
 }
 
 function getAlertType(days: number): string {
@@ -53,6 +54,7 @@ export function ExpiryAlertSection({
   reagents,
   onSnooze,
   onDismiss,
+  teamName,
 }: ExpiryAlertSectionProps) {
   const { t } = useTranslation();
   const { alertExpanded, setAlertExpanded } = useStore();
@@ -110,7 +112,7 @@ export function ExpiryAlertSection({
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span>{icon}</span>
-                    <span className="font-medium truncate">{reagent.name}</span>
+                    <span className="font-medium truncate">{teamName ? `${teamName}: ` : ""}{reagent.name}</span>
                     <span className="text-muted-foreground text-xs whitespace-nowrap">
                       —{" "}
                       {days < 0

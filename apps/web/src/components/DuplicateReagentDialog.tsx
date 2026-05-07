@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { HelpCircle } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { DateInput } from "@/components/ui/DateInput";
 import { Textarea } from "@/components/ui/Textarea";
-import { Select } from "@/components/ui/Select";
 import type { Reagent, ReagentFormData } from "@/types";
 
 interface DuplicateReagentDialogProps {
@@ -31,6 +31,8 @@ export function DuplicateReagentDialog({
     expiryDate: "",
     lotNumber: "",
     notes: "",
+    manufacturer: "",
+    description: "",
   });
 
   useEffect(() => {
@@ -39,8 +41,13 @@ export function DuplicateReagentDialog({
         name: reagent.name,
         category: reagent.category ?? "reagents",
         expiryDate: "",
-        lotNumber: reagent.lot_number || "",
+        lotNumber: "",
         notes: reagent.notes || "",
+        supplier_name: reagent.supplier_name ?? undefined,
+        supplier_id: reagent.supplier_id ?? undefined,
+        quantity: reagent.quantity ?? undefined,
+        manufacturer: reagent.manufacturer || "",
+        description: reagent.description || "",
       });
       setError(null);
     }
@@ -49,10 +56,6 @@ export function DuplicateReagentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      setError(t("validation.nameRequired"));
-      return;
-    }
     if (!formData.expiryDate) {
       setError(t("validation.expiryDateRequired"));
       return;
@@ -71,7 +74,7 @@ export function DuplicateReagentDialog({
     }
   };
 
-  const handleChange = (field: keyof ReagentFormData, value: string) => {
+  const handleChange = (field: keyof ReagentFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
   };
@@ -80,7 +83,7 @@ export function DuplicateReagentDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={t("dialog.duplicateReagent")}
+      title={t("newShipment.title")}
       className="max-w-lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,37 +93,45 @@ export function DuplicateReagentDialog({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Reagent name — read-only */}
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">
-              {t("form.name")} *
+              {t("form.name")}
+            </label>
+            <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm">
+              {reagent?.name ?? ""}
+            </div>
+          </div>
+
+          {/* Supplier — read-only (if available) */}
+          {reagent?.supplier_name && (
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                {t("duplicationHistory.supplier")}
+              </label>
+              <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm">
+                {reagent.supplier_name}
+              </div>
+            </div>
+          )}
+
+          {/* Lot number — empty, user must enter */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t("newShipment.lotNumber")}
             </label>
             <Input
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder={t("form.namePlaceholder")}
-              required
+              value={formData.lotNumber ?? ""}
+              onChange={(e) => handleChange("lotNumber", e.target.value)}
+              placeholder={t("form.lotNumberPlaceholder")}
             />
           </div>
 
+          {/* Expiry date — empty, user must enter */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              {t("form.category")} *
-            </label>
-            <Select
-              value={formData.category}
-              onChange={(e) =>
-                handleChange("category", e.target.value as "reagents" | "beads")
-              }
-            >
-              <option value="reagents">{t("category.reagents")}</option>
-              <option value="beads">{t("category.beads")}</option>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              {t("form.expiryDate")} *
+              {t("newShipment.expiryDate")} *
             </label>
             <DateInput
               value={formData.expiryDate}
@@ -128,19 +139,51 @@ export function DuplicateReagentDialog({
               placeholderText={t("form.expiryDatePlaceholder")}
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("dialog.duplicateExpiryHint")}
+          </div>
+
+          {/* Quantity — pre-filled from original */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {t("newShipment.quantity")}
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={formData.quantity ?? ""}
+              onChange={(e) =>
+                handleChange(
+                  "quantity",
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
+              }
+            />
+            <p className="text-sm mt-1 flex items-center gap-1" style={{ color: "#2d6a4f" }}>
+              <HelpCircle className="h-4 w-4" />
+              {t("newShipment.sameQuantity")}
             </p>
           </div>
 
+          {/* Manufacturer — pre-filled, editable */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              {t("form.lotNumber")}
+              {t("form.manufacturer")}
             </label>
             <Input
-              value={formData.lotNumber}
-              onChange={(e) => handleChange("lotNumber", e.target.value)}
-              placeholder={t("form.lotNumberPlaceholder")}
+              value={formData.manufacturer ?? ""}
+              onChange={(e) => handleChange("manufacturer", e.target.value)}
+              placeholder={t("form.manufacturerPlaceholder")}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              {t("form.description")}
+            </label>
+            <Textarea
+              value={formData.description ?? ""}
+              onChange={(e) => handleChange("description", e.target.value)}
+              placeholder={t("form.descriptionPlaceholder")}
+              rows={2}
             />
           </div>
 
