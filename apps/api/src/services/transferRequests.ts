@@ -41,23 +41,53 @@ export async function createTransferRequest(data: {
   });
 }
 
+// Directus may return 403 if the collection's read permission for the
+// API role has not been granted yet — degrade to an empty list so the
+// notification badge / page load doesn't fail for users with no
+// incoming transfers. Other errors bubble up.
+export function isMissingCollectionPermission(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } } | null)?.response
+    ?.status;
+  return status === 403;
+}
+
 export async function listIncomingPending(teamId: number) {
-  return listRecords<TransferRequestRecord>(collection, {
-    filter: {
-      to_team: { _eq: teamId },
-      status: { _eq: "pending" },
-    },
-    sort: ["-created_at"],
-    limit: 100,
-  });
+  try {
+    return await listRecords<TransferRequestRecord>(collection, {
+      filter: {
+        to_team: { _eq: teamId },
+        status: { _eq: "pending" },
+      },
+      sort: ["-created_at"],
+      limit: 100,
+    });
+  } catch (err) {
+    if (isMissingCollectionPermission(err)) {
+      console.warn(
+        "listIncomingPending: Directus 403 on ea_transfer_requests — returning [] (grant read permission on the collection to remove this warning)",
+      );
+      return [] as TransferRequestRecord[];
+    }
+    throw err;
+  }
 }
 
 export async function listOutgoing(teamId: number) {
-  return listRecords<TransferRequestRecord>(collection, {
-    filter: { from_team: { _eq: teamId } },
-    sort: ["-created_at"],
-    limit: 100,
-  });
+  try {
+    return await listRecords<TransferRequestRecord>(collection, {
+      filter: { from_team: { _eq: teamId } },
+      sort: ["-created_at"],
+      limit: 100,
+    });
+  } catch (err) {
+    if (isMissingCollectionPermission(err)) {
+      console.warn(
+        "listOutgoing: Directus 403 on ea_transfer_requests — returning []",
+      );
+      return [] as TransferRequestRecord[];
+    }
+    throw err;
+  }
 }
 
 export async function getTransferRequest(id: number) {

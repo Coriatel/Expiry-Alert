@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { getTeamId } from "../utils/team.js";
 import {
   cancelTransferRequest,
@@ -52,7 +53,7 @@ const decideSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
 });
 
-transferRequestsRouter.get("/", async (req, res) => {
+transferRequestsRouter.get("/", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -63,9 +64,9 @@ transferRequestsRouter.get("/", async (req, res) => {
   }
   const items = await listIncomingPending(teamId);
   return res.json({ items });
-});
+}));
 
-transferRequestsRouter.post("/", async (req, res) => {
+transferRequestsRouter.post("/", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -87,9 +88,9 @@ transferRequestsRouter.post("/", async (req, res) => {
   });
 
   res.status(201).json(entry);
-});
+}));
 
-transferRequestsRouter.post("/:id/decide", async (req, res) => {
+transferRequestsRouter.post("/:id/decide", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -112,9 +113,9 @@ transferRequestsRouter.post("/:id/decide", async (req, res) => {
     user?.id ?? 0,
   );
   res.json(entry);
-});
+}));
 
-transferRequestsRouter.post("/:id/cancel", async (req, res) => {
+transferRequestsRouter.post("/:id/cancel", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -129,4 +130,4 @@ transferRequestsRouter.post("/:id/cancel", async (req, res) => {
   const user = (req as any).user;
   const entry = await cancelTransferRequest(id, user?.id ?? 0);
   res.json(entry);
-});
+}));

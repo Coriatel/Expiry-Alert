@@ -1,3 +1,4 @@
+import { inspect } from "util";
 import express from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -152,3 +153,20 @@ function shutdown(signal: string) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Surface (and survive) unhandled async errors from fire-and-forget work.
+// Without this, Node 22 terminates the process on any rejected promise that
+// escapes a handler — taking the whole API down between requests.
+process.on("unhandledRejection", (reason: unknown) => {
+  // Use util.inspect so axios-style errors with non-enumerable properties
+  // (response, config, request) and their nested objects are visible —
+  // JSON.stringify drops these and they print as "#<Object>".
+  console.error(
+    "[unhandledRejection]",
+    inspect(reason, { depth: 5, getters: true, breakLength: 200 }),
+  );
+});
+
+process.on("uncaughtException", (err: Error) => {
+  console.error("[uncaughtException]", err?.stack ?? err);
+});
