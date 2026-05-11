@@ -24,6 +24,7 @@ import { reagentCatalogRouter } from "./routes/reagentCatalog.js";
 import { destructionLogRouter } from "./routes/destructionLog.js";
 import { duplicationLogRouter } from "./routes/duplicationLog.js";
 import { importRouter } from "./routes/import.js";
+import { transferRequestsRouter } from "./routes/transferRequests.js";
 import { initCron } from "./services/cron.js";
 
 warnMissingConfig();
@@ -99,6 +100,7 @@ app.use("/api/reagent-catalog", reagentCatalogRouter);
 app.use("/api/destruction-log", destructionLogRouter);
 app.use("/api/duplication-log", duplicationLogRouter);
 app.use("/api/import", importRouter);
+app.use("/api/transfer-requests", transferRequestsRouter);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(__dirname, "../../web/dist");

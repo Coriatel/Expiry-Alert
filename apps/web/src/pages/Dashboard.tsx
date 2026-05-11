@@ -18,6 +18,8 @@ import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { DestructionDialog } from "@/components/DestructionDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
+import { TransferRequestsBanner } from "@/components/TransferRequestsBanner";
+import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
 import { ExpiryCalendar } from "@/components/ExpiryCalendar";
@@ -86,6 +88,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   });
 
   const [teams, setTeams] = useState<TeamSummary[]>([]);
+  const [requestTransferOpen, setRequestTransferOpen] = useState(false);
   const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
 
   const {
@@ -449,6 +452,9 @@ export function Dashboard({ teamName }: DashboardProps) {
       {/* Push Notification Prompt */}
       <PushPromptBanner />
 
+      {/* Incoming transfer requests */}
+      <TransferRequestsBanner teams={teams} />
+
       {/* Inline Alert Section */}
       <ExpiryAlertSection
         reagents={expiringReagents}
@@ -532,16 +538,25 @@ export function Dashboard({ teamName }: DashboardProps) {
         </div>
       </div>
 
-      {/* Add Button */}
+      {/* Add Button + Request transfer */}
       {!showBulkAdd && (
-        <Button
-          onClick={() => setShowBulkAdd(true)}
-          disabled={isLoading}
-          className="print:hidden"
-        >
-          <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          {t("dashboard.addMultiple")}
-        </Button>
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <Button onClick={() => setShowBulkAdd(true)} disabled={isLoading}>
+            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t("dashboard.addMultiple")}
+          </Button>
+          {otherTeams.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setRequestTransferOpen(true)}
+              disabled={isLoading}
+            >
+              {t("transferRequests.requestButton", {
+                defaultValue: "בקש פריטים מצוות אחר",
+              })}
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Bulk Add Form */}
@@ -642,6 +657,16 @@ export function Dashboard({ teamName }: DashboardProps) {
         open={destroyingReagent !== null}
         onClose={() => setDestroyingReagent(null)}
         onConfirm={handleDestroyConfirm}
+      />
+
+      <RequestTransferDialog
+        open={requestTransferOpen}
+        onClose={() => setRequestTransferOpen(false)}
+        teams={otherTeams}
+        onSent={() => showToast(
+          t("transferRequests.sent", { defaultValue: "הבקשה נשלחה" }),
+          "success",
+        )}
       />
 
       {/* Confirm Dialog */}
