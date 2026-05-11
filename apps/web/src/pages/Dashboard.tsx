@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -17,6 +18,7 @@ import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { DestructionDialog } from "@/components/DestructionDialog";
+import { TransferReagentsDialog } from "@/components/TransferReagentsDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
@@ -75,6 +77,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   const [destroyingReagent, setDestroyingReagent] = useState<Reagent | null>(
     null,
   );
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const bulkDestroyQueueRef = useRef<number[]>([]);
   const bulkDestroyDoneRef = useRef<number>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -538,17 +541,20 @@ export function Dashboard({ teamName }: DashboardProps) {
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkDelete")} ({selectedReagentIds.length})
               </Button>
-              {otherTeams.map((team) => (
+              {otherTeams.length > 0 && (
                 <Button
-                  key={team.id}
                   variant="outline"
-                  onClick={() => handleImportToTeam(team)}
+                  onClick={() => setTransferDialogOpen(true)}
                   disabled={isLoading}
                   className="print:hidden"
                 >
-                  {t("import.copyTo", { team: team.name })}
+                  <Send className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                  {t("transfer.button", {
+                    defaultValue: "העבר לצוות",
+                  })}{" "}
+                  ({selectedReagentIds.length})
                 </Button>
-              ))}
+              )}
             </>
           )}
         </div>
@@ -673,6 +679,17 @@ export function Dashboard({ teamName }: DashboardProps) {
           }
         }}
         onConfirm={handleDestroyConfirm}
+      />
+
+      <TransferReagentsDialog
+        open={transferDialogOpen}
+        onClose={() => setTransferDialogOpen(false)}
+        teams={otherTeams}
+        count={selectedReagentIds.length}
+        onPick={(team) => {
+          setTransferDialogOpen(false);
+          handleImportToTeam(team);
+        }}
       />
 
       {/* Confirm Dialog */}
