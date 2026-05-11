@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -30,7 +30,6 @@ import {
   addReagentsBulk,
   updateReagent,
   deleteReagent,
-  deleteReagentsBulk,
   archiveReagentsBulk,
   destroyReagent,
   getExpiringReagents,
@@ -76,6 +75,8 @@ export function Dashboard({ teamName }: DashboardProps) {
   const [destroyingReagent, setDestroyingReagent] = useState<Reagent | null>(
     null,
   );
+  const bulkDestroyQueueRef = useRef<number[]>([]);
+  const bulkDestroyDoneRef = useRef<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
@@ -320,31 +321,39 @@ export function Dashboard({ teamName }: DashboardProps) {
     });
   };
 
+  const pickNextFromQueue = (): Reagent | null => {
+    while (bulkDestroyQueueRef.current.length > 0) {
+      const nextId = bulkDestroyQueueRef.current.shift()!;
+      const next = reagents.find((r) => r.id === nextId);
+      if (next) return next;
+    }
+    return null;
+  };
+
+  const finishBulkDestroy = async (cancelled: boolean) => {
+    const done = bulkDestroyDoneRef.current;
+    bulkDestroyQueueRef.current = [];
+    bulkDestroyDoneRef.current = 0;
+    setDestroyingReagent(null);
+    if (done > 0) {
+      await loadData();
+      clearSelection();
+      showToast(
+        t("success.reagentsDestroyed", { count: done, defaultValue: `${done} פריטים הושמדו` }),
+        "success",
+      );
+    } else if (cancelled) {
+      setDestroyingReagent(null);
+    }
+  };
+
   const handleBulkDelete = () => {
     if (selectedReagentIds.length === 0) return;
-
-    setConfirmState({
-      open: true,
-      title: t("confirm.deleteMultipleTitle"),
-      message: t("confirm.deleteMultipleMessage", {
-        count: selectedReagentIds.length,
-      }),
-      variant: "danger",
-      onConfirm: async () => {
-        try {
-          await deleteReagentsBulk(selectedReagentIds);
-          await loadData();
-          clearSelection();
-          showToast(
-            t("success.reagentsDeleted", { count: selectedReagentIds.length }),
-            "success",
-          );
-        } catch (error) {
-          console.error("Failed to delete reagents:", error);
-          showToast(t("errors.deleteFailed"), "error");
-        }
-      },
-    });
+    bulkDestroyQueueRef.current = [...selectedReagentIds];
+    bulkDestroyDoneRef.current = 0;
+    const first = pickNextFromQueue();
+    if (!first) return;
+    setDestroyingReagent(first);
   };
 
   const handleDestroy = (reagent: Reagent) => {
@@ -367,10 +376,23 @@ export function Dashboard({ teamName }: DashboardProps) {
         quantity_original: reagent.quantity ?? undefined,
         quantity_destroyed: quantityDestroyed,
       });
-      setDestroyingReagent(null);
-      await loadData();
-      clearSelection();
-      showToast(t("success.reagentArchived"), "success");
+      const isBulk =
+        bulkDestroyQueueRef.current.length > 0 ||
+        bulkDestroyDoneRef.current > 0;
+      if (isBulk) {
+        bulkDestroyDoneRef.current += 1;
+        const next = pickNextFromQueue();
+        if (next) {
+          setDestroyingReagent(next);
+        } else {
+          await finishBulkDestroy(false);
+        }
+      } else {
+        setDestroyingReagent(null);
+        await loadData();
+        clearSelection();
+        showToast(t("success.reagentArchived"), "success");
+      }
     } catch (error) {
       console.error("Failed to destroy reagent:", error);
       showToast(t("errors.archiveFailed"), "error");
@@ -640,7 +662,16 @@ export function Dashboard({ teamName }: DashboardProps) {
       <DestructionDialog
         reagent={destroyingReagent}
         open={destroyingReagent !== null}
-        onClose={() => setDestroyingReagent(null)}
+        onClose={() => {
+          const inBulk =
+            bulkDestroyQueueRef.current.length > 0 ||
+            bulkDestroyDoneRef.current > 0;
+          if (inBulk) {
+            void finishBulkDestroy(true);
+          } else {
+            setDestroyingReagent(null);
+          }
+        }}
         onConfirm={handleDestroyConfirm}
       />
 
