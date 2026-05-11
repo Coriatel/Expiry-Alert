@@ -104,6 +104,10 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
             name: catalogItem.name,
             supplier_id: supplier?.id,
             supplier_name: supplier?.name,
+            manufacturer:
+              row.manufacturer && row.manufacturer.trim() !== ''
+                ? row.manufacturer
+                : catalogItem.manufacturer ?? '',
           };
         }
         return next;
@@ -126,6 +130,10 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
           name: newItem.name,
           supplier_id: supplier?.id,
           supplier_name: supplier?.name,
+          manufacturer:
+            row.manufacturer && row.manufacturer.trim() !== ''
+              ? row.manufacturer
+              : newItem.manufacturer ?? '',
         };
         return next;
       });
