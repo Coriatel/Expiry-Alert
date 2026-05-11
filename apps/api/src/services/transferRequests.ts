@@ -45,7 +45,7 @@ export async function createTransferRequest(data: {
 // API role has not been granted yet — degrade to an empty list so the
 // notification badge / page load doesn't fail for users with no
 // incoming transfers. Other errors bubble up.
-function isMissingCollectionPermission(err: unknown): boolean {
+export function isMissingCollectionPermission(err: unknown): boolean {
   const status = (err as { response?: { status?: number } } | null)?.response
     ?.status;
   return status === 403;
