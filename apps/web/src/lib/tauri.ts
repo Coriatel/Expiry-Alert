@@ -466,6 +466,7 @@ export type ReagentCatalogItem = {
   name: string;
   catalog_number?: string | null;
   supplier_id: number;
+  manufacturer?: string | null;
   is_active: boolean;
 };
 
@@ -479,10 +480,16 @@ export async function createReagentCatalogItem(
   name: string,
   supplierId: number,
   catalogNumber?: string,
+  manufacturer?: string,
 ): Promise<ReagentCatalogItem> {
   return apiFetch<ReagentCatalogItem>("/api/reagent-catalog", {
     method: "POST",
-    body: JSON.stringify({ name, supplier_id: supplierId, catalog_number: catalogNumber }),
+    body: JSON.stringify({
+      name,
+      supplier_id: supplierId,
+      catalog_number: catalogNumber,
+      manufacturer,
+    }),
   });
 }
 

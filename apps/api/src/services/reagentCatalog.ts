@@ -11,6 +11,7 @@ export type ReagentCatalogRecord = {
   name: string;
   catalog_number: string | null;
   supplier_id: number | null;
+  manufacturer: string | null;
   is_active: boolean;
   date_created: string;
   date_updated: string;
@@ -39,13 +40,19 @@ export async function listReagentCatalog(
 
 export async function createReagentCatalogEntry(
   teamId: number,
-  data: { name: string; catalog_number?: string | null; supplier_id: number },
+  data: {
+    name: string;
+    catalog_number?: string | null;
+    supplier_id: number;
+    manufacturer?: string | null;
+  },
 ) {
   return createRecord<ReagentCatalogRecord>(collection, {
     team: teamId,
     name: data.name,
     catalog_number: data.catalog_number ?? null,
     supplier_id: data.supplier_id,
+    manufacturer: data.manufacturer ?? null,
     is_active: true,
   });
 }

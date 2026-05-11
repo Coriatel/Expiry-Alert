@@ -14,6 +14,7 @@ const catalogEntrySchema = z.object({
   name: z.string().min(1),
   catalog_number: z.string().optional().nullable(),
   supplier_id: z.number().int(),
+  manufacturer: z.string().max(255).optional().nullable(),
 });
 
 reagentCatalogRouter.use(requireAuth);
@@ -42,6 +43,7 @@ reagentCatalogRouter.post("/", async (req, res) => {
     name: parsed.data.name,
     catalog_number: parsed.data.catalog_number ?? null,
     supplier_id: parsed.data.supplier_id,
+    manufacturer: parsed.data.manufacturer ?? null,
   });
 
   res.status(201).json(entry);

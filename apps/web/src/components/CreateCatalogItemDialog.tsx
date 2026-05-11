@@ -29,6 +29,7 @@ export function CreateCatalogItemDialog({
   const [name, setName] = useState('');
   const [supplierId, setSupplierId] = useState<number | ''>(defaultSupplierId ?? '');
   const [catalogNumber, setCatalogNumber] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +37,7 @@ export function CreateCatalogItemDialog({
     setName('');
     setSupplierId(defaultSupplierId ?? '');
     setCatalogNumber('');
+    setManufacturer('');
     setError('');
     onClose();
   };
@@ -49,10 +51,12 @@ export function CreateCatalogItemDialog({
         name.trim(),
         Number(supplierId),
         catalogNumber.trim() || undefined,
+        manufacturer.trim() || undefined,
       );
       setName('');
       setSupplierId(defaultSupplierId ?? '');
       setCatalogNumber('');
+      setManufacturer('');
       onCreated(item);
     } catch {
       setError(t('catalog.createError'));
@@ -99,6 +103,18 @@ export function CreateCatalogItemDialog({
             value={catalogNumber}
             onChange={(e) => setCatalogNumber(e.target.value)}
             placeholder={t('catalog.catalogNumber')}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            {t('catalog.manufacturer', { defaultValue: 'יצרן' })}
+          </label>
+          <Input
+            value={manufacturer}
+            onChange={(e) => setManufacturer(e.target.value)}
+            placeholder={t('catalog.manufacturer', { defaultValue: 'יצרן' })}
+            maxLength={255}
           />
         </div>
 
