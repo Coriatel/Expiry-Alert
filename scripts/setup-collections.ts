@@ -387,6 +387,63 @@ const eaDuplicationLogFields: FieldDef[] = [
   },
 ];
 
+const eaTransferRequestsFields: FieldDef[] = [
+  {
+    field: "id",
+    type: "integer",
+    schema: { is_primary_key: true, has_auto_increment: true },
+    meta: { hidden: true, readonly: true },
+  },
+  {
+    field: "from_team",
+    type: "integer",
+    schema: { is_nullable: false },
+    meta: { interface: "input", required: true },
+  },
+  {
+    field: "to_team",
+    type: "integer",
+    schema: { is_nullable: false },
+    meta: { interface: "input", required: true },
+  },
+  {
+    field: "message_text",
+    type: "text",
+    schema: { is_nullable: true },
+    meta: { interface: "input-multiline" },
+  },
+  {
+    field: "status",
+    type: "string",
+    schema: { is_nullable: false, default_value: "pending" },
+    meta: { interface: "input", required: true },
+  },
+  {
+    field: "created_by",
+    type: "integer",
+    schema: { is_nullable: true },
+    meta: { interface: "input" },
+  },
+  {
+    field: "created_at",
+    type: "timestamp",
+    schema: { is_nullable: false },
+    meta: { special: ["date-created"], interface: "datetime", readonly: true },
+  },
+  {
+    field: "decided_by",
+    type: "integer",
+    schema: { is_nullable: true },
+    meta: { interface: "input" },
+  },
+  {
+    field: "decided_at",
+    type: "timestamp",
+    schema: { is_nullable: true },
+    meta: { interface: "datetime" },
+  },
+];
+
 // Fields to add to existing `reagents` collection
 const reagentsNewFields: FieldDef[] = [
   {
@@ -465,8 +522,20 @@ async function main(): Promise<void> {
     fields: eaDuplicationLogFields,
   });
 
-  // 5. Add fields to existing `reagents` collection
-  console.log("\n[5/5] Add new fields to reagents");
+  // 5. ea_transfer_requests
+  console.log("\n[5/6] ea_transfer_requests");
+  await createCollection({
+    collection: "ea_transfer_requests",
+    meta: {
+      icon: "swap_horiz",
+      note: "Cross-team pull-request for reagent transfers",
+      singleton: false,
+    },
+    fields: eaTransferRequestsFields,
+  });
+
+  // 6. Add fields to existing `reagents` collection
+  console.log("\n[6/6] Add new fields to reagents");
   for (const fieldDef of reagentsNewFields) {
     await addFieldToCollection("reagents", fieldDef);
   }

@@ -60,6 +60,7 @@ export const config = {
       reagentCatalog: "ea_reagent_catalog",
       destructionLog: "ea_destruction_log",
       duplicationLog: "ea_duplication_log",
+      transferRequests: "ea_transfer_requests",
     },
   },
   sessionDbUrl: process.env.SESSION_DB_URL ?? "",

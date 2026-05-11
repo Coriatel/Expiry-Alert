@@ -566,3 +566,49 @@ export async function importReagentsToTeam(
     body: JSON.stringify({ targetTeamId, reagentIds }),
   });
 }
+
+// --- Transfer requests ---
+export type TransferRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled";
+
+export type TransferRequest = {
+  id: number;
+  from_team: number;
+  to_team: number;
+  message_text: string | null;
+  status: TransferRequestStatus;
+  created_by: number | null;
+  created_at: string;
+  decided_by: number | null;
+  decided_at: string | null;
+};
+
+export async function listIncomingTransferRequests(): Promise<TransferRequest[]> {
+  const res = await apiFetch<{ items: TransferRequest[] }>(
+    "/api/transfer-requests?role=incoming",
+  );
+  return res.items ?? [];
+}
+
+export async function createTransferRequest(
+  toTeam: number,
+  messageText?: string,
+): Promise<TransferRequest> {
+  return apiFetch<TransferRequest>("/api/transfer-requests", {
+    method: "POST",
+    body: JSON.stringify({ to_team: toTeam, message_text: messageText ?? null }),
+  });
+}
+
+export async function decideTransferRequest(
+  id: number,
+  decision: "approved" | "rejected",
+): Promise<TransferRequest> {
+  return apiFetch<TransferRequest>(`/api/transfer-requests/${id}/decide`, {
+    method: "POST",
+    body: JSON.stringify({ decision }),
+  });
+}
