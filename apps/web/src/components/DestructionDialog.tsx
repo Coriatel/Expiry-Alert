@@ -71,6 +71,12 @@ export function DestructionDialog({
             min={0}
             value={quantity}
             onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleConfirm(quantity);
+              }
+            }}
           />
         </div>
 
