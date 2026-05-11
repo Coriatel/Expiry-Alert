@@ -152,3 +152,24 @@ function shutdown(signal: string) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Surface (and survive) unhandled async errors from fire-and-forget work.
+// Without this, Node 22 terminates the process on any rejected promise that
+// escapes a handler — taking the whole API down between requests.
+process.on("unhandledRejection", (reason: unknown) => {
+  const detail =
+    reason instanceof Error
+      ? { message: reason.message, stack: reason.stack }
+      : (() => {
+          try {
+            return JSON.parse(JSON.stringify(reason));
+          } catch {
+            return String(reason);
+          }
+        })();
+  console.error("[unhandledRejection]", detail);
+});
+
+process.on("uncaughtException", (err: Error) => {
+  console.error("[uncaughtException]", err?.stack ?? err);
+});
