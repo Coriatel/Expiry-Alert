@@ -13,6 +13,34 @@ import {
 
 export const transferRequestsRouter = Router();
 
+export type TransferAuthResult =
+  | { ok: true }
+  | { ok: false; status: 403 | 404 | 409; error: string };
+
+export function authorizeDecide(
+  existing: { to_team: number; status: string } | null | undefined,
+  currentTeamId: number,
+): TransferAuthResult {
+  if (!existing) return { ok: false, status: 404, error: "Not found" };
+  if (existing.to_team !== currentTeamId)
+    return { ok: false, status: 403, error: "Forbidden" };
+  if (existing.status !== "pending")
+    return { ok: false, status: 409, error: "Already decided" };
+  return { ok: true };
+}
+
+export function authorizeCancel(
+  existing: { from_team: number; status: string } | null | undefined,
+  currentTeamId: number,
+): TransferAuthResult {
+  if (!existing) return { ok: false, status: 404, error: "Not found" };
+  if (existing.from_team !== currentTeamId)
+    return { ok: false, status: 403, error: "Forbidden" };
+  if (existing.status !== "pending")
+    return { ok: false, status: 409, error: "Already decided" };
+  return { ok: true };
+}
+
 transferRequestsRouter.use(requireAuth);
 
 const createSchema = z.object({
@@ -74,10 +102,8 @@ transferRequestsRouter.post("/:id/decide", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   const existing = await getTransferRequest(id);
-  if (!existing) return res.status(404).json({ error: "Not found" });
-  if (existing.to_team !== teamId) return res.status(403).json({ error: "Forbidden" });
-  if (existing.status !== "pending")
-    return res.status(409).json({ error: "Already decided" });
+  const auth = authorizeDecide(existing, teamId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   const user = (req as any).user;
   const entry = await decideTransferRequest(
@@ -97,11 +123,8 @@ transferRequestsRouter.post("/:id/cancel", async (req, res) => {
     return res.status(400).json({ error: "Invalid id" });
 
   const existing = await getTransferRequest(id);
-  if (!existing) return res.status(404).json({ error: "Not found" });
-  if (existing.from_team !== teamId)
-    return res.status(403).json({ error: "Forbidden" });
-  if (existing.status !== "pending")
-    return res.status(409).json({ error: "Already decided" });
+  const auth = authorizeCancel(existing, teamId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   const user = (req as any).user;
   const entry = await cancelTransferRequest(id, user?.id ?? 0);
