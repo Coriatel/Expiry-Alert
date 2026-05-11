@@ -45,10 +45,16 @@ fi
 # Stream with timestamps, line-buffered grep, N lines before/after each hit.
 # Before-context is critical: it usually contains the HTTP request line
 # whose handler scheduled the rejecting promise.
-# --since avoids replaying the full container history on start.
-"${DOCKER[@]}" logs --since "$SINCE" --timestamps --follow "$CONTAINER" 2>&1 \
-  | grep --line-buffered -E -B "$CONTEXT_BEFORE" -A "$CONTEXT_LINES" \
-      '\[unhandledRejection\]|\[uncaughtException\]' \
-  | while IFS= read -r line; do
-      printf '%s\n' "$line" | tee -a "$OUT"
-    done
+# Outer loop reconnects after docker compose recreates the container
+# (the docker logs stream dies but the container name persists).
+while true; do
+  "${DOCKER[@]}" logs --since "$SINCE" --timestamps --follow "$CONTAINER" 2>&1 \
+    | grep --line-buffered -E -B "$CONTEXT_BEFORE" -A "$CONTEXT_LINES" \
+        '\[unhandledRejection\]|\[uncaughtException\]' \
+    | while IFS= read -r line; do
+        printf '%s\n' "$line" | tee -a "$OUT"
+      done
+  echo "[watchdog $(date -Iseconds)] log stream ended — reconnecting in 5s" \
+    | tee -a "$OUT"
+  sleep 5
+done
