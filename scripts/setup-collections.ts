@@ -56,13 +56,22 @@ async function apiRequest(
   return { ok: res.ok, status: res.status, data };
 }
 
-async function collectionExists(collection: string): Promise<boolean> {
+// Returns { tableExists, registered }:
+//   tableExists  → PG table is present (Directus's `schema` field is non-null)
+//   registered   → Directus also has the metadata row (`meta` is non-null)
+// A table-without-meta state silently returns 403 on /items queries even
+// for the admin token, so we must POST /collections (with schema: null) to
+// register the missing meta only. Without this, an earlier SQL migration
+// that creates the PG table will cause this script to skip registration.
+async function collectionState(
+  collection: string,
+): Promise<{ tableExists: boolean; registered: boolean }> {
   const res = await apiRequest("GET", `/collections/${collection}`);
-  if (!res.ok) return false;
-  // Verify it has an actual DB table (schema is not null).
-  // A collection with schema: null is virtual (metadata only) — treat as non-existent.
-  const data = res.data as { data?: { schema?: unknown } };
-  return data?.data?.schema != null;
+  if (!res.ok) return { tableExists: false, registered: false };
+  const data = res.data as { data?: { schema?: unknown; meta?: unknown } };
+  const tableExists = data?.data?.schema != null;
+  const registered = tableExists && data?.data?.meta != null;
+  return { tableExists, registered };
 }
 
 async function fieldExists(
@@ -95,20 +104,27 @@ interface CollectionDef {
 
 async function createCollection(def: CollectionDef): Promise<void> {
   const name = def.collection;
-  if (await collectionExists(name)) {
-    console.log(`  [SKIP] Collection "${name}" already exists.`);
+  const state = await collectionState(name);
+  if (state.registered) {
+    console.log(`  [SKIP] Collection "${name}" already registered.`);
     return;
   }
 
+  // If the table exists but Directus has no metadata row, register meta
+  // only. schema: null + fields: [] tells Directus not to (re-)create the
+  // table or its fields; field meta will be introspected on first query.
+  const isMetaOnlyRegister = state.tableExists;
   const res = await apiRequest("POST", "/collections", {
     collection: def.collection,
-    schema: {},          // Required: empty object tells Directus to create an actual DB table
+    schema: isMetaOnlyRegister ? null : {},
     meta: def.meta,
-    fields: def.fields,
+    fields: isMetaOnlyRegister ? [] : def.fields,
   });
 
   if (res.ok) {
-    console.log(`  [OK]   Collection "${name}" created.`);
+    console.log(
+      `  [OK]   Collection "${name}" ${isMetaOnlyRegister ? "metadata registered (table pre-existed)" : "created"}.`,
+    );
   } else if (res.status === 409) {
     console.log(`  [SKIP] Collection "${name}" already exists (409).`);
   } else {
