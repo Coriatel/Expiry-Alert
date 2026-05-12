@@ -112,4 +112,23 @@ describe("PullImportPage", () => {
 
     expect(getSourceReagents).toHaveBeenCalledTimes(2);
   });
+
+  it("on initial load with 'Request not approved' shows friendly completed-state, not red error", async () => {
+    getSourceReagents.mockRejectedValueOnce(new Error("Request not approved"));
+    getAllReagents.mockResolvedValueOnce([]);
+
+    render(<PullImportPage requestId={42} />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/בקשת ההעברה כבר טופלה|הושלמה|לא זמינה/),
+      ).toBeInTheDocument(),
+    );
+
+    expect(screen.queryByText(/Request not approved/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^שגיאה/)).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /חזרה ללוח הבקרה/ }).length,
+    ).toBeGreaterThanOrEqual(1);
+  });
 });
