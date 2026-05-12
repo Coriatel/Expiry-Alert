@@ -11,6 +11,8 @@ import {
   listIncomingPending,
   listOutgoing,
 } from "../services/transferRequests.js";
+import type { TransferRequestRecord } from "../services/transferRequests.js";
+import { listReagents } from "../services/reagents.js";
 
 export const transferRequestsRouter = Router();
 
@@ -39,6 +41,24 @@ export function authorizeCancel(
     return { ok: false, status: 403, error: "Forbidden" };
   if (existing.status !== "pending")
     return { ok: false, status: 409, error: "Already decided" };
+  return { ok: true };
+}
+
+export function authorizePullSource(
+  existing:
+    | { from_team: number; status: string; created_by: number | null }
+    | null
+    | undefined,
+  currentTeamId: number,
+  currentUserId: number | null,
+): TransferAuthResult {
+  if (!existing) return { ok: false, status: 404, error: "Not found" };
+  if (existing.status !== "approved")
+    return { ok: false, status: 403, error: "Request not approved" };
+  if (existing.from_team !== currentTeamId)
+    return { ok: false, status: 403, error: "Forbidden" };
+  if (!currentUserId || existing.created_by !== currentUserId)
+    return { ok: false, status: 403, error: "Only request creator may pull" };
   return { ok: true };
 }
 
@@ -130,4 +150,21 @@ transferRequestsRouter.post("/:id/cancel", asyncHandler(async (req, res) => {
   const user = (req as any).user;
   const entry = await cancelTransferRequest(id, user?.id ?? 0);
   res.json(entry);
+}));
+
+transferRequestsRouter.get("/:id/source-reagents", asyncHandler(async (req, res) => {
+  const teamId = getTeamId(req);
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
+
+  const user = (req as any).user;
+  const existing = (await getTransferRequest(id)) as TransferRequestRecord | null;
+  const auth = authorizePullSource(existing, teamId, user?.id ?? null);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
+  const reagents = await listReagents(existing!.to_team);
+  res.json({ reagents });
 }));
