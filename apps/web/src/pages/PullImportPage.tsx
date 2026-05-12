@@ -56,13 +56,13 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
       .catch((e: unknown) => {
         if (signal?.cancelled) return;
         const msg = e instanceof Error ? e.message : String(e);
-        // Backend errors from authorizePullSource that mean "this URL is no
-        // longer actionable" — render friendly state instead of red banner.
+        const code = (e as { code?: unknown })?.code;
+        // authorizePullSource codes that mean "URL not actionable for this user"
         if (
-          msg === "Request not approved" ||
-          msg === "Forbidden" ||
-          msg === "Only request creator may pull" ||
-          msg === "Not found"
+          code === "request_not_approved" ||
+          code === "forbidden" ||
+          code === "not_creator" ||
+          code === "not_found"
         ) {
           setNotActionable(true);
         } else {

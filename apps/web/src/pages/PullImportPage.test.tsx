@@ -39,6 +39,13 @@ function makeReagent(over: Partial<Reagent> & { id: number; name: string }): Rea
   } as Reagent;
 }
 
+function apiError(message: string, code: string, status = 403): Error {
+  const e = new Error(message) as Error & { code: string; status: number };
+  e.code = code;
+  e.status = status;
+  return e;
+}
+
 describe("PullImportPage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -52,7 +59,7 @@ describe("PullImportPage", () => {
 
     getSourceReagents
       .mockResolvedValueOnce(sourceList)
-      .mockRejectedValueOnce(new Error("Request not approved"));
+      .mockRejectedValueOnce(apiError("Request not approved", "request_not_approved"));
     getAllReagents.mockResolvedValue([]);
     pullReagents.mockResolvedValueOnce({
       imported: [
@@ -114,7 +121,7 @@ describe("PullImportPage", () => {
   });
 
   it("on initial load with 'Request not approved' shows friendly completed-state, not red error", async () => {
-    getSourceReagents.mockRejectedValueOnce(new Error("Request not approved"));
+    getSourceReagents.mockRejectedValueOnce(apiError("Request not approved", "request_not_approved"));
     getAllReagents.mockResolvedValueOnce([]);
 
     render(<PullImportPage requestId={42} />);
