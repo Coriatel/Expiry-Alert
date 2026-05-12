@@ -31,7 +31,7 @@ destructionLogRouter.get("/", async (req, res) => {
   const dateTo = req.query.to ? String(req.query.to) : undefined;
 
   const entries = await listDestructionLog(teamId, dateFrom, dateTo);
-  res.json(entries);
+  res.json({ log: entries });
 });
 
 destructionLogRouter.post("/", async (req, res) => {

@@ -28,7 +28,7 @@ reagentCatalogRouter.get("/", async (req, res) => {
     : undefined;
 
   const entries = await listReagentCatalog(teamId, supplierId);
-  res.json(entries);
+  res.json({ items: entries });
 });
 
 reagentCatalogRouter.post("/", async (req, res) => {

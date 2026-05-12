@@ -15,5 +15,5 @@ duplicationLogRouter.get("/", async (req, res) => {
   const dateTo = req.query.to ? String(req.query.to) : undefined;
 
   const entries = await listDuplicationLog(teamId, dateFrom, dateTo);
-  res.json(entries);
+  res.json({ log: entries });
 });
