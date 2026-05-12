@@ -23,7 +23,7 @@ suppliersRouter.get("/", async (req, res) => {
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const suppliers = await listSuppliers(teamId);
-  res.json(suppliers);
+  res.json({ suppliers });
 });
 
 suppliersRouter.post("/", async (req, res) => {
