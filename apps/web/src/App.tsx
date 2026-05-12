@@ -11,6 +11,7 @@ import { DuplicationHistory } from "@/pages/DuplicationHistory";
 import { Messages } from "@/pages/Messages";
 import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
+import { PullImportPage } from "@/pages/PullImportPage";
 import { Button } from "@/components/ui/Button";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -39,6 +40,14 @@ function resolvePublicPage(pathname: string): PublicPage {
   return null;
 }
 
+type PullImportRoute = { requestId: number } | null;
+
+function resolvePullImport(pathname: string): PullImportRoute {
+  const m = pathname.match(/^\/transfer-requests\/(\d+)\/import\/?$/);
+  if (!m) return null;
+  return { requestId: Number(m[1]) };
+}
+
 function App() {
   const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
@@ -57,6 +66,7 @@ function App() {
     hasPendingJoinRequest,
   } = useAuth();
   const publicPage = resolvePublicPage(window.location.pathname);
+  const pullImportRoute = resolvePullImport(window.location.pathname);
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
   const userLabel = user?.name?.trim() || user?.email?.trim() || "User";
   const userInitial = userLabel.charAt(0).toUpperCase() || "U";
@@ -157,6 +167,16 @@ function App() {
         language={i18n.language}
         onToggleLanguage={toggleLanguage}
       />
+    );
+  }
+
+  if (pullImportRoute && user && teamApproved) {
+    return (
+      <ErrorBoundary>
+        <ToastProvider>
+          <PullImportPage requestId={pullImportRoute.requestId} />
+        </ToastProvider>
+      </ErrorBoundary>
     );
   }
 

@@ -612,3 +612,11 @@ export async function decideTransferRequest(
     body: JSON.stringify({ decision }),
   });
 }
+
+// --- Cross-team PULL transfer flow ---
+export async function getSourceReagents(requestId: number): Promise<Reagent[]> {
+  const res = await apiFetch<{ reagents: Reagent[] }>(
+    `/api/transfer-requests/${requestId}/source-reagents`,
+  );
+  return res.reagents ?? [];
+}
