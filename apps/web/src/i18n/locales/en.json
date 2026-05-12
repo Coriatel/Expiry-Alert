@@ -560,6 +560,12 @@
     "completedAt": "Completed {{date}}",
     "restoreTask": "Restore task"
   },
+  "approvedOutgoing": {
+    "bannerTitle": "Approved requests — ready to import",
+    "approvedYourRequest": "approved your request",
+    "importButton": "Import items",
+    "hint": "Click 'Import items' to choose which items to copy into your catalog. The request will move to 'completed' after the first import."
+  },
   "pullImport": {
     "title": "Import items from another team",
     "backToDashboard": "Back to dashboard",

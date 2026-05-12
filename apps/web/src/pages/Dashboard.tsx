@@ -19,6 +19,7 @@ import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { DestructionDialog } from "@/components/DestructionDialog";
 import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
 import { TransferRequestsBanner } from "@/components/TransferRequestsBanner";
+import { ApprovedOutgoingBanner } from "@/components/ApprovedOutgoingBanner";
 import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
@@ -476,6 +477,9 @@ export function Dashboard({ teamName }: DashboardProps) {
 
       {/* Incoming transfer requests */}
       <TransferRequestsBanner teams={teams} />
+
+      {/* Outgoing approved requests — ready to import */}
+      <ApprovedOutgoingBanner teams={teams} />
 
       {/* Inline Alert Section */}
       <ExpiryAlertSection
