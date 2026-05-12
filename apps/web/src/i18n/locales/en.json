@@ -559,5 +559,22 @@
     "createdAt": "Created {{date}}",
     "completedAt": "Completed {{date}}",
     "restoreTask": "Restore task"
+  },
+  "pullImport": {
+    "title": "Import items from another team",
+    "backToDashboard": "Back to dashboard",
+    "hint": "These are the reagents available from the team that approved your transfer request. Mark the items you want to import. The 'Import' button will be added in the next update.",
+    "error": "Failed to load items",
+    "empty": "No items available to import from this team",
+    "selectAll": "Select all",
+    "staged_one": "1 item staged",
+    "staged_other": "{{count}} items staged",
+    "columns": {
+      "name": "Name",
+      "supplier": "Supplier",
+      "lot": "Lot",
+      "expiry": "Expiry",
+      "quantity": "Quantity"
+    }
   }
 }
