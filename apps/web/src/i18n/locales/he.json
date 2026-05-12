@@ -560,12 +560,6 @@
     "completedAt": "הושלמה {{date}}",
     "restoreTask": "החזר משימה"
   },
-  "approvedOutgoing": {
-    "bannerTitle": "בקשות מאושרות — מוכנות לייבוא",
-    "approvedYourRequest": "אישר/ה את הבקשה שלך",
-    "importButton": "ייבא פריטים",
-    "hint": "לחץ/י 'ייבא פריטים' כדי לבחור אילו פריטים להעביר לקטלוג שלך. הבקשה תועבר למצב 'הושלם' אחרי ייבוא ראשון."
-  },
   "pullImport": {
     "title": "ייבוא פריטים מצוות אחר",
     "backToDashboard": "חזרה ללוח הבקרה",
