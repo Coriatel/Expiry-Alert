@@ -106,7 +106,12 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
       const res = await pullReagents(requestId, ids);
       setResult(res);
       setSelected(new Set());
-      await fetchData();
+      if (res.imported.length > 0) {
+        // Request transitioned to "completed" — source-reagents will 403.
+        setReagents([]);
+      } else {
+        await fetchData();
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
