@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getSourceReagents } from "@/lib/tauri";
+import {
+  getAllReagents,
+  getSourceReagents,
+  pullReagents,
+  type PullResult,
+} from "@/lib/tauri";
 import type { Reagent } from "@/types";
 
 interface PullImportPageProps {
@@ -16,34 +21,63 @@ function formatDate(iso?: string | null): string {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
+function normalizeLot(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const s = value.replace(/\s+/g, "").toLowerCase();
+  return s.length === 0 ? null : s;
+}
+
 export function PullImportPage({ requestId }: PullImportPageProps) {
   const { t } = useTranslation();
   const [reagents, setReagents] = useState<Reagent[]>([]);
+  const [callerLots, setCallerLots] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<PullResult | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchData = (signal?: { cancelled: boolean }) => {
     setLoading(true);
     setError(null);
-    getSourceReagents(requestId)
-      .then((data) => {
-        if (cancelled) return;
-        setReagents(data);
+    return Promise.all([getSourceReagents(requestId), getAllReagents()])
+      .then(([sourceList, callerList]) => {
+        if (signal?.cancelled) return;
+        setReagents(sourceList);
+        const lots = new Set<string>();
+        for (const r of callerList) {
+          const n = normalizeLot(r.lot_number);
+          if (n) lots.add(n);
+        }
+        setCallerLots(lots);
       })
       .catch((e: unknown) => {
-        if (cancelled) return;
+        if (signal?.cancelled) return;
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!signal?.cancelled) setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    fetchData(signal);
     return () => {
-      cancelled = true;
+      signal.cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
+
+  const dupSet = useMemo(() => {
+    const s = new Set<number>();
+    for (const r of reagents) {
+      const n = normalizeLot(r.lot_number);
+      if (n && callerLots.has(n)) s.add(r.id);
+    }
+    return s;
+  }, [reagents, callerLots]);
 
   const toggle = (id: number) => {
     setSelected((cur) => {
@@ -63,6 +97,24 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
 
   const allSelected = reagents.length > 0 && selected.size === reagents.length;
 
+  const handleImport = async () => {
+    if (selected.size === 0 || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const ids = Array.from(selected);
+      const res = await pullReagents(requestId, ids);
+      setResult(res);
+      setSelected(new Set());
+      await fetchData();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-4">
       <header className="flex items-center justify-between">
@@ -80,9 +132,19 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
       <p className="text-sm text-muted-foreground">
         {t("pullImport.hint", {
           defaultValue:
-            "אלו הפריטים הזמינים מהצוות שאישר את בקשת ההעברה. סמן/י את הפריטים שברצונך לייבא. כפתור 'ייבא' יתווסף בעדכון הבא.",
+            "אלו הפריטים הזמינים מהצוות שאישר את בקשת ההעברה. סמן/י את הפריטים שברצונך לייבא. פריטים שכבר קיימים אצלך (לפי מספר אצווה) מסומנים בתג ולא נבחרים אוטומטית — ניתן לסמן ידנית אם רוצים בכל זאת.",
         })}
       </p>
+
+      {result && (
+        <div className="rounded-lg border border-green-200 bg-green-50 text-green-900 p-3 text-sm">
+          {t("pullImport.resultSummary", {
+            defaultValue: "{{imported}} יובאו, {{skipped}} דולגו",
+            imported: result.imported.length,
+            skipped: result.skipped.length,
+          })}
+        </div>
+      )}
 
       {loading && (
         <div className="text-center py-8 text-muted-foreground">
@@ -92,8 +154,7 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
 
       {error && !loading && (
         <div className="rounded-lg border border-red-200 bg-red-50 text-red-900 p-3 text-sm">
-          {t("pullImport.error", { defaultValue: "שגיאה בטעינת הפריטים" })}:{" "}
-          {error}
+          {t("pullImport.error", { defaultValue: "שגיאה" })}: {error}
         </div>
       )}
 
@@ -105,7 +166,7 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
         </div>
       )}
 
-      {!loading && !error && reagents.length > 0 && (
+      {!loading && reagents.length > 0 && (
         <>
           <div className="border rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
@@ -145,36 +206,74 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {reagents.map((r) => (
-                  <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-3 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(r.id)}
-                        onChange={() => toggle(r.id)}
-                        aria-label={`select-${r.id}`}
-                      />
-                    </td>
-                    <td className="px-3 py-2">{r.name}</td>
-                    <td className="px-3 py-2">{r.supplier_name ?? "—"}</td>
-                    <td className="px-3 py-2">{r.lot_number ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDate(r.expiry_date)}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      {r.quantity ?? "—"}
-                    </td>
-                  </tr>
-                ))}
+                {reagents.map((r) => {
+                  const isDup = dupSet.has(r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`border-b last:border-0 hover:bg-muted/30 ${
+                        isDup ? "bg-yellow-50/40" : ""
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(r.id)}
+                          onChange={() => toggle(r.id)}
+                          aria-label={`select-${r.id}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span>{r.name}</span>
+                        {isDup && (
+                          <span
+                            className="ms-2 inline-block rounded-full bg-yellow-200 text-yellow-900 px-2 py-0.5 text-xs"
+                            title={t("pullImport.alreadyExistsTitle", {
+                              defaultValue:
+                                "פריט עם אותו מספר אצווה כבר קיים אצלך",
+                            })}
+                          >
+                            {t("pullImport.alreadyExists", {
+                              defaultValue: "כבר קיים",
+                            })}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">{r.supplier_name ?? "—"}</td>
+                      <td className="px-3 py-2">{r.lot_number ?? "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {formatDate(r.expiry_date)}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {r.quantity ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          <div className="text-sm text-muted-foreground">
-            {t("pullImport.staged", {
-              defaultValue: "{{count}} פריטים מסומנים",
-              count: selected.size,
-            })}
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm text-muted-foreground">
+              {t("pullImport.staged", {
+                defaultValue: "{{count}} פריטים מסומנים",
+                count: selected.size,
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={selected.size === 0 || submitting}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
+            >
+              {submitting
+                ? t("actions.processing", { defaultValue: "מעבד..." })
+                : t("pullImport.importButton", {
+                    defaultValue: "ייבא נבחרים ({{count}})",
+                    count: selected.size,
+                  })}
+            </button>
           </div>
         </>
       )}
