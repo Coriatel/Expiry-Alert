@@ -563,12 +563,16 @@
   "pullImport": {
     "title": "Import items from another team",
     "backToDashboard": "Back to dashboard",
-    "hint": "These are the reagents available from the team that approved your transfer request. Mark the items you want to import. The 'Import' button will be added in the next update.",
-    "error": "Failed to load items",
+    "hint": "These are the reagents available from the team that approved your transfer request. Mark the items you want to import. Items already in your catalog (matched by lot number) are flagged and unchecked by default — you may still select them manually.",
+    "error": "Error",
     "empty": "No items available to import from this team",
     "selectAll": "Select all",
     "staged_one": "1 item staged",
     "staged_other": "{{count}} items staged",
+    "alreadyExists": "Already in catalog",
+    "alreadyExistsTitle": "An item with the same lot number already exists in your catalog",
+    "importButton": "Import selected ({{count}})",
+    "resultSummary": "{{imported}} imported, {{skipped}} skipped",
     "columns": {
       "name": "Name",
       "supplier": "Supplier",

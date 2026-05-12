@@ -10,7 +10,8 @@ export type TransferRequestStatus =
   | "pending"
   | "approved"
   | "rejected"
-  | "cancelled";
+  | "cancelled"
+  | "completed";
 
 export type TransferRequestRecord = {
   id: number;
@@ -109,6 +110,14 @@ export async function decideTransferRequest(
 export async function cancelTransferRequest(id: number, userId: number) {
   return updateSingleRecord<TransferRequestRecord>(collection, id, {
     status: "cancelled",
+    decided_by: userId,
+    decided_at: new Date().toISOString(),
+  });
+}
+
+export async function completeTransferRequest(id: number, userId: number) {
+  return updateSingleRecord<TransferRequestRecord>(collection, id, {
+    status: "completed",
     decided_by: userId,
     decided_at: new Date().toISOString(),
   });

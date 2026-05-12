@@ -620,3 +620,24 @@ export async function getSourceReagents(requestId: number): Promise<Reagent[]> {
   );
   return res.reagents ?? [];
 }
+
+export type PullResult = {
+  imported: Array<{ old_id: number; new_id: number }>;
+  skipped: Array<{
+    old_id: number;
+    reason: "not_in_source" | "duplicate_lot" | "create_failed";
+  }>;
+};
+
+export async function pullReagents(
+  requestId: number,
+  reagentIds: number[],
+): Promise<PullResult> {
+  return apiFetch<PullResult>(
+    `/api/transfer-requests/${requestId}/pull`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reagent_ids: reagentIds }),
+    },
+  );
+}
