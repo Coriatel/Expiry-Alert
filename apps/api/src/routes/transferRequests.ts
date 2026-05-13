@@ -192,9 +192,20 @@ transferRequestsRouter.get("/:id/source-reagents", asyncHandler(async (req, res)
   const auth = authorizePullSource(existing, teamId, user?.id ?? null);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error, code: auth.code });
 
-  const reagents = await listReagents(existing!.to_team);
+  const reagents = eligibleForPullTransfer(
+    await listReagents(existing!.to_team),
+  );
   res.json({ reagents });
 }));
+
+// Archived items must not be offered for cross-team pull, otherwise they
+// would resurrect as active in the caller team (the pull endpoint creates
+// new records with is_archived: false). Filter at both call sites.
+export function eligibleForPullTransfer(
+  reagents: ReagentRecord[],
+): ReagentRecord[] {
+  return reagents.filter((r) => !r.is_archived);
+}
 
 export function normalizeLot(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -285,10 +296,11 @@ transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
   const auth = authorizePullSource(existing, teamId, user?.id ?? null);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error, code: auth.code });
 
-  const [sourceReagents, callerReagents] = await Promise.all([
+  const [rawSource, callerReagents] = await Promise.all([
     listReagents(existing!.to_team),
     listReagents(teamId),
   ]);
+  const sourceReagents = eligibleForPullTransfer(rawSource);
 
   const { toImport, skipped } = partitionPullRequest(
     sourceReagents,

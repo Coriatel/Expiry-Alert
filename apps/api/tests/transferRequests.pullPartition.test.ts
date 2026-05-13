@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  eligibleForPullTransfer,
   normalizeLot,
   partitionPullRequest,
 } from "../src/routes/transferRequests.ts";
@@ -89,4 +90,19 @@ test("partition: duplicate ids in request — deduped, processed once", () => {
   const out = partitionPullRequest(src, caller, [1, 1, 1]);
   assert.equal(out.toImport.length, 1);
   assert.equal(out.skipped.length, 0);
+});
+
+test("eligibleForPullTransfer: empty list → empty list", () => {
+  assert.deepEqual(eligibleForPullTransfer([]), []);
+});
+
+test("eligibleForPullTransfer: drops archived items, keeps active ones", () => {
+  const active1 = { ...r(1, "AB1"), is_archived: false };
+  const archived = { ...r(2, "CD2"), is_archived: true };
+  const active2 = { ...r(3, "EF3"), is_archived: false };
+  const out = eligibleForPullTransfer([active1, archived, active2]);
+  assert.deepEqual(
+    out.map((x) => x.id),
+    [1, 3],
+  );
 });
