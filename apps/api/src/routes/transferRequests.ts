@@ -21,9 +21,20 @@ import {
 
 export const transferRequestsRouter = Router();
 
+export type TransferAuthCode =
+  | "not_found"
+  | "forbidden"
+  | "request_not_approved"
+  | "not_creator";
+
 export type TransferAuthResult =
   | { ok: true }
-  | { ok: false; status: 403 | 404 | 409; error: string };
+  | {
+      ok: false;
+      status: 403 | 404 | 409;
+      error: string;
+      code?: TransferAuthCode;
+    };
 
 export function authorizeDecide(
   existing: { to_team: number; status: string } | null | undefined,
@@ -57,13 +68,24 @@ export function authorizePullSource(
   currentTeamId: number,
   currentUserId: number | null,
 ): TransferAuthResult {
-  if (!existing) return { ok: false, status: 404, error: "Not found" };
+  if (!existing)
+    return { ok: false, status: 404, error: "Not found", code: "not_found" };
   if (existing.status !== "approved")
-    return { ok: false, status: 403, error: "Request not approved" };
+    return {
+      ok: false,
+      status: 403,
+      error: "Request not approved",
+      code: "request_not_approved",
+    };
   if (existing.from_team !== currentTeamId)
-    return { ok: false, status: 403, error: "Forbidden" };
+    return { ok: false, status: 403, error: "Forbidden", code: "forbidden" };
   if (!currentUserId || existing.created_by !== currentUserId)
-    return { ok: false, status: 403, error: "Only request creator may pull" };
+    return {
+      ok: false,
+      status: 403,
+      error: "Only request creator may pull",
+      code: "not_creator",
+    };
   return { ok: true };
 }
 
@@ -168,11 +190,22 @@ transferRequestsRouter.get("/:id/source-reagents", asyncHandler(async (req, res)
   const user = (req as any).user;
   const existing = (await getTransferRequest(id)) as TransferRequestRecord | null;
   const auth = authorizePullSource(existing, teamId, user?.id ?? null);
-  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error, code: auth.code });
 
-  const reagents = await listReagents(existing!.to_team);
+  const reagents = eligibleForPullTransfer(
+    await listReagents(existing!.to_team),
+  );
   res.json({ reagents });
 }));
+
+// Archived items must not be offered for cross-team pull, otherwise they
+// would resurrect as active in the caller team (the pull endpoint creates
+// new records with is_archived: false). Filter at both call sites.
+export function eligibleForPullTransfer(
+  reagents: ReagentRecord[],
+): ReagentRecord[] {
+  return reagents.filter((r) => !r.is_archived);
+}
 
 export function normalizeLot(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -261,12 +294,13 @@ transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
   const user = (req as any).user;
   const existing = (await getTransferRequest(id)) as TransferRequestRecord | null;
   const auth = authorizePullSource(existing, teamId, user?.id ?? null);
-  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error, code: auth.code });
 
-  const [sourceReagents, callerReagents] = await Promise.all([
+  const [rawSource, callerReagents] = await Promise.all([
     listReagents(existing!.to_team),
     listReagents(teamId),
   ]);
+  const sourceReagents = eligibleForPullTransfer(rawSource);
 
   const { toImport, skipped } = partitionPullRequest(
     sourceReagents,

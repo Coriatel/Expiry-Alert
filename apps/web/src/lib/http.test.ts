@@ -40,4 +40,36 @@ describe("parseApiResponse", () => {
       "Request failed (502)",
     );
   });
+
+  it("attaches typed error code and status to the thrown error", async () => {
+    const response = new Response(
+      JSON.stringify({ error: "Request not approved", code: "request_not_approved" }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
+
+    try {
+      await parseApiResponse(response);
+      throw new Error("should have thrown");
+    } catch (e) {
+      const err = e as Error & { code?: string | null; status?: number };
+      expect(err.message).toBe("Request not approved");
+      expect(err.code).toBe("request_not_approved");
+      expect(err.status).toBe(403);
+    }
+  });
+
+  it("error code is null when backend omits code", async () => {
+    const response = new Response(JSON.stringify({ error: "boom" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+
+    try {
+      await parseApiResponse(response);
+      throw new Error("should have thrown");
+    } catch (e) {
+      const err = e as Error & { code?: string | null };
+      expect(err.code).toBeNull();
+    }
+  });
 });

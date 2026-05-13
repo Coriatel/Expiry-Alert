@@ -2,7 +2,18 @@ type ApiErrorPayload = {
   error?: string;
   message?: string;
   details?: string;
+  code?: string;
 };
+
+export type ApiError = Error & { code?: string | null; status?: number };
+
+function getApiErrorCode(payload: unknown): string | null {
+  if (payload && typeof payload === "object") {
+    const c = (payload as { code?: unknown }).code;
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return null;
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 export const AUTH_EXPIRED_EVENT = "expiry-alert:auth-expired";
@@ -55,7 +66,10 @@ export async function parseApiResponse<T>(response: Response): Promise<T> {
   const payload = tryParseJson(text, contentType);
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, response));
+    const err = new Error(getApiErrorMessage(payload, response)) as ApiError;
+    err.code = getApiErrorCode(payload);
+    err.status = response.status;
+    throw err;
   }
 
   if (!text.trim()) {

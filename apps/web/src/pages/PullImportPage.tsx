@@ -33,6 +33,7 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
   const [callerLots, setCallerLots] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notActionable, setNotActionable] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PullResult | null>(null);
@@ -40,6 +41,7 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
   const fetchData = (signal?: { cancelled: boolean }) => {
     setLoading(true);
     setError(null);
+    setNotActionable(false);
     return Promise.all([getSourceReagents(requestId), getAllReagents()])
       .then(([sourceList, callerList]) => {
         if (signal?.cancelled) return;
@@ -54,7 +56,18 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
       .catch((e: unknown) => {
         if (signal?.cancelled) return;
         const msg = e instanceof Error ? e.message : String(e);
-        setError(msg);
+        const code = (e as { code?: unknown })?.code;
+        // authorizePullSource codes that mean "URL not actionable for this user"
+        if (
+          code === "request_not_approved" ||
+          code === "forbidden" ||
+          code === "not_creator" ||
+          code === "not_found"
+        ) {
+          setNotActionable(true);
+        } else {
+          setError(msg);
+        }
       })
       .finally(() => {
         if (!signal?.cancelled) setLoading(false);
@@ -106,7 +119,12 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
       const res = await pullReagents(requestId, ids);
       setResult(res);
       setSelected(new Set());
-      await fetchData();
+      if (res.imported.length > 0) {
+        // Request transitioned to "completed" — source-reagents will 403.
+        setReagents([]);
+      } else {
+        await fetchData();
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -158,7 +176,26 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
         </div>
       )}
 
-      {!loading && !error && reagents.length === 0 && (
+      {notActionable && !loading && !result && (
+        <div className="rounded-lg border bg-muted/40 p-6 text-center space-y-3">
+          <p className="text-base">
+            {t("pullImport.notActionable", {
+              defaultValue:
+                "בקשת ההעברה כבר טופלה או שאינה זמינה לייבוא יותר.",
+            })}
+          </p>
+          <a
+            href="/"
+            className="inline-block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            {t("pullImport.backToDashboard", {
+              defaultValue: "חזרה ללוח הבקרה",
+            })}
+          </a>
+        </div>
+      )}
+
+      {!loading && !error && !notActionable && reagents.length === 0 && !result && (
         <div className="text-center py-8 text-muted-foreground">
           {t("pullImport.empty", {
             defaultValue: "אין פריטים זמינים לייבוא מהצוות הזה",

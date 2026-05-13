@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Inbox, Check, X, PackageOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import {
   decideTransferRequest,
   listIncomingTransferRequests,
@@ -20,6 +21,7 @@ export function TransferRequestsBanner({
   pollMs = 30000,
 }: TransferRequestsBannerProps) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [incoming, setIncoming] = useState<TransferRequest[]>([]);
   const [outgoing, setOutgoing] = useState<TransferRequest[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -50,6 +52,9 @@ export function TransferRequestsBanner({
     try {
       await decideTransferRequest(id, decision);
       setIncoming((cur) => cur.filter((r) => r.id !== id));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showToast(msg, "error");
     } finally {
       setBusyId(null);
     }
