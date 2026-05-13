@@ -18,11 +18,14 @@ vi.mock("@/components/ui/Toast", () => ({
 }));
 
 const listIncomingTransferRequests = vi.fn();
+const listOutgoingTransferRequests = vi.fn();
 const decideTransferRequest = vi.fn();
 
 vi.mock("@/lib/tauri", () => ({
   listIncomingTransferRequests: (...a: unknown[]) =>
     listIncomingTransferRequests(...a),
+  listOutgoingTransferRequests: (...a: unknown[]) =>
+    listOutgoingTransferRequests(...a),
   decideTransferRequest: (...a: unknown[]) => decideTransferRequest(...a),
 }));
 
@@ -37,6 +40,7 @@ describe("TransferRequestsBanner", () => {
     listIncomingTransferRequests.mockResolvedValueOnce([
       { id: 11, from_team: 7, to_team: 1, status: "pending", message_text: null },
     ]);
+    listOutgoingTransferRequests.mockResolvedValueOnce([]);
     decideTransferRequest.mockResolvedValueOnce({});
 
     render(<TransferRequestsBanner teams={teams} pollMs={1_000_000} />);
@@ -57,6 +61,7 @@ describe("TransferRequestsBanner", () => {
     listIncomingTransferRequests.mockResolvedValueOnce([
       { id: 11, from_team: 7, to_team: 1, status: "pending", message_text: null },
     ]);
+    listOutgoingTransferRequests.mockResolvedValueOnce([]);
     const err = new Error("Already decided") as Error & { code?: string };
     err.code = "already_decided";
     decideTransferRequest.mockRejectedValueOnce(err);

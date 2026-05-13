@@ -572,7 +572,8 @@ export type TransferRequestStatus =
   | "pending"
   | "approved"
   | "rejected"
-  | "cancelled";
+  | "cancelled"
+  | "completed";
 
 export type TransferRequest = {
   id: number;
@@ -589,6 +590,13 @@ export type TransferRequest = {
 export async function listIncomingTransferRequests(): Promise<TransferRequest[]> {
   const res = await apiFetch<{ items: TransferRequest[] }>(
     "/api/transfer-requests?role=incoming",
+  );
+  return res.items ?? [];
+}
+
+export async function listOutgoingTransferRequests(): Promise<TransferRequest[]> {
+  const res = await apiFetch<{ items: TransferRequest[] }>(
+    "/api/transfer-requests?role=outgoing",
   );
   return res.items ?? [];
 }

@@ -474,7 +474,7 @@ export function Dashboard({ teamName }: DashboardProps) {
       {/* Push Notification Prompt */}
       <PushPromptBanner />
 
-      {/* Incoming transfer requests */}
+      {/* Transfer requests (incoming pending + outgoing approved) */}
       <TransferRequestsBanner teams={teams} />
 
       {/* Inline Alert Section */}
