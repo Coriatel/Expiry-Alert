@@ -21,9 +21,9 @@ function getAlertType(days: number): string {
 }
 
 function getUrgencyIcon(days: number) {
-  if (days < 0) return "🔴";
-  if (days <= 2) return "🟠";
-  return "🟡";
+  if (days < 0) return "bg-red-500";
+  if (days <= 2) return "bg-orange-500";
+  return "bg-yellow-500";
 }
 
 function getBorderColor(reagents: Reagent[]): string {
@@ -81,18 +81,18 @@ export function ExpiryAlertSection({
       <button
         type="button"
         onClick={() => setAlertExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-start"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-start"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0" />
-          <span className="font-semibold text-sm">
+          <span className="font-semibold text-sm truncate">
             {t("notifications.alertSummary", { count: reagents.length })}
           </span>
         </div>
         {expanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         )}
       </button>
 
@@ -104,24 +104,31 @@ export function ExpiryAlertSection({
             {sorted.map((reagent) => {
               const days = getDaysUntilExpiry(reagent.expiry_date);
               const alertType = getAlertType(days);
-              const icon = getUrgencyIcon(days);
+              const indicatorClass = getUrgencyIcon(days);
               return (
                 <div
                   key={reagent.id}
-                  className="flex items-center justify-between bg-white/70 rounded-md px-3 py-2 text-sm"
+                  className="flex items-start justify-between gap-2 bg-white/70 rounded-md px-3 py-2 text-sm"
                 >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span>{icon}</span>
-                    <span className="font-medium truncate">{teamName ? `${teamName}: ` : ""}{reagent.name}</span>
-                    <span className="text-muted-foreground text-xs whitespace-nowrap">
-                      —{" "}
-                      {days < 0
-                        ? t("status.expired")
-                        : days === 0
-                          ? t("status.expiresToday")
-                          : days === 1
-                            ? t("status.expiresInOneDay")
-                            : t("status.expiresIn", { days })}
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <span
+                      className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${indicatorClass}`}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">
+                        {reagent.name}
+                      </span>
+                      <span className="block text-muted-foreground text-xs">
+                        {teamName ? `${teamName} - ` : ""}
+                        {days < 0
+                          ? t("status.expired")
+                          : days === 0
+                            ? t("status.expiresToday")
+                            : days === 1
+                              ? t("status.expiresInOneDay")
+                              : t("status.expiresIn", { days })}
+                      </span>
                     </span>
                   </div>
                   <button
@@ -143,11 +150,12 @@ export function ExpiryAlertSection({
           </p>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 border-t pt-2">
+          <div className="grid gap-2 border-t pt-2 sm:flex sm:flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={() => reagents.forEach((r) => onSnooze(r.id, 1))}
+              className="w-full sm:w-auto"
             >
               <Clock className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
               {t("notifications.remindTomorrow")}
@@ -156,6 +164,7 @@ export function ExpiryAlertSection({
               variant="outline"
               size="sm"
               onClick={() => reagents.forEach((r) => onSnooze(r.id, 3))}
+              className="w-full sm:w-auto"
             >
               <Clock className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
               {t("notifications.remindIn3Days")}
@@ -170,6 +179,7 @@ export function ExpiryAlertSection({
                   onDismiss(r.id, alertType);
                 });
               }}
+              className="w-full sm:w-auto"
             >
               <X className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
               {t("notifications.dismissAll")}

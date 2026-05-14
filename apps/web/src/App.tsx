@@ -341,7 +341,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <div className="min-h-screen bg-background flex">
+        <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background flex">
           {/* Sidebar */}
           <Sidebar
             currentPage={currentPage as SidebarPage}
@@ -362,8 +362,8 @@ function App() {
           <div className="flex-1 flex flex-col min-w-0">
             {/* Mobile header */}
             <header className="md:hidden border-b bg-card sticky top-0 z-40">
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <button onClick={() => setMobileSidebarOpen(true)}>
                     <Menu className="h-5 w-5" />
                   </button>
@@ -372,11 +372,11 @@ function App() {
                     alt="Expiry Alert"
                     className="h-7 w-7 object-contain"
                   />
-                  <span className="font-semibold text-sm truncate">
+                  <span className="min-w-0 truncate text-sm font-semibold">
                     {currentTeamName}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -437,7 +437,8 @@ function App() {
             </header>
 
             {/* Page content */}
-            <main className="flex-1">
+            <main className="flex-1 min-w-0 overflow-x-hidden">
+              <InstallPrompt />
               {currentPage === "dashboard" ? (
                 <Dashboard teamName={currentTeamName} />
               ) : currentPage === "batch-history" ? (
@@ -461,7 +462,6 @@ function App() {
             </main>
           </div>
         </div>
-        <InstallPrompt />
       </ToastProvider>
     </ErrorBoundary>
   );

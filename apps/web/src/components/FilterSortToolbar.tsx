@@ -36,12 +36,12 @@ export function FilterSortToolbar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const filterControls = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 min-w-0">
       {/* Status filter */}
       <Select
         value={statusFilter}
         onChange={(e) => onStatusFilterChange(e.target.value as ExpiryStatus | 'all')}
-        className="w-auto min-w-[120px] h-9 text-sm"
+        className="w-full sm:w-auto sm:min-w-[120px] h-9 text-sm"
       >
         <option value="all">{t('filters.status')}: {t('filters.all')}</option>
         <option value="expired">{t('filters.expired')}</option>
@@ -54,7 +54,7 @@ export function FilterSortToolbar({
       <Select
         value={categoryFilter}
         onChange={(e) => onCategoryFilterChange(e.target.value)}
-        className="w-auto min-w-[120px] h-9 text-sm"
+        className="w-full sm:w-auto sm:min-w-[120px] h-9 text-sm"
       >
         <option value="all">{t('filters.category')}: {t('filters.all')}</option>
         <option value="reagents">{t('category.reagents')}</option>
@@ -62,11 +62,11 @@ export function FilterSortToolbar({
       </Select>
 
       {/* Sort */}
-      <div className="flex items-center gap-1">
+      <div className="flex w-full items-center gap-1 min-w-0 sm:w-auto">
         <Select
           value={sortField}
           onChange={(e) => onSortFieldChange(e.target.value)}
-          className="w-auto min-w-[130px] h-9 text-sm"
+          className="w-full sm:w-auto sm:min-w-[130px] h-9 text-sm"
         >
           <option value="expiry_date">{t('filters.expiryDate')}</option>
           <option value="name">{t('filters.name')}</option>
@@ -86,8 +86,8 @@ export function FilterSortToolbar({
   );
 
   return (
-    <div className="print:hidden filter-toolbar">
-      <div className="flex items-center justify-between gap-2">
+    <div className="print:hidden filter-toolbar min-w-0">
+      <div className="flex items-center justify-between gap-2 min-w-0">
         {/* On mobile: filter toggle button + view toggle */}
         {isMobile ? (
           <>
@@ -155,7 +155,7 @@ export function FilterSortToolbar({
 
       {/* Mobile expanded filters */}
       {isMobile && mobileOpen && (
-        <div className="mt-2 pt-2 border-t">
+        <div className="mt-2 pt-2 border-t min-w-0">
           {filterControls}
         </div>
       )}

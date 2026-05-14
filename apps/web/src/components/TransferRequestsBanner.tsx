@@ -62,9 +62,9 @@ export function TransferRequestsBanner({
 
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 print:hidden">
-      <div className="flex items-center gap-2 mb-2">
-        <Inbox className="h-4 w-4 text-blue-700" />
-        <span className="font-semibold text-blue-900 text-sm">
+      <div className="flex items-center gap-2 mb-2 min-w-0">
+        <Inbox className="h-4 w-4 shrink-0 text-blue-700" />
+        <span className="font-semibold text-blue-900 text-sm truncate">
           {t("transferRequests.bannerTitle", {
             defaultValue: "בקשות העברה",
           })}{" "}
@@ -92,7 +92,7 @@ export function TransferRequestsBanner({
                 </div>
               )}
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
               <Button
                 size="sm"
                 variant="outline"

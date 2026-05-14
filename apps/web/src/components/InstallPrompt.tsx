@@ -80,8 +80,8 @@ export function InstallPrompt() {
     : t('install.androidInstructions');
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 inset-x-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:max-w-md z-40 animate-in slide-in-from-bottom-4">
-      <div className="bg-card border-2 border-primary/20 rounded-xl shadow-lg p-4">
+    <div className="mx-4 mt-4 md:mx-6 animate-in slide-in-from-bottom-4 print:hidden">
+      <div className="bg-card border border-primary/20 rounded-lg shadow-sm p-3 md:p-4">
         <div className="flex items-start gap-3">
           <Smartphone className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">

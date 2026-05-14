@@ -457,7 +457,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto max-w-full overflow-x-hidden p-4 md:p-6 space-y-5 md:space-y-6">
       {/* Print header */}
       <div className="hidden print:block border-b pb-3 mb-4">
         <div className="flex items-center gap-3">
@@ -470,6 +470,80 @@ export function Dashboard({ teamName }: DashboardProps) {
           </div>
         </div>
       </div>
+
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <h1 className="text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            className="print:hidden w-full sm:w-auto"
+          >
+            <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t("actions.print")}
+          </Button>
+          {selectedReagentIds.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleBulkArchive}
+                disabled={isLoading}
+                className="print:hidden w-full sm:w-auto"
+              >
+                <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t("actions.bulkArchive")} ({selectedReagentIds.length})
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isLoading}
+                className="print:hidden w-full sm:w-auto"
+              >
+                <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t("actions.bulkDelete")} ({selectedReagentIds.length})
+              </Button>
+              {otherTeams.map((team) => (
+                <Button
+                  key={team.id}
+                  variant="outline"
+                  onClick={() => handleImportToTeam(team)}
+                  disabled={isLoading}
+                  className="print:hidden w-full sm:w-auto"
+                >
+                  {t("import.copyTo", { team: team.name })}
+                </Button>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Add Button + Request transfer */}
+      {!showBulkAdd && (
+        <div className="grid gap-2 sm:flex sm:flex-wrap print:hidden">
+          <Button
+            onClick={() => setShowBulkAdd(true)}
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t("dashboard.addMultiple")}
+          </Button>
+          {otherTeams.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setRequestTransferOpen(true)}
+              disabled={isLoading}
+              className="w-full sm:w-auto"
+            >
+              {t("transferRequests.requestButton", {
+                defaultValue: "בקש פריטים מצוות אחר",
+              })}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Push Notification Prompt */}
       <PushPromptBanner />
@@ -486,100 +560,31 @@ export function Dashboard({ teamName }: DashboardProps) {
       />
 
       {/* Expiry Calendar & Timeline */}
-      <div className="bg-card rounded-xl border print:hidden">
+      <div className="bg-card rounded-lg border print:hidden">
         <button
           onClick={() => setCalendarExpanded(!calendarExpanded)}
-          className="w-full flex items-center justify-between p-4"
+          className="w-full flex items-center justify-between gap-3 p-4 text-start"
         >
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            <span className="font-semibold">{t("calendar.title")}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Calendar className="h-5 w-5 shrink-0" />
+            <span className="font-semibold truncate">{t("calendar.title")}</span>
           </div>
           {calendarExpanded ? (
-            <ChevronUp className="h-4 w-4" />
+            <ChevronUp className="h-4 w-4 shrink-0" />
           ) : (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-4 w-4 shrink-0" />
           )}
         </button>
         {calendarExpanded && (
           <div className="px-4 pb-4 grid gap-6 md:grid-cols-2">
             <ExpiryCalendar reagents={reagents} />
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold mb-3">{t("calendar.timeline")}</h3>
               <ExpiryTimeline reagents={reagents} />
             </div>
           </div>
         )}
       </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between print:hidden">
-        <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handlePrint}
-            className="print:hidden"
-          >
-            <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-            {t("actions.print")}
-          </Button>
-          {selectedReagentIds.length > 0 && (
-            <>
-              <Button
-                variant="outline"
-                onClick={handleBulkArchive}
-                disabled={isLoading}
-                className="print:hidden"
-              >
-                <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("actions.bulkArchive")} ({selectedReagentIds.length})
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={isLoading}
-                className="print:hidden"
-              >
-                <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("actions.bulkDelete")} ({selectedReagentIds.length})
-              </Button>
-              {otherTeams.map((team) => (
-                <Button
-                  key={team.id}
-                  variant="outline"
-                  onClick={() => handleImportToTeam(team)}
-                  disabled={isLoading}
-                  className="print:hidden"
-                >
-                  {t("import.copyTo", { team: team.name })}
-                </Button>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Add Button + Request transfer */}
-      {!showBulkAdd && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <Button onClick={() => setShowBulkAdd(true)} disabled={isLoading}>
-            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-            {t("dashboard.addMultiple")}
-          </Button>
-          {otherTeams.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setRequestTransferOpen(true)}
-              disabled={isLoading}
-            >
-              {t("transferRequests.requestButton", {
-                defaultValue: "בקש פריטים מצוות אחר",
-              })}
-            </Button>
-          )}
-        </div>
-      )}
 
       {/* Bulk Add Form */}
       {showBulkAdd && (

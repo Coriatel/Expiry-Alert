@@ -65,19 +65,24 @@ export function PushPromptBanner() {
   };
 
   return (
-    <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3">
-      <div className="rounded-full bg-primary/10 p-2 shrink-0">
+    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex flex-wrap items-start gap-3">
+      <div className="self-start rounded-full bg-primary/10 p-2 shrink-0">
         <Bell className="h-5 w-5 text-primary" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="font-medium text-sm">{t("push.promptTitle")}</p>
         <p className="text-sm text-muted-foreground">{t("push.promptMessage")}</p>
         {isIosNotStandalone && (
           <p className="text-xs text-muted-foreground mt-1">{t("push.iosGuidance")}</p>
         )}
       </div>
-      <div className="flex gap-2 shrink-0">
-        <Button size="sm" variant="outline" onClick={handleDismiss}>
+      <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:shrink-0">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleDismiss}
+          className={isIosNotStandalone ? "col-span-2 sm:col-span-1" : ""}
+        >
           {t("push.notNow")}
         </Button>
         {!isIosNotStandalone && (
