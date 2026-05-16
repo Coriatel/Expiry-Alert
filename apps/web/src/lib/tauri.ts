@@ -73,6 +73,16 @@ export async function restoreReagent(id: number): Promise<void> {
   await apiFetch(`/api/reagents/${id}/restore`, { method: "POST" });
 }
 
+export async function updateReagentInTreatment(
+  id: number,
+  inTreatment: boolean,
+): Promise<void> {
+  await apiFetch(`/api/reagents/${id}/in-treatment`, {
+    method: "PATCH",
+    body: JSON.stringify({ in_treatment: inTreatment }),
+  });
+}
+
 export async function duplicateReagent(
   originalId: number,
   data: ReagentFormData,

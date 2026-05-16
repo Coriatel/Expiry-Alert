@@ -31,6 +31,7 @@ import {
   getActiveReagents,
   addReagentsBulk,
   updateReagent,
+  updateReagentInTreatment,
   deleteReagent,
   archiveReagentsBulk,
   destroyReagent,
@@ -288,6 +289,17 @@ export function Dashboard({ teamName }: DashboardProps) {
     await updateReagent(id, data);
     await loadData();
     showToast(t("success.reagentUpdated"), "success");
+  };
+
+  const handleToggleInTreatment = async (id: number, value: boolean) => {
+    try {
+      await updateReagentInTreatment(id, value);
+      await loadData();
+      showToast(t("success.reagentUpdated"), "success");
+    } catch (error) {
+      console.error("Failed to update treatment status:", error);
+      showToast(t("errors.updateFailed"), "error");
+    }
   };
 
   const handleDuplicate = (reagent: Reagent) => {
@@ -622,6 +634,9 @@ export function Dashboard({ teamName }: DashboardProps) {
               const r = reagents.find((x) => x.id === id);
               if (r) handleDestroy(r);
             }}
+            onToggleInTreatment={(id, value) => {
+              void handleToggleInTreatment(id, value);
+            }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
@@ -635,6 +650,9 @@ export function Dashboard({ teamName }: DashboardProps) {
             onArchive={(id) => {
               const r = reagents.find((x) => x.id === id);
               if (r) handleDestroy(r);
+            }}
+            onToggleInTreatment={(id, value) => {
+              void handleToggleInTreatment(id, value);
             }}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
@@ -653,6 +671,9 @@ export function Dashboard({ teamName }: DashboardProps) {
           onArchive={(id) => {
             const r = reagents.find((x) => x.id === id);
             if (r) handleDestroy(r);
+          }}
+          onToggleInTreatment={(id, value) => {
+            void handleToggleInTreatment(id, value);
           }}
           selectedIds={selectedReagentIds}
           onToggleSelect={toggleReagentSelection}

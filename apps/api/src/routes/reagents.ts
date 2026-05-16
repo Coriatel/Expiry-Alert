@@ -57,6 +57,10 @@ const idsSchema = z.object({
   ids: z.array(z.coerce.number()),
 });
 
+export const reagentTreatmentSchema = z.object({
+  in_treatment: z.boolean(),
+});
+
 const isDateAfter = (value: string | null | undefined, compareTo: Date) => {
   if (!value) return false;
   const parsed = new Date(value);
@@ -263,6 +267,24 @@ reagentsRouter.post("/:id/restore", async (req, res) => {
     return res.status(400).json({ error: "Invalid id" });
   await updateReagent(id, {
     is_archived: false,
+  });
+
+  res.status(204).send();
+});
+reagentsRouter.patch("/:id/in-treatment", async (req, res) => {
+  const teamId = getTeamId(req);
+  if (!teamId) return res.status(400).json({ error: "Missing team" });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
+
+  const parsed = reagentTreatmentSchema.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.message });
+
+  await updateReagent(id, {
+    in_treatment: parsed.data.in_treatment,
   });
 
   res.status(204).send();

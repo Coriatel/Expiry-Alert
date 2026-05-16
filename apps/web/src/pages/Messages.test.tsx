@@ -78,6 +78,11 @@ describe("Messages page", () => {
       screen.getByPlaceholderText("messages.bodyPlaceholder"),
       "Please check this bottle.",
     );
+    await user.click(
+      screen.getByRole("button", {
+        name: "messages.attachReagents messages.attachDescription",
+      }),
+    );
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "messages.send" }));
 
