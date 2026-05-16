@@ -9,6 +9,7 @@ interface ReagentCardListProps {
   onDuplicate?: (reagent: Reagent) => void;
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
+  onToggleInTreatment?: (id: number, value: boolean) => void;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onSelectAll: () => void;
@@ -20,6 +21,7 @@ export function ReagentCardList({
   onDuplicate,
   onDelete,
   onArchive,
+  onToggleInTreatment,
   selectedIds,
   onToggleSelect,
   onSelectAll,
@@ -65,6 +67,7 @@ export function ReagentCardList({
           onDuplicate={onDuplicate}
           onDelete={onDelete}
           onArchive={onArchive}
+          onToggleInTreatment={onToggleInTreatment}
         />
       ))}
     </div>
