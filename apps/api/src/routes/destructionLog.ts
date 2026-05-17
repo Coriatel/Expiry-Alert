@@ -16,8 +16,8 @@ const destructionSchema = z.object({
   supplier_name: z.string().optional().nullable(),
   lot_number: z.string().optional().nullable(),
   expiry_date: z.string().optional().nullable(),
-  quantity_original: z.number().optional().nullable(),
-  quantity_destroyed: z.number(),
+  quantity_original: z.coerce.number().optional().nullable(),
+  quantity_destroyed: z.coerce.number(),
   notes: z.string().optional().nullable(),
 });
 

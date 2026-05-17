@@ -70,6 +70,7 @@ export function DestructionDialog({
             type="number"
             min={0}
             value={quantity}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
