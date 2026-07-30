@@ -566,6 +566,49 @@ export async function getDuplicationLog(from?: string, to?: string): Promise<Dup
   return res.log ?? [];
 }
 
+// --- Log line editing (destruction / duplication history) ---
+export async function updateDestructionEntry(
+  id: number,
+  data: Partial<DestructionLogEntry>,
+): Promise<DestructionLogEntry> {
+  return apiFetch(`/api/destruction-log/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/// `restore` returns the reagent to stock (un-archives it) as well as deleting the record.
+export async function deleteDestructionEntry(
+  id: number,
+  restore = false,
+): Promise<{ deleted: number; restored: boolean }> {
+  return apiFetch(
+    `/api/destruction-log/${id}${restore ? "?restore=true" : ""}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function updateDuplicationEntry(
+  id: number,
+  data: Partial<DuplicationLogEntry>,
+): Promise<DuplicationLogEntry> {
+  return apiFetch(`/api/duplication-log/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/// `clearFlag` also removes the superseded batch's "new in stock" yellow dot.
+export async function deleteDuplicationEntry(
+  id: number,
+  clearFlag = false,
+): Promise<{ deleted: number; flagCleared: boolean }> {
+  return apiFetch(
+    `/api/duplication-log/${id}${clearFlag ? "?clearFlag=true" : ""}`,
+    { method: "DELETE" },
+  );
+}
+
 // --- Import ---
 export async function importReagentsToTeam(
   targetTeamId: number,

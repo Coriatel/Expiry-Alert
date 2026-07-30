@@ -23,7 +23,6 @@ import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
 import { PushPromptBanner } from "@/components/PushPromptBanner";
 import { ExpiryCalendar } from "@/components/ExpiryCalendar";
-import { ExpiryTimeline } from "@/components/ExpiryTimeline";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useStore } from "@/store/store";
 import { useToast } from "@/components/ui/Toast";
@@ -588,12 +587,8 @@ export function Dashboard({ teamName }: DashboardProps) {
           )}
         </button>
         {calendarExpanded && (
-          <div className="px-4 pb-4 grid gap-6 md:grid-cols-2">
+          <div className="px-4 pb-4">
             <ExpiryCalendar reagents={reagents} />
-            <div className="min-w-0">
-              <h3 className="font-semibold mb-3">{t("calendar.timeline")}</h3>
-              <ExpiryTimeline reagents={reagents} />
-            </div>
           </div>
         )}
       </div>

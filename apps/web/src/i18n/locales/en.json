@@ -124,7 +124,9 @@
     "retry": "Try again",
     "print": "Print",
     "duplicate": "Duplicate",
-    "search": "Search"
+    "search": "Search",
+    "actions": "Actions",
+    "showMore": "Show more"
   },
   "form": {
     "name": "Name",
@@ -359,12 +361,14 @@
     "importFailed": "Failed to import reagents. Please try again.",
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",
-    "technicalDetails": "Technical details"
+    "technicalDetails": "Technical details",
+    "saveFailed": "Save failed"
   },
   "validation": {
     "nameRequired": "Name is required",
     "expiryDateRequired": "Expiry date is required",
-    "invalidDate": "Invalid date format"
+    "invalidDate": "Invalid date format",
+    "invalidQuantity": "Invalid quantity"
   },
   "filters": {
     "title": "Filter & Sort",
@@ -482,7 +486,13 @@
     "customRange": "Custom Range",
     "from": "From",
     "to": "To",
-    "noRecords": "No records"
+    "noRecords": "No records",
+    "notes": "Notes",
+    "editTitle": "Edit record",
+    "deleteTitle": "Delete record",
+    "deleteDescription": "Delete this record? You can also return the item to stock if it was logged by mistake.",
+    "deleteRecordOnly": "Delete record only",
+    "deleteAndRestore": "Delete and return item to stock"
   },
   "duplicationHistory": {
     "title": "Duplication History",
@@ -493,7 +503,12 @@
     "expiryDate": "Expiry Date",
     "quantity": "Quantity",
     "performedBy": "Performed By",
-    "noRecords": "No records"
+    "noRecords": "No records",
+    "editTitle": "Edit record",
+    "deleteTitle": "Delete record",
+    "deleteDescription": "Delete this duplication record? You can also clear the \"new in stock\" mark from the older batch.",
+    "deleteRecordOnly": "Delete record only",
+    "deleteAndClearFlag": "Delete and remove the \"new in stock\" mark"
   },
   "destruction": {
     "title": "Destruction",

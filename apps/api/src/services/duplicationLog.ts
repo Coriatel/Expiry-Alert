@@ -1,5 +1,11 @@
 import { config } from "../config.js";
-import { createRecord, listRecords } from "./directus.js";
+import {
+  createRecord,
+  deleteRecord,
+  findOne,
+  listRecords,
+  updateSingleRecord,
+} from "./directus.js";
 
 export type DuplicationLogRecord = {
   id: number;
@@ -45,4 +51,20 @@ export async function createDuplicationEntry(
   data: Omit<DuplicationLogRecord, "id" | "date_created">,
 ) {
   return createRecord<DuplicationLogRecord>(collection, data);
+}
+
+/// Fetch a single log entry. Callers MUST verify `team` before mutating it.
+export async function getDuplicationEntry(id: number) {
+  return findOne<DuplicationLogRecord>(collection, { id: { _eq: id } });
+}
+
+export async function updateDuplicationEntry(
+  id: number,
+  data: Partial<DuplicationLogRecord>,
+) {
+  await updateSingleRecord(collection, id, data);
+}
+
+export async function deleteDuplicationEntry(id: number) {
+  await deleteRecord(collection, id);
 }

@@ -10,7 +10,14 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PrintHeader } from "@/components/PrintHeader";
-import { getDuplicationLog } from "@/lib/tauri";
+import {
+  deleteDuplicationEntry,
+  getDuplicationLog,
+  updateDuplicationEntry,
+} from "@/lib/tauri";
+import { EditLogLineDialog, type LogField } from "@/components/EditLogLineDialog";
+import { DeleteLogLineDialog } from "@/components/DeleteLogLineDialog";
+import { Pencil, Trash2 } from "lucide-react";
 import type { DuplicationLogEntry } from "@/lib/tauri";
 
 interface DuplicationHistoryProps {
@@ -100,6 +107,8 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
   // Data
   const [entries, setEntries] = useState<DuplicationLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [editEntry, setEditEntry] = useState<DuplicationLogEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<DuplicationLogEntry | null>(null);
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>("received_date");
@@ -126,6 +135,35 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
     const { from, to } = getPeriodDates(activePeriod);
     loadData(from, to);
   }, [activePeriod, loadData]);
+
+  const reload = () => {
+    if (activePeriod === "custom") {
+      loadData(customFrom || undefined, customTo || undefined);
+      return;
+    }
+    const { from, to } = getPeriodDates(activePeriod);
+    loadData(from, to);
+  };
+
+  const editFields: LogField[] = [
+    { key: "reagent_name", label: t("duplicationHistory.reagentName"), type: "text" },
+    { key: "supplier_name", label: t("duplicationHistory.supplier"), type: "text" },
+    { key: "lot_number", label: t("duplicationHistory.lotNumber"), type: "text" },
+    { key: "expiry_date", label: t("duplicationHistory.expiryDate"), type: "date" },
+    { key: "quantity", label: t("duplicationHistory.quantity"), type: "number" },
+    { key: "received_date", label: t("duplicationHistory.receivedDate"), type: "date" },
+  ];
+
+  const handleSaveEdit = async (id: number, data: Record<string, unknown>) => {
+    await updateDuplicationEntry(id, data as any);
+    reload();
+  };
+
+  const handleConfirmDelete = async (clearFlag: boolean) => {
+    if (!deleteEntry) return;
+    await deleteDuplicationEntry(deleteEntry.id, clearFlag);
+    reload();
+  };
 
   const handleCustomSearch = () => {
     setActivePeriod("custom");
@@ -335,6 +373,9 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
                     <SortIcon field="received_by_name" />
                   </span>
                 </th>
+                <th className="px-3 py-2 text-center font-medium print:hidden">
+                  {t("actions.actions", { defaultValue: "Actions" })}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -358,12 +399,58 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
                   <td className="px-3 py-2">
                     {entry.received_by_name ?? "—"}
                   </td>
+                  <td className="px-3 py-2 print:hidden">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={t("actions.edit")}
+                        onClick={() => setEditEntry(entry)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={t("actions.delete")}
+                        onClick={() => setDeleteEntry(entry)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <EditLogLineDialog
+        entry={editEntry}
+        open={editEntry !== null}
+        title={t("duplicationHistory.editTitle", { defaultValue: "Edit record" })}
+        fields={editFields}
+        onClose={() => setEditEntry(null)}
+        onSave={handleSaveEdit}
+      />
+
+      <DeleteLogLineDialog
+        open={deleteEntry !== null}
+        title={t("duplicationHistory.deleteTitle", { defaultValue: "Delete record" })}
+        description={t("duplicationHistory.deleteDescription", {
+          defaultValue:
+            "Delete this duplication record? You can also clear the 'new in stock' mark from the older batch.",
+        })}
+        recordOnlyLabel={t("duplicationHistory.deleteRecordOnly", {
+          defaultValue: "Delete record only",
+        })}
+        withSideEffectLabel={t("duplicationHistory.deleteAndClearFlag", {
+          defaultValue: "Delete and remove the new-in-stock mark",
+        })}
+        onClose={() => setDeleteEntry(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

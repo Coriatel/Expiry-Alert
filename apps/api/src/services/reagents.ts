@@ -48,14 +48,59 @@ export async function createReagent(
   return createRecord<ReagentRecord>(collection, { ...data, team: teamId });
 }
 
-export async function duplicateReagent(
-  teamId: number,
-  originalId: number,
-  data: Partial<ReagentRecord>,
-) {
-  const created = await createReagent(teamId, data);
-  const newId = created.id;
+/// Coerce a reagent's free-text quantity into a number for the duplication log.
+/// Quantities are stored as text, so values like "10 vials" or "" must not become NaN.
+export function toLoggedQuantity(
+  raw: string | number | null | undefined,
+): number | null {
+  if (raw == null) return null;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
 
+const normalizeName = (v: string | null | undefined) =>
+  (v ?? "").trim().toLowerCase();
+
+/// Find the batch in the target team that an incoming batch supersedes:
+/// same item, still active, and expiring EARLIER than the incoming one.
+/// Returns the closest predecessor (latest expiry among older batches), or null.
+export function findSupersededReagent(
+  existing: ReagentRecord[],
+  imported: Pick<
+    ReagentRecord,
+    "name" | "category" | "expiry_date" | "catalog_reagent_id"
+  >,
+): ReagentRecord | null {
+  const importedExpiry = imported.expiry_date;
+  if (!importedExpiry) return null;
+
+  const sameItem = existing.filter((candidate) => {
+    if (candidate.is_archived) return false;
+    if (!candidate.expiry_date) return false;
+    if (candidate.category !== imported.category) return false;
+    // Already superseded: re-pointing it would orphan its existing replaced_by
+    // relationship and contradict the duplication-log row written for it.
+    if (candidate.replaced_by != null) return false;
+
+    // Prefer catalog identity when both sides carry one; else fall back to name.
+    if (candidate.catalog_reagent_id != null && imported.catalog_reagent_id != null) {
+      return candidate.catalog_reagent_id === imported.catalog_reagent_id;
+    }
+    return normalizeName(candidate.name) === normalizeName(imported.name);
+  });
+
+  const older = sameItem.filter((c) => c.expiry_date < importedExpiry);
+  if (older.length === 0) return null;
+
+  return older.reduce((best, c) => (c.expiry_date > best.expiry_date ? c : best));
+}
+
+/// Mark an older reagent as replaced by a newer one: sets replaced_by (drives the
+/// "new in stock" yellow dot) and appends a dated arrival note.
+export async function markReplacedBy(originalId: number, newId: number) {
   const original = await findOne<ReagentRecord>(collection, {
     id: { _eq: originalId },
   });
@@ -70,7 +115,15 @@ export async function duplicateReagent(
     replaced_by: newId,
     notes: updatedNotes,
   });
+}
 
+export async function duplicateReagent(
+  teamId: number,
+  originalId: number,
+  data: Partial<ReagentRecord>,
+) {
+  const created = await createReagent(teamId, data);
+  await markReplacedBy(originalId, created.id);
   return created;
 }
 
