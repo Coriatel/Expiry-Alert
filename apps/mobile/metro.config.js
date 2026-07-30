@@ -15,7 +15,10 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// Ensure shared package is resolved correctly
-config.resolver.disableHierarchicalLookup = true;
+// Keep Node-style hierarchical resolution. Disabling it only worked while a
+// global react override let npm hoist every package flat; under strict peer
+// resolution npm legitimately nests (e.g. expo-asset under expo/node_modules)
+// and Metro must be able to walk up to find those.
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;
