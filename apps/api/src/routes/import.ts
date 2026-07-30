@@ -4,7 +4,14 @@ import { requireAuth } from "../middleware/auth.js";
 import { getTeamId } from "../utils/team.js";
 import { config } from "../config.js";
 import { findOne } from "../services/directus.js";
-import { createReagent, type ReagentRecord } from "../services/reagents.js";
+import {
+  createReagent,
+  findSupersededReagent,
+  listReagents,
+  markReplacedBy,
+  type ReagentRecord,
+} from "../services/reagents.js";
+import { createDuplicationEntry } from "../services/duplicationLog.js";
 import {
   listMembershipsByUser,
   type MembershipRecord,
@@ -87,6 +94,14 @@ importRouter.post("/reagents", async (req, res) => {
 
   const reagentCollection = config.directus.collections.reagents as any;
   const ids: number[] = [];
+  const userName = user?.name || user?.email || "Unknown";
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  // Snapshot of the target team's stock, used to detect which existing batch each
+  // incoming batch supersedes. Newly created batches are appended so a second
+  // import of the same item supersedes the one we just created, not an older one.
+  const targetStock = await listReagents(parsed.data.targetTeamId);
+  let superseded = 0;
 
   for (const reagentId of parsed.data.reagentIds) {
     const original = await findOne<ReagentRecord>(reagentCollection, {
@@ -95,12 +110,34 @@ importRouter.post("/reagents", async (req, res) => {
     if (!original) continue;
     if ((original as any).team !== sourceTeamId) continue;
 
-    const created = await createReagent(
-      parsed.data.targetTeamId,
-      copyReagentData(original),
-    );
+    const payload = copyReagentData(original);
+    const created = await createReagent(parsed.data.targetTeamId, payload);
     ids.push(created.id);
+
+    // An import IS a duplication: mark the older batch with the "new in stock"
+    // dot and record it in the duplication history, same as /:id/duplicate does.
+    const predecessor = findSupersededReagent(targetStock, payload as any);
+    if (predecessor) {
+      await markReplacedBy(predecessor.id, created.id);
+      await createDuplicationEntry({
+        team: parsed.data.targetTeamId,
+        original_reagent_id: predecessor.id,
+        new_reagent_id: created.id,
+        reagent_name: payload.name ?? null,
+        supplier_name: payload.supplier_name ?? null,
+        lot_number: payload.lot_number ?? null,
+        expiry_date: payload.expiry_date ?? null,
+        quantity: payload.quantity != null ? Number(payload.quantity) : null,
+        received_by: userId != null ? String(userId) : null,
+        received_by_name: userName,
+        received_date: todayIso,
+      });
+      superseded += 1;
+      predecessor.replaced_by = created.id;
+    }
+
+    targetStock.push({ ...(payload as any), id: created.id, team: parsed.data.targetTeamId });
   }
 
-  res.status(201).json({ copied: ids.length, ids });
+  res.status(201).json({ copied: ids.length, ids, superseded });
 });

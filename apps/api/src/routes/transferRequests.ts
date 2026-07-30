@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getTeamId } from "../utils/team.js";
+import { createDuplicationEntry } from "../services/duplicationLog.js";
 import {
   cancelTransferRequest,
   completeTransferRequest,
@@ -14,6 +15,8 @@ import {
 } from "../services/transferRequests.js";
 import type { TransferRequestRecord } from "../services/transferRequests.js";
 import {
+  findSupersededReagent,
+  markReplacedBy,
   createReagent,
   listReagents,
   type ReagentRecord,
@@ -326,6 +329,32 @@ transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
         is_archived: false,
       });
       imported.push({ old_id: src.id, new_id: created.id });
+
+      // A pull-import IS a duplication for the receiving team: flag the older
+      // batch with the "new in stock" dot and log it in duplication history.
+      const predecessor = findSupersededReagent(callerReagents, src as any);
+      if (predecessor) {
+        try {
+          await markReplacedBy(predecessor.id, created.id);
+          await createDuplicationEntry({
+            team: teamId,
+            original_reagent_id: predecessor.id,
+            new_reagent_id: created.id,
+            reagent_name: src.name ?? null,
+            supplier_name: src.supplier_name ?? null,
+            lot_number: src.lot_number ?? null,
+            expiry_date: src.expiry_date ?? null,
+            quantity: src.quantity != null ? Number(src.quantity) : null,
+            received_by: user?.id != null ? String(user.id) : null,
+            received_by_name: user?.name || user?.email || "Unknown",
+            received_date: new Date().toISOString().slice(0, 10),
+          });
+          predecessor.replaced_by = created.id;
+        } catch (err) {
+          console.warn("pull: markReplacedBy/dupLog failed", { src_id: src.id, err });
+        }
+      }
+      callerReagents.push({ ...(src as any), id: created.id, team: teamId });
     } catch (err) {
       console.warn("pull: createReagent failed", { src_id: src.id, err });
       skipped.push({ old_id: src.id, reason: "create_failed" });

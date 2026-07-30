@@ -1,5 +1,11 @@
 import { config } from "../config.js";
-import { createRecord, listRecords } from "./directus.js";
+import {
+  createRecord,
+  deleteRecord,
+  findOne,
+  listRecords,
+  updateSingleRecord,
+} from "./directus.js";
 
 export type DestructionLogRecord = {
   id: number;
@@ -46,4 +52,20 @@ export async function createDestructionEntry(
   data: Omit<DestructionLogRecord, "id" | "date_created">,
 ) {
   return createRecord<DestructionLogRecord>(collection, data);
+}
+
+/// Fetch a single log entry. Callers MUST verify `team` before mutating it.
+export async function getDestructionEntry(id: number) {
+  return findOne<DestructionLogRecord>(collection, { id: { _eq: id } });
+}
+
+export async function updateDestructionEntry(
+  id: number,
+  data: Partial<DestructionLogRecord>,
+) {
+  await updateSingleRecord(collection, id, data);
+}
+
+export async function deleteDestructionEntry(id: number) {
+  await deleteRecord(collection, id);
 }

@@ -10,7 +10,14 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PrintHeader } from "@/components/PrintHeader";
-import { getDestructionLog } from "@/lib/tauri";
+import {
+  deleteDestructionEntry,
+  getDestructionLog,
+  updateDestructionEntry,
+} from "@/lib/tauri";
+import { EditLogLineDialog, type LogField } from "@/components/EditLogLineDialog";
+import { DeleteLogLineDialog } from "@/components/DeleteLogLineDialog";
+import { Pencil, Trash2 } from "lucide-react";
 import type { DestructionLogEntry } from "@/lib/tauri";
 
 interface BatchHistoryProps {
@@ -100,6 +107,8 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
   // Data
   const [entries, setEntries] = useState<DestructionLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [editEntry, setEditEntry] = useState<DestructionLogEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<DestructionLogEntry | null>(null);
 
   // Filters
   const [destroyedOnly, setDestroyedOnly] = useState(false);
@@ -129,6 +138,36 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
     const { from, to } = getPeriodDates(activePeriod);
     loadData(from, to);
   }, [activePeriod, loadData]);
+
+  const reload = () => {
+    if (activePeriod === "custom") {
+      loadData(customFrom || undefined, customTo || undefined);
+      return;
+    }
+    const { from, to } = getPeriodDates(activePeriod);
+    loadData(from, to);
+  };
+
+  const editFields: LogField[] = [
+    { key: "reagent_name", label: t("batchHistory.reagentName"), type: "text" },
+    { key: "supplier_name", label: t("batchHistory.supplier"), type: "text" },
+    { key: "lot_number", label: t("batchHistory.lotNumber"), type: "text" },
+    { key: "expiry_date", label: t("batchHistory.expiryDate"), type: "date" },
+    { key: "quantity_original", label: t("batchHistory.quantityOriginal"), type: "number" },
+    { key: "quantity_destroyed", label: t("batchHistory.quantityDestroyed"), type: "number" },
+    { key: "notes", label: t("batchHistory.notes", { defaultValue: "Notes" }), type: "textarea" },
+  ];
+
+  const handleSaveEdit = async (id: number, data: Record<string, unknown>) => {
+    await updateDestructionEntry(id, data as any);
+    reload();
+  };
+
+  const handleConfirmDelete = async (restore: boolean) => {
+    if (!deleteEntry) return;
+    await deleteDestructionEntry(deleteEntry.id, restore);
+    reload();
+  };
 
   const handleCustomSearch = () => {
     setActivePeriod("custom");
@@ -364,6 +403,9 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
                     <SortIcon field="destroyed_by_name" />
                   </span>
                 </th>
+                <th className="px-3 py-2 text-center font-medium print:hidden">
+                  {t("actions.actions", { defaultValue: "Actions" })}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -390,12 +432,58 @@ export function BatchHistory({ teamName, userName }: BatchHistoryProps) {
                   <td className="px-3 py-2">
                     {entry.destroyed_by_name ?? "—"}
                   </td>
+                  <td className="px-3 py-2 print:hidden">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={t("actions.edit")}
+                        onClick={() => setEditEntry(entry)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={t("actions.delete")}
+                        onClick={() => setDeleteEntry(entry)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <EditLogLineDialog
+        entry={editEntry}
+        open={editEntry !== null}
+        title={t("batchHistory.editTitle", { defaultValue: "Edit record" })}
+        fields={editFields}
+        onClose={() => setEditEntry(null)}
+        onSave={handleSaveEdit}
+      />
+
+      <DeleteLogLineDialog
+        open={deleteEntry !== null}
+        title={t("batchHistory.deleteTitle", { defaultValue: "Delete record" })}
+        description={t("batchHistory.deleteDescription", {
+          defaultValue:
+            "Delete this record? You can also return the item to stock if it was logged by mistake.",
+        })}
+        recordOnlyLabel={t("batchHistory.deleteRecordOnly", {
+          defaultValue: "Delete record only",
+        })}
+        withSideEffectLabel={t("batchHistory.deleteAndRestore", {
+          defaultValue: "Delete and return item to stock",
+        })}
+        onClose={() => setDeleteEntry(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

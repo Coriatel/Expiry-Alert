@@ -124,7 +124,9 @@
     "retry": "נסה שוב",
     "print": "הדפס",
     "duplicate": "שכפל",
-    "search": "חפש"
+    "search": "חפש",
+    "actions": "פעולות",
+    "showMore": "הצג עוד"
   },
   "form": {
     "name": "שם",
@@ -359,12 +361,14 @@
     "importFailed": "שגיאה בייבוא הריאגנטים. נא לנסות שוב.",
     "somethingWentWrong": "משהו השתבש",
     "unexpectedError": "אירעה שגיאה בלתי צפויה. נא לנסות שוב.",
-    "technicalDetails": "פרטים טכניים"
+    "technicalDetails": "פרטים טכניים",
+    "saveFailed": "השמירה נכשלה"
   },
   "validation": {
     "nameRequired": "שם הוא שדה חובה",
     "expiryDateRequired": "תאריך תפוגה הוא שדה חובה",
-    "invalidDate": "פורמט תאריך לא תקין"
+    "invalidDate": "פורמט תאריך לא תקין",
+    "invalidQuantity": "כמות לא חוקית"
   },
   "filters": {
     "title": "סינון ומיון",
@@ -482,7 +486,13 @@
     "customRange": "טווח מותאם",
     "from": "מתאריך",
     "to": "עד תאריך",
-    "noRecords": "אין רשומות"
+    "noRecords": "אין רשומות",
+    "notes": "הערות",
+    "editTitle": "עריכת רשומה",
+    "deleteTitle": "מחיקת רשומה",
+    "deleteDescription": "למחוק את הרשומה? אם הרשומה נוצרה בטעות, ניתן גם להחזיר את הפריט למלאי.",
+    "deleteRecordOnly": "מחק רשומה בלבד",
+    "deleteAndRestore": "מחק והחזר את הפריט למלאי"
   },
   "duplicationHistory": {
     "title": "היסטוריית שכפולים",
@@ -493,7 +503,12 @@
     "expiryDate": "תאריך תפוגה",
     "quantity": "כמות",
     "performedBy": "בוצע ע\"י",
-    "noRecords": "אין רשומות"
+    "noRecords": "אין רשומות",
+    "editTitle": "עריכת רשומה",
+    "deleteTitle": "מחיקת רשומה",
+    "deleteDescription": "למחוק את רשומת השכפול? ניתן גם להסיר את הסימון \"הגיע חדש\" מהאצווה הקודמת.",
+    "deleteRecordOnly": "מחק רשומה בלבד",
+    "deleteAndClearFlag": "מחק והסר את הסימון \"הגיע חדש\""
   },
   "destruction": {
     "title": "השמדה",

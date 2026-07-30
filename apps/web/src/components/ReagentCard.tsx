@@ -55,15 +55,16 @@ export function ReagentCard({
 }: ReagentCardProps) {
   const { t } = useTranslation();
   const [descExpanded, setDescExpanded] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
   const days = getDaysUntilExpiry(reagent.expiry_date);
   const status = getExpiryStatus(reagent.expiry_date);
   const isExpired = status === "expired";
   const inTreatment = reagent.in_treatment === true;
 
   return (
-    <div className={cn("rounded-lg border p-4 shadow-sm", getCardBg(status))}>
+    <div className={cn("rounded-lg border p-3 sm:p-4 shadow-sm", getCardBg(status))}>
       {/* Top row: checkbox + name */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <button
           onClick={() => onToggleSelect(reagent.id)}
           className="flex-shrink-0 mt-0.5"
@@ -75,7 +76,7 @@ export function ReagentCard({
           )}
         </button>
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-bold break-words">
+          <h3 className="text-base sm:text-lg font-bold break-words leading-snug">
             {reagent.name}
             {reagent.replaced_by != null && (
               <>
@@ -118,28 +119,42 @@ export function ReagentCard({
 
       {/* Supplier, manufacturer, quantity, lot number, description + notes */}
       {(reagent.supplier_name || reagent.manufacturer || reagent.quantity != null || reagent.lot_number || reagent.notes || reagent.description) && (
-        <div className="mt-2 text-sm text-muted-foreground space-y-1">
-          {reagent.supplier_name && (
-            <p>
-              {t("catalog.supplier")}: {reagent.supplier_name}
+        <div className="mt-1.5 text-sm text-muted-foreground space-y-1">
+          {/* Compact meta: wraps inline instead of one line per field */}
+          {(reagent.supplier_name ||
+            reagent.manufacturer ||
+            reagent.quantity != null ||
+            reagent.lot_number) && (
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              {reagent.supplier_name && <span>{reagent.supplier_name}</span>}
               {reagent.manufacturer && (
-                <span className="ms-2 text-muted-foreground/70">
-                  {t("form.manufacturer")}: {reagent.manufacturer}
-                </span>
+                <>
+                  {reagent.supplier_name && <span aria-hidden>·</span>}
+                  <span className="text-muted-foreground/70">
+                    {reagent.manufacturer}
+                  </span>
+                </>
               )}
-            </p>
+              {reagent.quantity != null && (
+                <>
+                  {(reagent.supplier_name || reagent.manufacturer) && (
+                    <span aria-hidden>·</span>
+                  )}
+                  <span>
+                    {t("newShipment.quantity")}: {reagent.quantity}
+                  </span>
+                </>
+              )}
+              {reagent.lot_number && (
+                <>
+                  {(reagent.supplier_name ||
+                    reagent.manufacturer ||
+                    reagent.quantity != null) && <span aria-hidden>·</span>}
+                  <span>{reagent.lot_number}</span>
+                </>
+              )}
+            </div>
           )}
-          {!reagent.supplier_name && reagent.manufacturer && (
-            <p>
-              {t("form.manufacturer")}: {reagent.manufacturer}
-            </p>
-          )}
-          {reagent.quantity != null && (
-            <p>
-              {t("newShipment.quantity")}: {reagent.quantity}
-            </p>
-          )}
-          {reagent.lot_number && <p>{reagent.lot_number}</p>}
           {reagent.description && (
             <p className="break-words">
               {reagent.description.length > 60 && !descExpanded
@@ -155,12 +170,31 @@ export function ReagentCard({
               )}
             </p>
           )}
-          {reagent.notes && <p className="break-words">{reagent.notes}</p>}
+          {reagent.notes && (
+            <div>
+              <p
+                className={cn(
+                  "break-words whitespace-pre-wrap",
+                  !notesExpanded && "line-clamp-2",
+                )}
+              >
+                {reagent.notes}
+              </p>
+              {reagent.notes.length > 80 && (
+                <button
+                  onClick={() => setNotesExpanded((v) => !v)}
+                  className="text-primary underline text-xs"
+                >
+                  {notesExpanded ? t("actions.close") : t("actions.showMore", { defaultValue: "Show more" })}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Actions */}
-      <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+      <div className="mt-2 pt-2 border-t flex flex-wrap gap-1 sm:gap-2">
         <Button
           variant="ghost"
           size="sm"
