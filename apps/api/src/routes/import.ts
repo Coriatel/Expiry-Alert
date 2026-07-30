@@ -9,6 +9,7 @@ import {
   findSupersededReagent,
   listReagents,
   markReplacedBy,
+  toLoggedQuantity,
   type ReagentRecord,
 } from "../services/reagents.js";
 import { createDuplicationEntry } from "../services/duplicationLog.js";
@@ -118,22 +119,31 @@ importRouter.post("/reagents", async (req, res) => {
     // dot and record it in the duplication history, same as /:id/duplicate does.
     const predecessor = findSupersededReagent(targetStock, payload as any);
     if (predecessor) {
-      await markReplacedBy(predecessor.id, created.id);
-      await createDuplicationEntry({
-        team: parsed.data.targetTeamId,
-        original_reagent_id: predecessor.id,
-        new_reagent_id: created.id,
-        reagent_name: payload.name ?? null,
-        supplier_name: payload.supplier_name ?? null,
-        lot_number: payload.lot_number ?? null,
-        expiry_date: payload.expiry_date ?? null,
-        quantity: payload.quantity != null ? Number(payload.quantity) : null,
-        received_by: userId != null ? String(userId) : null,
-        received_by_name: userName,
-        received_date: todayIso,
-      });
-      superseded += 1;
-      predecessor.replaced_by = created.id;
+      // Bookkeeping must never abort or stall the import: the reagent is already
+      // created at this point. Same containment as the pull path.
+      try {
+        await markReplacedBy(predecessor.id, created.id);
+        await createDuplicationEntry({
+          team: parsed.data.targetTeamId,
+          original_reagent_id: predecessor.id,
+          new_reagent_id: created.id,
+          reagent_name: payload.name ?? null,
+          supplier_name: payload.supplier_name ?? null,
+          lot_number: payload.lot_number ?? null,
+          expiry_date: payload.expiry_date ?? null,
+          quantity: toLoggedQuantity(payload.quantity),
+          received_by: userId != null ? String(userId) : null,
+          received_by_name: userName,
+          received_date: todayIso,
+        });
+        superseded += 1;
+        predecessor.replaced_by = created.id;
+      } catch (err) {
+        console.warn("import: markReplacedBy/dupLog failed", {
+          reagent_id: created.id,
+          err,
+        });
+      }
     }
 
     targetStock.push({ ...(payload as any), id: created.id, team: parsed.data.targetTeamId });

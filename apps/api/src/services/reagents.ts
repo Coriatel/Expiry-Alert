@@ -48,6 +48,19 @@ export async function createReagent(
   return createRecord<ReagentRecord>(collection, { ...data, team: teamId });
 }
 
+/// Coerce a reagent's free-text quantity into a number for the duplication log.
+/// Quantities are stored as text, so values like "10 vials" or "" must not become NaN.
+export function toLoggedQuantity(
+  raw: string | number | null | undefined,
+): number | null {
+  if (raw == null) return null;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
 const normalizeName = (v: string | null | undefined) =>
   (v ?? "").trim().toLowerCase();
 
@@ -68,6 +81,9 @@ export function findSupersededReagent(
     if (candidate.is_archived) return false;
     if (!candidate.expiry_date) return false;
     if (candidate.category !== imported.category) return false;
+    // Already superseded: re-pointing it would orphan its existing replaced_by
+    // relationship and contradict the duplication-log row written for it.
+    if (candidate.replaced_by != null) return false;
 
     // Prefer catalog identity when both sides carry one; else fall back to name.
     if (candidate.catalog_reagent_id != null && imported.catalog_reagent_id != null) {

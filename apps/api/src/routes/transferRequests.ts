@@ -15,6 +15,7 @@ import {
 } from "../services/transferRequests.js";
 import type { TransferRequestRecord } from "../services/transferRequests.js";
 import {
+  toLoggedQuantity,
   findSupersededReagent,
   markReplacedBy,
   createReagent,
@@ -344,7 +345,7 @@ transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
             supplier_name: src.supplier_name ?? null,
             lot_number: src.lot_number ?? null,
             expiry_date: src.expiry_date ?? null,
-            quantity: src.quantity != null ? Number(src.quantity) : null,
+            quantity: toLoggedQuantity(src.quantity),
             received_by: user?.id != null ? String(user.id) : null,
             received_by_name: user?.name || user?.email || "Unknown",
             received_date: new Date().toISOString().slice(0, 10),
