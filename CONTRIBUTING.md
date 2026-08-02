@@ -48,8 +48,25 @@ Before submitting:
 
 - Describe your changes clearly
 - Reference any related issues
-- Include screenshots for UI changes
+- Complete the mobile-release evidence block for every UI-affecting change
 - Ensure no breaking changes (or document them clearly)
+
+### UI release evidence gate
+
+A UI-affecting release cannot be classified visually green without all of the following:
+
+- rendered local screenshots at 360, 390, and 430 px plus a named desktop viewport;
+- explicit inspection of the fold and full page, including RTL/mixed-language content;
+- before and after evidence tied to the exact source revision;
+- green web build and browser release checks;
+- a rollback procedure; and
+- live post-deployment screenshots when production is changed.
+
+The `mobile-release-gate` check enforces the viewport, accessibility, touch-target,
+overflow, clipping, card/table parity, and evidence requirements. Changes that do
+not affect `apps/web` runtime UI are explicitly exempt from the PR evidence block,
+but still run the automated gate. Test, policy, and CI-only changes do not require
+an Expiry Alert production deployment.
 
 ## Questions?
 
