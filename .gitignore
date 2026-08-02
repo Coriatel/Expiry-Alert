@@ -6,6 +6,8 @@ node_modules/
 dist/
 dist-ssr/
 build/
+test-results/
+playwright-report/
 
 # Tauri build
 src-tauri/target/

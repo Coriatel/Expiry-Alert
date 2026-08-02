@@ -18,6 +18,12 @@ import {
 import { EditLogLineDialog, type LogField } from "@/components/EditLogLineDialog";
 import { DeleteLogLineDialog } from "@/components/DeleteLogLineDialog";
 import { Pencil, Trash2 } from "lucide-react";
+import { HistoryViewToggle } from "@/components/HistoryViewToggle";
+import { DuplicationHistoryCards } from "@/components/HistoryCards";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useStore } from "@/store/store";
+import { cn } from "@/lib/utils";
+import { getDuplicationDisplayEntries } from "@/lib/historyDisplay";
 import type { DuplicationLogEntry } from "@/lib/tauri";
 
 interface DuplicationHistoryProps {
@@ -98,6 +104,11 @@ function formatDate(iso: string): string {
 
 export function DuplicationHistory({ teamName, userName }: DuplicationHistoryProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const { duplicationHistoryViewMode, setDuplicationHistoryViewMode } =
+    useStore();
+  const effectiveViewMode =
+    duplicationHistoryViewMode ?? (isMobile ? "cards" : "table");
 
   // Period selection
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("lastMonth");
@@ -175,27 +186,10 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
   };
 
   // Sort
-  const displayEntries = useMemo(() => {
-    const sorted = [...entries].sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
-
-      if (aVal == null && bVal == null) return 0;
-      if (aVal == null) return 1;
-      if (bVal == null) return -1;
-
-      let cmp = 0;
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        cmp = aVal - bVal;
-      } else {
-        cmp = String(aVal).localeCompare(String(bVal));
-      }
-
-      return sortDir === "desc" ? -cmp : cmp;
-    });
-
-    return sorted;
-  }, [entries, sortField, sortDir]);
+  const displayEntries = useMemo(
+    () => getDuplicationDisplayEntries(entries, sortField, sortDir),
+    [entries, sortField, sortDir],
+  );
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -235,7 +229,7 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
       : periodButtons.find((p) => p.key === activePeriod)?.label ?? "";
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto max-w-full space-y-5 overflow-x-hidden p-4 md:space-y-6 md:p-6">
       {/* Print header - visible only in print */}
       <PrintHeader
         teamName={teamName}
@@ -244,12 +238,22 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
       />
 
       {/* Page header */}
-      <div className="flex items-center justify-between print:hidden">
-        <h1 className="text-3xl font-bold">{t("duplicationHistory.title")}</h1>
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          {t("actions.print")}
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <h1 className="text-2xl font-bold md:text-3xl">{t("duplicationHistory.title")}</h1>
+        <div className="flex items-center gap-2">
+          <HistoryViewToggle
+            value={effectiveViewMode}
+            onChange={setDuplicationHistoryViewMode}
+          />
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            className="min-h-11"
+          >
+            <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t("actions.print")}
+          </Button>
+        </div>
       </div>
 
       {/* Period filter bar */}
@@ -259,6 +263,7 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
             key={pb.key}
             variant={activePeriod === pb.key ? "default" : "outline"}
             size="sm"
+            className="min-h-11"
             onClick={() => handlePeriodClick(pb.key)}
           >
             {pb.label}
@@ -276,7 +281,7 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="w-40"
+            className="min-h-11 w-40"
           />
         </div>
         <div>
@@ -287,10 +292,10 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="w-40"
+            className="min-h-11 w-40"
           />
         </div>
-        <Button size="sm" onClick={handleCustomSearch}>
+        <Button size="sm" className="min-h-11" onClick={handleCustomSearch}>
           <Search className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           {t("actions.search")}
         </Button>
@@ -306,8 +311,26 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
           {t("duplicationHistory.noRecords")}
         </div>
       ) : (
-        <div className="border rounded-lg overflow-x-auto">
-          <table className="w-full text-sm">
+        <>
+          {effectiveViewMode === "cards" && (
+            <div className="print:hidden">
+              <DuplicationHistoryCards
+                entries={displayEntries}
+                onEdit={setEditEntry}
+                onDelete={setDeleteEntry}
+              />
+            </div>
+          )}
+          <div
+            className={cn(
+              "max-w-full overflow-x-auto rounded-lg border print:block",
+              effectiveViewMode === "table" ? "block" : "hidden",
+            )}
+            role="region"
+            aria-label={t("history.tableRegion")}
+            tabIndex={0}
+          >
+          <table className="w-full min-w-[960px] text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th
@@ -405,6 +428,8 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
                         variant="ghost"
                         size="sm"
                         title={t("actions.edit")}
+                        aria-label={t("actions.edit")}
+                        className="h-11 w-11 p-0"
                         onClick={() => setEditEntry(entry)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -413,6 +438,8 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
                         variant="ghost"
                         size="sm"
                         title={t("actions.delete")}
+                        aria-label={t("actions.delete")}
+                        className="h-11 w-11 p-0"
                         onClick={() => setDeleteEntry(entry)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -423,7 +450,8 @@ export function DuplicationHistory({ teamName, userName }: DuplicationHistoryPro
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <EditLogLineDialog

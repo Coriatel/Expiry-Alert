@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Pencil,
-  Trash2,
   CheckSquare,
-  Square,
   Copy,
+  Flame,
+  Pencil,
+  Square,
   Stethoscope,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { NewInStockDot } from "@/components/NewInStockDot";
 import type { Reagent } from "@/types";
 import {
+  cn,
+  formatDate,
   getDaysUntilExpiry,
   getExpiryStatus,
   getStatusColor,
-  formatDate,
-  cn,
 } from "@/lib/utils";
 
 interface ReagentCardProps {
@@ -43,6 +44,31 @@ function getCardBg(status: string): string {
   }
 }
 
+function MetaField({
+  label,
+  value,
+  className,
+  direction = "auto",
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  className?: string;
+  direction?: "auto" | "ltr";
+}) {
+  if (value == null || value === "") return null;
+  return (
+    <div className={cn("min-w-0", className)}>
+      <dt className="text-[11px] font-medium text-muted-foreground">{label}</dt>
+      <dd
+        className="mt-0.5 break-words text-sm leading-5 [overflow-wrap:anywhere]"
+        dir={direction}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 export function ReagentCard({
   reagent,
   isSelected,
@@ -60,14 +86,29 @@ export function ReagentCard({
   const status = getExpiryStatus(reagent.expiry_date);
   const isExpired = status === "expired";
   const inTreatment = reagent.in_treatment === true;
+  const statusLabel =
+    days < 0
+      ? t("status.expired")
+      : days === 0
+        ? t("status.expiresToday")
+        : days === 1
+          ? t("status.expiresInOneDay")
+          : t("status.expiresIn", { days });
 
   return (
-    <div className={cn("rounded-lg border p-3 sm:p-4 shadow-sm", getCardBg(status))}>
-      {/* Top row: checkbox + name */}
-      <div className="flex items-start gap-2 sm:gap-3">
+    <article
+      className={cn(
+        "rounded-lg border p-3 shadow-sm",
+        getCardBg(status),
+      )}
+    >
+      <div className="flex items-start gap-1.5">
         <button
+          type="button"
           onClick={() => onToggleSelect(reagent.id)}
-          className="flex-shrink-0 mt-0.5"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("table.selectItem")}
+          aria-pressed={isSelected}
         >
           {isSelected ? (
             <CheckSquare className="h-5 w-5 text-primary" />
@@ -75,41 +116,27 @@ export function ReagentCard({
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
         </button>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-bold break-words leading-snug">
-            {reagent.name}
-            {reagent.replaced_by != null && (
-              <>
-                {" "}
-                <NewInStockDot />
-              </>
-            )}
-          </h3>
-          {/* Subtitle + status badge — single row */}
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            <span>
-              {reagent.category
-                ? t(`category.${reagent.category}`, { defaultValue: "-" })
-                : "-"}
-              {" • "}
-              {formatDate(reagent.expiry_date)}
-            </span>
+        <div className="min-w-0 flex-1 pt-1">
+          <div className="flex items-start gap-2">
+            <h2
+              className="min-w-0 flex-1 break-words text-base font-bold leading-5 [overflow-wrap:anywhere] sm:text-lg"
+              dir="auto"
+            >
+              {reagent.name}
+            </h2>
+            {reagent.replaced_by != null && <NewInStockDot />}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
                 getStatusColor(status),
               )}
             >
-              {days < 0
-                ? t("status.expired")
-                : days === 0
-                  ? t("status.expiresToday")
-                  : days === 1
-                    ? t("status.expiresInOneDay")
-                    : t("status.expiresIn", { days })}
+              {statusLabel}
             </span>
             {inTreatment && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-amber-300 bg-amber-100 text-amber-800">
+              <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                 {t("status.inTreatment")}
               </span>
             )}
@@ -117,55 +144,51 @@ export function ReagentCard({
         </div>
       </div>
 
-      {/* Supplier, manufacturer, quantity, lot number, description + notes */}
-      {(reagent.supplier_name || reagent.manufacturer || reagent.quantity != null || reagent.lot_number || reagent.notes || reagent.description) && (
-        <div className="mt-1.5 text-sm text-muted-foreground space-y-1">
-          {/* Compact meta: wraps inline instead of one line per field */}
-          {(reagent.supplier_name ||
-            reagent.manufacturer ||
-            reagent.quantity != null ||
-            reagent.lot_number) && (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-              {reagent.supplier_name && <span>{reagent.supplier_name}</span>}
-              {reagent.manufacturer && (
-                <>
-                  {reagent.supplier_name && <span aria-hidden>·</span>}
-                  <span className="text-muted-foreground/70">
-                    {reagent.manufacturer}
-                  </span>
-                </>
-              )}
-              {reagent.quantity != null && (
-                <>
-                  {(reagent.supplier_name || reagent.manufacturer) && (
-                    <span aria-hidden>·</span>
-                  )}
-                  <span>
-                    {t("newShipment.quantity")}: {reagent.quantity}
-                  </span>
-                </>
-              )}
-              {reagent.lot_number && (
-                <>
-                  {(reagent.supplier_name ||
-                    reagent.manufacturer ||
-                    reagent.quantity != null) && <span aria-hidden>·</span>}
-                  <span>{reagent.lot_number}</span>
-                </>
-              )}
-            </div>
-          )}
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t pt-2">
+        <MetaField
+          label={t("batchHistory.supplier")}
+          value={reagent.supplier_name}
+          className="col-span-2"
+        />
+        <MetaField
+          label={t("form.manufacturer")}
+          value={reagent.manufacturer}
+        />
+        <MetaField label={t("form.lotNumber")} value={reagent.lot_number} />
+        <MetaField
+          label={t("form.receivedDate")}
+          value={reagent.received_date ? formatDate(reagent.received_date) : null}
+          direction="ltr"
+        />
+        <MetaField
+          label={t("form.expiryDate")}
+          value={formatDate(reagent.expiry_date)}
+          direction="ltr"
+        />
+        <MetaField
+          label={t("newShipment.quantity")}
+          value={reagent.quantity}
+        />
+        <MetaField
+          label={t("form.category")}
+          value={t(`category.${reagent.category}`, { defaultValue: "—" })}
+        />
+      </dl>
+
+      {(reagent.description || reagent.notes) && (
+        <div className="mt-2 space-y-1.5 border-t pt-2 text-sm text-muted-foreground">
           {reagent.description && (
-            <p className="break-words">
-              {reagent.description.length > 60 && !descExpanded
-                ? reagent.description.slice(0, 60) + "…"
+            <p className="break-words [overflow-wrap:anywhere]" dir="auto">
+              {reagent.description.length > 80 && !descExpanded
+                ? `${reagent.description.slice(0, 80)}…`
                 : reagent.description}
-              {reagent.description.length > 60 && (
+              {reagent.description.length > 80 && (
                 <button
-                  onClick={() => setDescExpanded((v) => !v)}
-                  className="ms-1 text-primary underline text-xs"
+                  type="button"
+                  onClick={() => setDescExpanded((value) => !value)}
+                  className="ms-1 min-h-11 rounded px-2 text-xs text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {descExpanded ? t("actions.close") : "הצג עוד"}
+                  {descExpanded ? t("actions.close") : t("actions.showMore")}
                 </button>
               )}
             </p>
@@ -174,18 +197,20 @@ export function ReagentCard({
             <div>
               <p
                 className={cn(
-                  "break-words whitespace-pre-wrap",
+                  "break-words whitespace-pre-wrap [overflow-wrap:anywhere]",
                   !notesExpanded && "line-clamp-2",
                 )}
+                dir="auto"
               >
                 {reagent.notes}
               </p>
-              {reagent.notes.length > 80 && (
+              {reagent.notes.length > 100 && (
                 <button
-                  onClick={() => setNotesExpanded((v) => !v)}
-                  className="text-primary underline text-xs"
+                  type="button"
+                  onClick={() => setNotesExpanded((value) => !value)}
+                  className="min-h-11 rounded px-2 text-xs text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {notesExpanded ? t("actions.close") : t("actions.showMore", { defaultValue: "Show more" })}
+                  {notesExpanded ? t("actions.close") : t("actions.showMore")}
                 </button>
               )}
             </div>
@@ -193,33 +218,40 @@ export function ReagentCard({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="mt-2 pt-2 border-t flex flex-wrap gap-1 sm:gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-1 border-t pt-1">
         <Button
+          type="button"
           variant="ghost"
-          size="sm"
           onClick={() => onEdit(reagent)}
+          className="h-11 w-11 p-0"
+          aria-label={t("actions.edit")}
           title={t("actions.edit")}
         >
-          <Pencil className="h-4 w-4 sm:ltr:mr-1 sm:rtl:ml-1" />
-          <span className="hidden sm:inline">{t("actions.edit")}</span>
+          <Pencil className="h-4 w-4" />
         </Button>
         {onDuplicate && (
           <Button
+            type="button"
             variant="ghost"
-            size="sm"
             onClick={() => onDuplicate(reagent)}
+            className="h-11 w-11 p-0"
+            aria-label={t("actions.duplicate")}
             title={t("actions.duplicate")}
           >
-            <Copy className="h-4 w-4 sm:ltr:mr-1 sm:rtl:ml-1" />
-            <span className="hidden sm:inline">{t("actions.duplicate")}</span>
+            <Copy className="h-4 w-4" />
           </Button>
         )}
         {isExpired && onToggleInTreatment && (
           <Button
+            type="button"
             variant="ghost"
-            size="sm"
             onClick={() => onToggleInTreatment(reagent.id, !inTreatment)}
+            className="h-11 w-11 p-0"
+            aria-label={
+              inTreatment
+                ? t("actions.removeInTreatment")
+                : t("actions.inTreatment")
+            }
             title={
               inTreatment
                 ? t("actions.removeInTreatment")
@@ -227,37 +259,31 @@ export function ReagentCard({
             }
           >
             <Stethoscope
-              className={cn(
-                "h-4 w-4 sm:ltr:mr-1 sm:rtl:ml-1",
-                inTreatment ? "text-amber-600" : "",
-              )}
+              className={cn("h-4 w-4", inTreatment && "text-amber-600")}
             />
-            <span className="hidden sm:inline">
-              {inTreatment
-                ? t("actions.removeInTreatment")
-                : t("actions.inTreatment")}
-            </span>
           </Button>
         )}
         <Button
+          type="button"
           variant="ghost"
-          size="sm"
           onClick={() => onArchive(reagent.id)}
+          className="h-11 w-11 p-0"
+          aria-label={t("actions.destroy")}
           title={t("actions.destroy")}
         >
-          <Trash2 className="h-4 w-4 text-destructive sm:ltr:mr-1 sm:rtl:ml-1" />
-          <span className="hidden sm:inline">{t("actions.destroy")}</span>
+          <Flame className="h-4 w-4 text-destructive" />
         </Button>
         <Button
+          type="button"
           variant="ghost"
-          size="sm"
           onClick={() => onDelete(reagent.id)}
+          className="h-11 w-11 p-0"
+          aria-label={t("actions.delete")}
           title={t("actions.delete")}
         >
-          <Trash2 className="h-4 w-4 text-muted-foreground sm:ltr:mr-1 sm:rtl:ml-1" />
-          <span className="hidden sm:inline">{t("actions.delete")}</span>
+          <Trash2 className="h-4 w-4 text-muted-foreground" />
         </Button>
       </div>
-    </div>
+    </article>
   );
 }

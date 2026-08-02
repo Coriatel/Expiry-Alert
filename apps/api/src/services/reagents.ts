@@ -6,6 +6,7 @@ import {
   listRecords,
   updateSingleRecord,
   updateRecords,
+  updateRecordsByQuery,
 } from "./directus.js";
 
 export type ReagentRecord = {
@@ -129,6 +130,13 @@ export async function duplicateReagent(
 
 export async function updateReagent(id: number, data: Partial<ReagentRecord>) {
   await updateSingleRecord(collection, id, data);
+}
+
+export async function updateReagentIfCurrent(
+  filter: Record<string, unknown>,
+  data: Partial<ReagentRecord>,
+) {
+  return updateRecordsByQuery<ReagentRecord>(collection, { filter }, data);
 }
 
 export async function removeReagent(id: number) {

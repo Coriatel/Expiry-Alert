@@ -19,9 +19,9 @@ export default defineConfig({
       ],
       manifest: {
         id: "/",
-        name: "Reagent Expiry Tracker",
+        name: "Item Expiry Tracker",
         short_name: "Expiry Alert",
-        description: "Track reagent expiration dates and receive alerts",
+        description: "Track item expiration dates and receive alerts",
         theme_color: "#1B5E7B",
         background_color: "#ffffff",
         display: "standalone",

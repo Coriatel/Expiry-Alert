@@ -37,11 +37,12 @@ export function ReagentCardList({
   }
 
   return (
-    <div className="cards-view space-y-3">
+    <div className="cards-view space-y-2.5">
       {/* Select all */}
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-1"
+        className="flex min-h-11 items-center gap-2 rounded px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={t("table.selectAll")}
       >
         {selectedIds.length === reagents.length && reagents.length > 0 ? (
           <CheckSquare className="h-4 w-4" />

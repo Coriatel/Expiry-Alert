@@ -40,10 +40,29 @@ export async function addReagentsBulk(
 export async function updateReagent(
   id: number,
   data: ReagentFormData,
+  expected?: Reagent,
 ): Promise<{ restored?: boolean }> {
   return apiFetch(`/api/reagents/${id}`, {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      expected: expected
+        ? {
+            name: expected.name,
+            category: expected.category,
+            expiryDate: expected.expiry_date,
+            lotNumber: expected.lot_number ?? null,
+            receivedDate: expected.received_date ?? null,
+            notes: expected.notes ?? null,
+            supplier_id: expected.supplier_id ?? null,
+            supplier_name: expected.supplier_name ?? null,
+            quantity: expected.quantity ?? null,
+            manufacturer: expected.manufacturer ?? null,
+            description: expected.description ?? null,
+            isArchived: expected.is_archived,
+          }
+        : undefined,
+    }),
   });
 }
 

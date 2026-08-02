@@ -9,6 +9,7 @@ import {
   listReagents,
   removeReagent,
   updateReagent,
+  updateReagentIfCurrent,
 } from "../services/reagents.js";
 import { findOne } from "../services/directus.js";
 import { config } from "../config.js";
@@ -16,6 +17,8 @@ import { getNotificationSettings } from "../services/settings.js";
 import { createDuplicationEntry } from "../services/duplicationLog.js";
 
 export const reagentsRouter = Router();
+
+export const MAX_REAGENT_QUANTITY = 1_000_000;
 
 export const reagentSchema = z.object({
   name: z.string().min(1),
@@ -26,9 +29,24 @@ export const reagentSchema = z.object({
   notes: z.string().optional().nullable(),
   supplier_id: z.number().int().optional().nullable(),
   supplier_name: z.string().optional().nullable(),
-  quantity: z.number().int().optional().nullable(),
+  quantity: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_REAGENT_QUANTITY)
+    .optional()
+    .nullable(),
   manufacturer: z.string().trim().max(255).optional().nullable(),
   description: z.string().trim().max(2000).optional().nullable(),
+});
+
+const expectedReagentSchema = reagentSchema.extend({
+  quantity: z.union([z.string(), z.number()]).optional().nullable(),
+  isArchived: z.boolean(),
+});
+
+const reagentUpdateSchema = reagentSchema.extend({
+  expected: expectedReagentSchema.optional(),
 });
 
 export type ReagentInput = z.infer<typeof reagentSchema>;
@@ -66,6 +84,62 @@ const isDateAfter = (value: string | null | undefined, compareTo: Date) => {
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime()) && parsed > compareTo;
 };
+
+type ReagentUpdateTarget = {
+  team: number | null;
+};
+
+export function authorizeReagentUpdate(
+  current: ReagentUpdateTarget | null,
+  teamId: number,
+):
+  | { ok: true }
+  | {
+      ok: false;
+      status: 404;
+      code: "ITEM_NOT_FOUND";
+    } {
+  if (!current || current.team !== teamId) {
+    return { ok: false, status: 404, code: "ITEM_NOT_FOUND" };
+  }
+  return { ok: true };
+}
+
+function equalityFilter(value: unknown) {
+  return value == null ? { _null: true } : { _eq: value };
+}
+
+export function buildReagentUpdateFilter(
+  id: number,
+  teamId: number,
+  expected?: z.infer<typeof expectedReagentSchema>,
+) {
+  const expectedData = expected
+    ? {
+        ...buildReagentData({
+          ...expected,
+          quantity:
+            expected.quantity == null || expected.quantity === ""
+              ? null
+              : Number(expected.quantity),
+        }),
+        is_archived: expected.isArchived,
+      }
+    : null;
+
+  return {
+    id: { _eq: id },
+    team: { _eq: teamId },
+    ...(expectedData
+      ? Object.fromEntries(
+          Object.entries(expectedData).map(([field, value]) => [
+            field,
+            equalityFilter(value),
+          ]),
+        )
+      : {}),
+  };
+}
 
 reagentsRouter.use(requireAuth);
 
@@ -146,23 +220,46 @@ reagentsRouter.put("/:id", async (req, res) => {
   if (!Number.isFinite(id))
     return res.status(400).json({ error: "Invalid id" });
 
-  const parsed = reagentSchema.safeParse(req.body);
+  const parsed = reagentUpdateSchema.safeParse(req.body);
   if (!parsed.success)
-    return res.status(400).json({ error: parsed.error.message });
+    return res
+      .status(400)
+      .json({ error: "Invalid item data", code: "INVALID_ITEM" });
 
   const reagentCollection = config.directus.collections.reagents as any;
-  const current = await findOne<{ is_archived: boolean }>(reagentCollection, {
+  const current = await findOne<{
+    team: number | null;
+    is_archived: boolean;
+  }>(reagentCollection, {
     id: { _eq: id },
   });
+  const authorization = authorizeReagentUpdate(current, teamId);
+  if (!authorization.ok) {
+    return res.status(authorization.status).json({
+      error: "Item not found",
+      code: authorization.code,
+    });
+  }
 
   const today = new Date();
   const shouldRestore =
     current?.is_archived === true && isDateAfter(parsed.data.expiryDate, today);
 
-  await updateReagent(id, {
-    ...buildReagentData(parsed.data),
-    ...(shouldRestore ? { is_archived: false } : {}),
-  });
+  const updated = await updateReagentIfCurrent(
+    buildReagentUpdateFilter(id, teamId, parsed.data.expected),
+    {
+      ...buildReagentData(parsed.data),
+      ...(shouldRestore ? { is_archived: false } : {}),
+    },
+  );
+  if (updated.length === 0) {
+    return res.status(parsed.data.expected ? 409 : 404).json({
+      error: parsed.data.expected
+        ? "Item changed since it was opened"
+        : "Item not found",
+      code: parsed.data.expected ? "STALE_ITEM" : "ITEM_NOT_FOUND",
+    });
+  }
 
   res.status(200).json({ restored: shouldRestore });
 });

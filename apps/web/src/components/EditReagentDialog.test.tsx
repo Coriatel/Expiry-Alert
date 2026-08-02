@@ -10,6 +10,10 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+vi.mock("@/lib/tauri", () => ({
+  getSuppliers: vi.fn(() => new Promise(() => {})),
+}));
+
 const baseReagent: Reagent = {
   id: 1,
   name: "Test Reagent",
@@ -22,6 +26,10 @@ const baseReagent: Reagent = {
   notes: "some notes",
   manufacturer: "BIORAD",
   description: "QC beads for quality control",
+  supplier_id: 44,
+  supplier_name: "Existing Supplier",
+  quantity: 0,
+  received_date: "2026-01-15",
 };
 
 describe("EditReagentDialog — manufacturer & description", () => {
@@ -81,5 +89,66 @@ describe("EditReagentDialog — manufacturer & description", () => {
         }),
       );
     });
+  });
+
+  it("uses item terminology and exposes quantity, supplier and received date", () => {
+    render(
+      <EditReagentDialog
+        reagent={baseReagent}
+        open={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "dialog.editItem" })).toBeInTheDocument();
+    expect(screen.getByLabelText("newShipment.quantity")).toHaveValue(0);
+    expect(screen.getByLabelText("form.receivedDate")).toHaveValue("2026-01-15");
+    expect(screen.getByLabelText("form.supplier")).toHaveValue("44");
+  });
+
+  it("preserves zero, converts a blank quantity to null and blocks invalid input", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <EditReagentDialog
+        reagent={baseReagent}
+        open={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("actions.save"));
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ quantity: 0 }),
+      );
+    });
+
+    onSave.mockClear();
+    rerender(
+      <EditReagentDialog
+        reagent={{ ...baseReagent, id: 2, quantity: null }}
+        open={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByText("actions.save"));
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ quantity: null }),
+      );
+    });
+
+    onSave.mockClear();
+    fireEvent.change(screen.getByLabelText("newShipment.quantity"), {
+      target: { value: "-1" },
+    });
+    fireEvent.click(screen.getByText("actions.save"));
+    expect(await screen.findByText("validation.invalidQuantity")).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

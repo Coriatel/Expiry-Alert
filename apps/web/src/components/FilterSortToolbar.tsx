@@ -41,7 +41,7 @@ export function FilterSortToolbar({
       <Select
         value={statusFilter}
         onChange={(e) => onStatusFilterChange(e.target.value as ExpiryStatus | 'all')}
-        className="w-full sm:w-auto sm:min-w-[120px] h-9 text-sm"
+        className="h-11 w-full text-sm sm:w-auto sm:min-w-[120px]"
       >
         <option value="all">{t('filters.status')}: {t('filters.all')}</option>
         <option value="expired">{t('filters.expired')}</option>
@@ -54,7 +54,7 @@ export function FilterSortToolbar({
       <Select
         value={categoryFilter}
         onChange={(e) => onCategoryFilterChange(e.target.value)}
-        className="w-full sm:w-auto sm:min-w-[120px] h-9 text-sm"
+        className="h-11 w-full text-sm sm:w-auto sm:min-w-[120px]"
       >
         <option value="all">{t('filters.category')}: {t('filters.all')}</option>
         <option value="reagents">{t('category.reagents')}</option>
@@ -66,7 +66,7 @@ export function FilterSortToolbar({
         <Select
           value={sortField}
           onChange={(e) => onSortFieldChange(e.target.value)}
-          className="w-full sm:w-auto sm:min-w-[130px] h-9 text-sm"
+          className="h-11 w-full text-sm sm:w-auto sm:min-w-[130px]"
         >
           <option value="expiry_date">{t('filters.expiryDate')}</option>
           <option value="name">{t('filters.name')}</option>
@@ -76,8 +76,8 @@ export function FilterSortToolbar({
           variant="outline"
           size="sm"
           onClick={() => onSortDirectionChange(sortDirection === 'asc' ? 'desc' : 'asc')}
-          className="h-9 w-9 p-0"
-          title={sortDirection === 'asc' ? '↑' : '↓'}
+          className="h-11 w-11 p-0"
+          aria-label={t('filters.changeSortDirection')}
         >
           <ArrowUpDown className="h-4 w-4" />
         </Button>
@@ -95,7 +95,8 @@ export function FilterSortToolbar({
               variant="outline"
               size="sm"
               onClick={() => setMobileOpen((prev) => !prev)}
-              className="h-9"
+              className="h-11"
+              aria-expanded={mobileOpen}
             >
               <Filter className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               {t('filters.title')}
@@ -110,8 +111,10 @@ export function FilterSortToolbar({
                 variant={viewMode === 'table' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onViewModeChange('table')}
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 p-0"
                 title={t('dashboard.viewTable')}
+                aria-label={t('dashboard.viewTable')}
+                aria-pressed={viewMode === 'table'}
               >
                 <LayoutList className="h-4 w-4" />
               </Button>
@@ -119,8 +122,10 @@ export function FilterSortToolbar({
                 variant={viewMode === 'cards' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onViewModeChange('cards')}
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 p-0"
                 title={t('dashboard.viewCards')}
+                aria-label={t('dashboard.viewCards')}
+                aria-pressed={viewMode === 'cards'}
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -134,8 +139,10 @@ export function FilterSortToolbar({
                 variant={viewMode === 'table' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onViewModeChange('table')}
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 p-0"
                 title={t('dashboard.viewTable')}
+                aria-label={t('dashboard.viewTable')}
+                aria-pressed={viewMode === 'table'}
               >
                 <LayoutList className="h-4 w-4" />
               </Button>
@@ -143,8 +150,10 @@ export function FilterSortToolbar({
                 variant={viewMode === 'cards' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onViewModeChange('cards')}
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 p-0"
                 title={t('dashboard.viewCards')}
+                aria-label={t('dashboard.viewCards')}
+                aria-pressed={viewMode === 'cards'}
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
