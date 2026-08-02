@@ -46,7 +46,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           MOBILE_RELEASE_PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          changed_files="$(git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA")"
           export MOBILE_RELEASE_CHANGED_FILES="$changed_files"
           export MOBILE_RELEASE_HEAD_SHA="$HEAD_SHA"
           node scripts/check-mobile-release-evidence.mjs

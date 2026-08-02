@@ -10,8 +10,8 @@ const greenBody = `
 - UI impact: yes
 - Source: abcdef1234567890
 - Viewports: 360, 390, 430, 1440
-- Before: evidence/before/
-- After: CI artifact mobile-release-screenshots
+- Before: ./evidence/before/
+- After: artifact:mobile-release-screenshots
 - Inspection: PASS
 - Rollback: revert the UI commit and rerun the required gate
 `;
@@ -42,6 +42,27 @@ test("rejects release evidence tied to a different source revision", () => {
   );
   assert.equal(result.ok, false);
   assert.deepEqual(result.missing, ["source identity"]);
+});
+
+test("rejects untouched template placeholders", () => {
+  const result = evaluateMobileReleaseEvidence(
+    ["apps/web/src/pages/Dashboard.tsx"],
+    `
+- Source: abcdef1234567890
+- Viewports: 360, 390, 430, 1440
+- Before: <!-- durable rendered screenshot/evidence link -->
+- After: <!-- durable rendered screenshot/evidence link -->
+- Inspection: PASS
+- Rollback: <!-- exact revert/artifact procedure -->
+`,
+    "abcdef1234567890fedcba0987654321abcdef12",
+  );
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, [
+    "before evidence",
+    "after evidence",
+    "rollback",
+  ]);
 });
 
 test("fails closed when required UI evidence is absent", () => {

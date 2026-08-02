@@ -20,7 +20,17 @@ function field(body, name) {
 }
 
 function meaningful(value) {
-  return Boolean(value) && !/^(n\/?a|none|todo|tbd|-+)$/i.test(value);
+  const withoutComments = value.replace(/<!--[\s\S]*?-->/g, "").trim();
+  return Boolean(withoutComments) && !/^(n\/?a|none|todo|tbd|-+)$/i.test(withoutComments);
+}
+
+function evidenceReference(value) {
+  const withoutComments = value.replace(/<!--[\s\S]*?-->/g, "").trim();
+  return (
+    meaningful(withoutComments) &&
+    (/(?:https?:\/\/|artifact:)[^\s)]+/i.test(withoutComments) ||
+      /(?:^|\s)(?:\.{0,2}\/|\/)[^\s]+/.test(withoutComments))
+  );
 }
 
 export function evaluateMobileReleaseEvidence(changedFiles, body, expectedSource = "") {
@@ -58,8 +68,8 @@ export function evaluateMobileReleaseEvidence(changedFiles, body, expectedSource
   if (!requiredMobile || !hasDesktop) {
     missing.push("viewports 360/390/430 plus desktop");
   }
-  if (!meaningful(before)) missing.push("before evidence");
-  if (!meaningful(after)) missing.push("after evidence");
+  if (!evidenceReference(before)) missing.push("before evidence");
+  if (!evidenceReference(after)) missing.push("after evidence");
   if (inspection.toUpperCase() !== "PASS") missing.push("explicit inspection PASS");
   if (!meaningful(rollback)) missing.push("rollback");
 
