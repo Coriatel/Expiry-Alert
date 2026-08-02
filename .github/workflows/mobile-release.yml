@@ -75,14 +75,15 @@ jobs:
         working-directory: apps/web
 
       - name: Verify responsive release invariants
+        id: responsive
         run: npx playwright test e2e/mobile-ui.spec.ts e2e/native-auth.spec.ts
         working-directory: apps/web
 
       - name: Publish rendered evidence
-        if: always()
+        if: always() && steps.responsive.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-release-evidence-${{ github.sha }}
+          name: mobile-release-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: apps/web/test-results/
           if-no-files-found: error
           retention-days: 14
