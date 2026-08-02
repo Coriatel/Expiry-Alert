@@ -65,28 +65,28 @@ export function PushPromptBanner() {
   };
 
   return (
-    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex flex-wrap items-start gap-3">
-      <div className="self-start rounded-full bg-primary/10 p-2 shrink-0">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 rounded-lg border border-primary/20 bg-primary/5 p-3">
+      <div className="shrink-0 rounded-full bg-primary/10 p-2">
         <Bell className="h-5 w-5 text-primary" />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <p className="font-medium text-sm">{t("push.promptTitle")}</p>
         <p className="text-sm text-muted-foreground">{t("push.promptMessage")}</p>
         {isIosNotStandalone && (
           <p className="text-xs text-muted-foreground mt-1">{t("push.iosGuidance")}</p>
         )}
       </div>
-      <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:shrink-0">
+      <div className="col-span-2 flex justify-end gap-2">
         <Button
           size="sm"
           variant="outline"
           onClick={handleDismiss}
-          className={isIosNotStandalone ? "col-span-2 sm:col-span-1" : ""}
+          className="min-h-11"
         >
           {t("push.notNow")}
         </Button>
         {!isIosNotStandalone && (
-          <Button size="sm" onClick={handleEnable} disabled={loading}>
+          <Button onClick={handleEnable} disabled={loading} className="min-h-11">
             {t("push.enable")}
           </Button>
         )}

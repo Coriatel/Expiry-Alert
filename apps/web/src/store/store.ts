@@ -17,7 +17,9 @@ interface AppState {
   isLoading: boolean;
 
   // User preferences (persisted)
-  viewMode: "table" | "cards";
+  viewMode: "table" | "cards" | null;
+  batchHistoryViewMode: "table" | "cards" | null;
+  duplicationHistoryViewMode: "table" | "cards" | null;
   statusFilter: ExpiryStatus | "all";
   categoryFilter: string;
   sortField: string;
@@ -37,6 +39,8 @@ interface AppState {
 
   // Preference setters
   setViewMode: (mode: "table" | "cards") => void;
+  setBatchHistoryViewMode: (mode: "table" | "cards") => void;
+  setDuplicationHistoryViewMode: (mode: "table" | "cards") => void;
   setStatusFilter: (filter: ExpiryStatus | "all") => void;
   setCategoryFilter: (filter: string) => void;
   setSortField: (field: string) => void;
@@ -57,7 +61,9 @@ export const useStore = create<AppState>()(
       isLoading: false,
 
       // Preference defaults
-      viewMode: "table",
+      viewMode: null,
+      batchHistoryViewMode: null,
+      duplicationHistoryViewMode: null,
       statusFilter: "all",
       categoryFilter: "all",
       sortField: "expiry_date",
@@ -83,6 +89,10 @@ export const useStore = create<AppState>()(
 
       // Preference setters
       setViewMode: (mode) => set({ viewMode: mode }),
+      setBatchHistoryViewMode: (mode) =>
+        set({ batchHistoryViewMode: mode }),
+      setDuplicationHistoryViewMode: (mode) =>
+        set({ duplicationHistoryViewMode: mode }),
       setStatusFilter: (filter) => set({ statusFilter: filter }),
       setCategoryFilter: (filter) => set({ categoryFilter: filter }),
       setSortField: (field) => set({ sortField: field }),
@@ -94,6 +104,8 @@ export const useStore = create<AppState>()(
       name: "expiry-alert-preferences",
       partialize: (state) => ({
         viewMode: state.viewMode,
+        batchHistoryViewMode: state.batchHistoryViewMode,
+        duplicationHistoryViewMode: state.duplicationHistoryViewMode,
         statusFilter: state.statusFilter,
         categoryFilter: state.categoryFilter,
         sortField: state.sortField,

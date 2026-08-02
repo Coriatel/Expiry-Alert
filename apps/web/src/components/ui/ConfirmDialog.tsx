@@ -55,7 +55,7 @@ export function ConfirmDialog({
         <div className="flex gap-3 w-full">
           <Button
             variant="outline"
-            className="flex-1"
+            className="min-h-11 flex-1"
             onClick={onClose}
             disabled={isLoading}
           >
@@ -63,7 +63,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             variant={variant === 'danger' ? 'destructive' : 'default'}
-            className="flex-1"
+            className="min-h-11 flex-1"
             onClick={handleConfirm}
             disabled={isLoading}
           >

@@ -364,7 +364,12 @@ function App() {
             <header className="md:hidden border-b bg-card sticky top-0 z-40">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <button onClick={() => setMobileSidebarOpen(true)}>
+                  <button
+                    type="button"
+                    onClick={() => setMobileSidebarOpen(true)}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={t("nav.openMenu")}
+                  >
                     <Menu className="h-5 w-5" />
                   </button>
                   <img
@@ -379,18 +384,20 @@ function App() {
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
                     variant="ghost"
-                    size="sm"
                     onClick={toggleLanguage}
+                    className="h-11 w-11 p-0"
+                    aria-label={t("settings.languageTitle")}
                   >
                     <Globe className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
                     onClick={async () => {
                       await signOut();
                       setAuthScreen("login");
                     }}
+                    className="h-11 w-11 p-0"
+                    aria-label={t("auth.signOut")}
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>

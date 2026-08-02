@@ -83,7 +83,7 @@ export function Sidebar({
             onNavigate(page);
             setTeamDropdownOpen(false);
           }}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors w-full ${
+          className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors w-full ${
             isActive
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -118,7 +118,7 @@ export function Sidebar({
             setCollapsed(false);
             setTeamDropdownOpen(true);
           }}
-          className="flex items-center justify-center w-full px-3 py-2"
+          className="flex min-h-11 w-full items-center justify-center px-3 py-2"
           title={currentTeamName || t("settings.currentTeam")}
         >
           <TeamInitial name={currentTeamName} />
@@ -130,7 +130,7 @@ export function Sidebar({
       <div className="relative px-3 py-2">
         <button
           onClick={() => setTeamDropdownOpen(!teamDropdownOpen)}
-          className="flex items-center gap-2 w-full rounded-lg px-2 py-2 hover:bg-muted transition-colors"
+          className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-muted"
         >
           <TeamInitial name={currentTeamName} />
           <span className="text-sm font-medium truncate flex-1 text-start">
@@ -190,7 +190,10 @@ export function Sidebar({
             setCollapsed(!collapsed);
             setTeamDropdownOpen(false);
           }}
-          className="flex items-center justify-center w-full rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex min-h-11 w-full items-center justify-center rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={
+            collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")
+          }
         >
           {collapsed ? (
             <PanelRightClose className="h-5 w-5 rtl:rotate-180" />

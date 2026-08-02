@@ -285,7 +285,8 @@ export function Dashboard({ teamName }: DashboardProps) {
   };
 
   const handleEditSave = async (id: number, data: ReagentFormData) => {
-    await updateReagent(id, data);
+    const current = reagents.find((reagent) => reagent.id === id);
+    await updateReagent(id, data, current);
     await loadData();
     showToast(t("success.reagentUpdated"), "success");
   };
@@ -468,7 +469,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   };
 
   return (
-    <div className="container mx-auto max-w-full overflow-x-hidden p-4 md:p-6 space-y-5 md:space-y-6">
+    <div className="container mx-auto max-w-full space-y-4 overflow-x-hidden p-3 md:space-y-6 md:p-6">
       {/* Print header */}
       <div className="hidden print:block border-b pb-3 mb-4">
         <div className="flex items-center gap-3">
@@ -483,24 +484,51 @@ export function Dashboard({ teamName }: DashboardProps) {
       </div>
 
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <h1 className="text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-2 print:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold md:text-3xl">{t("dashboard.title")}</h1>
           <Button
             variant="outline"
             onClick={handlePrint}
-            className="print:hidden w-full sm:w-auto"
+            className="h-11 w-11 shrink-0 p-0 sm:w-auto sm:px-4"
+            aria-label={t("actions.print")}
           >
-            <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-            {t("actions.print")}
+            <Printer className="h-4 w-4 sm:ltr:mr-2 sm:rtl:ml-2" />
+            <span className="hidden sm:inline">{t("actions.print")}</span>
           </Button>
+        </div>
+
+        {!showBulkAdd && (
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button
+              onClick={() => setShowBulkAdd(true)}
+              disabled={isLoading}
+              className="min-h-11 min-w-0 px-3"
+            >
+              <Plus className="h-4 w-4 shrink-0 ltr:mr-2 rtl:ml-2" />
+              <span className="truncate">{t("dashboard.addMultiple")}</span>
+            </Button>
+            {otherTeams.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setRequestTransferOpen(true)}
+                disabled={isLoading}
+                className="min-h-11 min-w-0 px-3"
+              >
+                <span className="truncate">{t("dashboard.requestItems")}</span>
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
           {selectedReagentIds.length > 0 && (
             <>
               <Button
                 variant="outline"
                 onClick={handleBulkArchive}
                 disabled={isLoading}
-                className="print:hidden w-full sm:w-auto"
+                className="min-h-11"
               >
                 <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkArchive")} ({selectedReagentIds.length})
@@ -509,7 +537,7 @@ export function Dashboard({ teamName }: DashboardProps) {
                 variant="destructive"
                 onClick={handleBulkDelete}
                 disabled={isLoading}
-                className="print:hidden w-full sm:w-auto"
+                className="min-h-11"
               >
                 <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {t("actions.bulkDelete")} ({selectedReagentIds.length})
@@ -520,7 +548,7 @@ export function Dashboard({ teamName }: DashboardProps) {
                   variant="outline"
                   onClick={() => handleImportToTeam(team)}
                   disabled={isLoading}
-                  className="print:hidden w-full sm:w-auto"
+                  className="min-h-11"
                 >
                   {t("import.copyTo", { team: team.name })}
                 </Button>
@@ -529,32 +557,6 @@ export function Dashboard({ teamName }: DashboardProps) {
           )}
         </div>
       </div>
-
-      {/* Add Button + Request transfer */}
-      {!showBulkAdd && (
-        <div className="grid gap-2 sm:flex sm:flex-wrap print:hidden">
-          <Button
-            onClick={() => setShowBulkAdd(true)}
-            disabled={isLoading}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-            {t("dashboard.addMultiple")}
-          </Button>
-          {otherTeams.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setRequestTransferOpen(true)}
-              disabled={isLoading}
-              className="w-full sm:w-auto"
-            >
-              {t("transferRequests.requestButton", {
-                defaultValue: "בקש פריטים מצוות אחר",
-              })}
-            </Button>
-          )}
-        </div>
-      )}
 
       {/* Push Notification Prompt */}
       <PushPromptBanner />
@@ -574,7 +576,8 @@ export function Dashboard({ teamName }: DashboardProps) {
       <div className="bg-card rounded-lg border print:hidden">
         <button
           onClick={() => setCalendarExpanded(!calendarExpanded)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-start"
+          className="flex min-h-11 w-full items-center justify-between gap-3 p-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-expanded={calendarExpanded}
         >
           <div className="flex items-center gap-2 min-w-0">
             <Calendar className="h-5 w-5 shrink-0" />

@@ -81,6 +81,15 @@ export async function updateRecords(
   return directus.request(updateItems(collection, keys as any, data));
 }
 
+export async function updateRecordsByQuery<T>(
+  collection: keyof Schema,
+  query: any,
+  data: any,
+): Promise<T[]> {
+  const result = await directus.request(updateItems(collection, query, data));
+  return result as unknown as T[];
+}
+
 export async function deleteRecord(
   collection: keyof Schema,
   id: string | number,

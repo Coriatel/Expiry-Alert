@@ -15,6 +15,7 @@ import {
   Square,
   Copy,
   Stethoscope,
+  Flame,
 } from "lucide-react";
 import type { Reagent } from "@/types";
 import { NewInStockDot } from "@/components/NewInStockDot";
@@ -68,7 +69,12 @@ export function ReagentTable({
       columnHelper.display({
         id: "select",
         header: () => (
-          <button onClick={onSelectAll} className="flex items-center">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            className="flex h-11 w-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={t("table.selectAll")}
+          >
             {selectedIds.length === reagents.length && reagents.length > 0 ? (
               <CheckSquare className="h-4 w-4" />
             ) : (
@@ -78,8 +84,10 @@ export function ReagentTable({
         ),
         cell: ({ row }) => (
           <button
+            type="button"
             onClick={() => onToggleSelect(row.original.id)}
-            className="flex items-center"
+            className="flex h-11 w-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={t("table.selectItem", { name: row.original.name })}
           >
             {selectedIds.includes(row.original.id) ? (
               <CheckSquare className="h-4 w-4" />
@@ -88,12 +96,16 @@ export function ReagentTable({
             )}
           </button>
         ),
-        size: 40,
+        size: 64,
       }),
       columnHelper.accessor("name", {
         header: t("table.name"),
+        size: 260,
         cell: (info) => (
-          <span className="font-medium break-words">
+          <span
+            className="block max-w-xs break-words font-medium [overflow-wrap:anywhere]"
+            dir="auto"
+          >
             {info.getValue()}
             {info.row.original.replaced_by != null && (
               <>
@@ -106,10 +118,12 @@ export function ReagentTable({
       }),
       columnHelper.accessor("supplier_name", {
         header: t("catalog.supplier"),
-        cell: (info) => info.getValue() || "\u2014",
+        size: 180,
+        cell: (info) => <span dir="auto">{info.getValue() || "\u2014"}</span>,
       }),
       columnHelper.accessor("category", {
         header: t("table.category"),
+        size: 120,
         cell: (info) => {
           const value = info.getValue();
           if (!value) return "-";
@@ -118,11 +132,13 @@ export function ReagentTable({
       }),
       columnHelper.accessor("expiry_date", {
         header: t("table.expiryDate"),
+        size: 130,
         cell: (info) => formatDate(info.getValue()),
       }),
       columnHelper.display({
         id: "days_until_expiry",
         header: t("table.daysUntilExpiry"),
+        size: 170,
         cell: ({ row }) => {
           const days = getDaysUntilExpiry(row.original.expiry_date);
           const status = getExpiryStatus(row.original.expiry_date);
@@ -155,14 +171,17 @@ export function ReagentTable({
       }),
       columnHelper.accessor("lot_number", {
         header: t("table.lotNumber"),
-        cell: (info) => info.getValue() || "-",
+        size: 190,
+        cell: (info) => <span dir="auto">{info.getValue() || "-"}</span>,
       }),
       columnHelper.accessor("manufacturer", {
         header: t("table.manufacturerCol"),
-        cell: (info) => info.getValue() || "\u2014",
+        size: 160,
+        cell: (info) => <span dir="auto">{info.getValue() || "\u2014"}</span>,
       }),
       columnHelper.accessor("quantity", {
         header: t("newShipment.quantity"),
+        size: 90,
         cell: (info) => {
           const val = info.getValue();
           return val != null ? val : "\u2014";
@@ -170,12 +189,17 @@ export function ReagentTable({
       }),
       columnHelper.accessor("notes", {
         header: t("table.notes"),
+        size: 220,
         cell: (info) => {
           const notes = info.getValue() || "";
           const description = info.row.original.description || "";
           const titleAttr = [description, notes].filter(Boolean).join(" | ");
           return (
-            <div className="max-w-xs line-clamp-2" title={titleAttr || undefined}>
+            <div
+              className="max-w-xs line-clamp-2"
+              dir="auto"
+              title={titleAttr || undefined}
+            >
               {notes || "-"}
             </div>
           );
@@ -195,6 +219,8 @@ export function ReagentTable({
                 size="sm"
                 onClick={() => onEdit(row.original)}
                 title={t("actions.edit")}
+                aria-label={t("actions.edit")}
+                className="h-11 w-11 p-0"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -204,6 +230,8 @@ export function ReagentTable({
                   size="sm"
                   onClick={() => onDuplicate(row.original)}
                   title={t("actions.duplicate")}
+                  aria-label={t("actions.duplicate")}
+                  className="h-11 w-11 p-0"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -220,6 +248,12 @@ export function ReagentTable({
                       ? t("actions.removeInTreatment")
                       : t("actions.inTreatment")
                   }
+                  aria-label={
+                    inTreatment
+                      ? t("actions.removeInTreatment")
+                      : t("actions.inTreatment")
+                  }
+                  className="h-11 w-11 p-0"
                 >
                   <Stethoscope
                     className={cn(
@@ -234,21 +268,25 @@ export function ReagentTable({
                 size="sm"
                 onClick={() => onArchive(row.original.id)}
                 title={t("actions.destroy")}
+                aria-label={t("actions.destroy")}
+                className="h-11 w-11 p-0"
               >
-                <Trash2 className="h-4 w-4 text-destructive" />
+                <Flame className="h-4 w-4 text-destructive" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(row.original.id)}
                 title={t("actions.delete")}
+                aria-label={t("actions.delete")}
+                className="h-11 w-11 p-0"
               >
                 <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             </div>
           );
         },
-        size: 120,
+        size: 260,
       }),
     ],
     [
@@ -290,11 +328,14 @@ export function ReagentTable({
   return (
     <div
       className={cn(
-        "table-container overflow-auto max-h-[600px] border rounded-lg",
+        "table-container max-h-[600px] max-w-full overflow-auto rounded-lg border",
         className,
       )}
+      role="region"
+      tabIndex={0}
+      aria-label={t("table.regionLabel")}
     >
-      <table className="w-full">
+      <table className="w-full min-w-[1844px] table-fixed">
         <thead className="bg-muted sticky top-0 z-10">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
@@ -305,17 +346,29 @@ export function ReagentTable({
                     "px-4 py-3 text-start text-sm font-medium border-b whitespace-nowrap",
                     (header.id === "select" || header.id === "actions") &&
                       "print-hide",
+                    header.id === "actions" &&
+                      "sticky left-0 z-20 border-e bg-muted",
                   )}
-                  style={{ width: header.getSize() }}
+                  style={{
+                    width: header.getSize(),
+                    minWidth: header.getSize(),
+                  }}
                 >
                   {header.isPlaceholder ? null : (
-                    <div
+                    <button
+                      type="button"
                       className={cn(
                         header.column.getCanSort() &&
-                          "cursor-pointer select-none",
-                        "flex items-center gap-2",
+                          "cursor-pointer select-none hover:underline",
+                        "flex min-h-11 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       )}
                       onClick={header.column.getToggleSortingHandler()}
+                      disabled={!header.column.getCanSort()}
+                      aria-label={
+                        header.column.getCanSort()
+                          ? t("filters.changeSortDirection")
+                          : undefined
+                      }
                     >
                       {flexRender(
                         header.column.columnDef.header,
@@ -326,7 +379,7 @@ export function ReagentTable({
                           {header.column.getIsSorted() === "desc" ? "↓" : "↑"}
                         </span>
                       )}
-                    </div>
+                    </button>
                   )}
                 </th>
               ))}
@@ -350,11 +403,24 @@ export function ReagentTable({
                   <td
                     key={cell.id}
                     className={cn(
-                      "px-4 py-3 text-sm whitespace-nowrap",
+                      "px-4 py-3 text-sm",
+                      !["name", "supplier_name", "manufacturer", "notes"].includes(
+                        cell.column.id,
+                      ) && "whitespace-nowrap",
                       (cell.column.id === "select" ||
                         cell.column.id === "actions") &&
                         "print-hide",
+                      cell.column.id === "actions" && [
+                        "sticky left-0 z-[1] border-e bg-background",
+                        status === "expired" && "bg-red-50",
+                        status === "expiring-soon" && "bg-orange-50",
+                        status === "expiring-week" && "bg-yellow-50",
+                      ],
                     )}
+                    style={{
+                      width: cell.column.getSize(),
+                      minWidth: cell.column.getSize(),
+                    }}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
