@@ -18,6 +18,7 @@ const greenBody = `
 
 test("classifies web runtime paths as UI-affecting", () => {
   assert.equal(isUiAffectingPath("apps/web/src/pages/Dashboard.tsx"), true);
+  assert.equal(isUiAffectingPath("apps/web/.env.production"), true);
   assert.equal(isUiAffectingPath("apps/web/tailwind.config.js"), true);
   assert.equal(isUiAffectingPath("packages/shared/src/utils.ts"), true);
   assert.equal(isUiAffectingPath("packages/shared/package.json"), true);

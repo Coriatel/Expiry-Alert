@@ -5,6 +5,7 @@ const UI_PATHS = [
   /^apps\/web\/public\//,
   /^apps\/web\/index\.html$/,
   /^apps\/web\/package\.json$/,
+  /^apps\/web\/\.env(?:\..+)?$/,
   /^apps\/web\/(tailwind|postcss|vite)\.config\.[cm]?[jt]s$/,
   /^packages\/shared\/src\//,
   /^packages\/shared\/package\.json$/,
