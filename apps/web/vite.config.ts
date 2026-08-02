@@ -11,7 +11,7 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: [
         "favicon-v2.ico",
         "apple-touch-icon-v2.png",

@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
-import { clientsClaim } from "workbox-core";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst, NetworkOnly } from "workbox-strategies";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
@@ -10,9 +9,6 @@ declare let self: ServiceWorkerGlobalScope;
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
-
-self.skipWaiting();
-clientsClaim();
 
 // Runtime Caching
 // Google Fonts
