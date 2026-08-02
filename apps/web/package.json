@@ -10,7 +10,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:mobile": "npm run build && playwright test e2e/mobile-ui.spec.ts e2e/native-auth.spec.ts",
+    "test:e2e:mobile-known-defect": "MOBILE_RELEASE_NEGATIVE_CONTROL=1 playwright test e2e/mobile-release-known-defect.spec.ts"
   },
   "dependencies": {
     "@expiry-alert/shared": "*",

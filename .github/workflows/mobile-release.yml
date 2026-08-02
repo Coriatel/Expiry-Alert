@@ -1,0 +1,88 @@
+name: Mobile release gate
+
+on:
+  pull_request:
+    branches: ['*']
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-release-gate:
+    name: mobile-release-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install deterministic browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Verify release-evidence policy tests
+        run: npm run test:mobile-release-evidence
+
+      - name: Enforce pull-request release evidence
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MOBILE_RELEASE_PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          export MOBILE_RELEASE_CHANGED_FILES="$changed_files"
+          export MOBILE_RELEASE_HEAD_SHA="$HEAD_SHA"
+          node scripts/check-mobile-release-evidence.mjs
+
+      - name: Typecheck all workspaces
+        run: npm run typecheck
+
+      - name: Run unit and integration tests
+        run: npm test
+
+      - name: Build API
+        run: npm run build:api
+
+      - name: Build web
+        run: npm run build:web
+
+      - name: Prove known mobile defects are rejected
+        shell: bash
+        run: |
+          set +e
+          MOBILE_RELEASE_NEGATIVE_CONTROL=1 npx playwright test e2e/mobile-release-known-defect.spec.ts 2>&1 | tee mobile-negative-control.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test "$status" -ne 0
+          grep -q "3 failed" mobile-negative-control.log
+        working-directory: apps/web
+
+      - name: Verify responsive release invariants
+        run: npx playwright test e2e/mobile-ui.spec.ts e2e/native-auth.spec.ts
+        working-directory: apps/web
+
+      - name: Publish rendered evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-release-evidence-${{ github.sha }}
+          path: apps/web/test-results/
+          if-no-files-found: error
+          retention-days: 14
