@@ -17,6 +17,28 @@ function getApiErrorCode(payload: unknown): string | null {
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 export const AUTH_EXPIRED_EVENT = "expiry-alert:auth-expired";
+export const REQUEST_TIMEOUT_CODE = "REQUEST_TIMEOUT";
+const REQUEST_TIMEOUT_MS = 20_000;
+
+// A stalled mobile connection otherwise leaves the caller awaiting forever,
+// which shows up as a dialog stuck on "saving".
+function withTimeout(signal: AbortSignal | null | undefined) {
+  if (typeof AbortSignal === "undefined") return { signal: signal ?? undefined };
+
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  if (!signal) return { signal: timeoutSignal };
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any([signal, timeoutSignal]) };
+  }
+  return { signal };
+}
+
+function isTimeoutError(error: unknown) {
+  return (
+    error instanceof DOMException &&
+    (error.name === "TimeoutError" || error.name === "AbortError")
+  );
+}
 
 function tryParseJson(text: string, contentType: string): unknown | null {
   if (!text.trim()) return null;
@@ -88,11 +110,22 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      credentials: "include",
+      ...options,
+      headers,
+      ...withTimeout(options.signal),
+    });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      const timeoutError = new Error("Request timed out") as ApiError;
+      timeoutError.code = REQUEST_TIMEOUT_CODE;
+      throw timeoutError;
+    }
+    throw error;
+  }
 
   if (
     response.status === 401 &&

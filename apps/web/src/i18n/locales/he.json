@@ -358,7 +358,8 @@
     "reagentDuplicated": "הפריט שוכפל בהצלחה",
     "noteAdded": "ההערה נוספה בהצלחה",
     "noteDeleted": "ההערה נמחקה בהצלחה",
-    "notificationSnoozed": "ההתראה נדחתה"
+    "notificationSnoozed": "ההתראה נדחתה",
+    "notificationsSnoozed": "{{count}} התראות נדחו"
   },
   "errors": {
     "loadFailed": "שגיאה בטעינת הנתונים. נא לנסות שוב.",
@@ -377,7 +378,8 @@
     "somethingWentWrong": "משהו השתבש",
     "unexpectedError": "אירעה שגיאה בלתי צפויה. נא לנסות שוב.",
     "technicalDetails": "פרטים טכניים",
-    "saveFailed": "השמירה נכשלה"
+    "saveFailed": "השמירה נכשלה",
+    "requestTimeout": "הבקשה לא הושלמה בזמן. בדוק את החיבור לאינטרנט ונסה שוב."
   },
   "validation": {
     "nameRequired": "שם הוא שדה חובה",
@@ -467,7 +469,9 @@
     "deniedHelp": "לחץ על סמל המנעול ליד שורת הכתובת בדפדפן ← הרשאות ← התראות ← אפשר. לאחר מכן רענן את הדף.",
     "testAction": "שלח בדיקה",
     "testSent": "התראת בדיקה נשלחה",
-    "testFailed": "שליחת התראת הבדיקה נכשלה"
+    "testFailed": "שליחת התראת הבדיקה נכשלה",
+    "notConfigured": "התראות דחיפה אינן מוגדרות בשרת. יש לפנות למנהל המערכת.",
+    "enableFailed": "הפעלת ההתראות נכשלה. נא לנסות שוב."
   },
   "indicator": {
     "newInStock": "חדש במלאי"

@@ -23,7 +23,7 @@ describe("ExpiryAlertSection", () => {
             is_archived: false,
           },
         ]}
-        onSnooze={vi.fn()}
+        onSnoozeAll={vi.fn()}
         onDismiss={onDismiss}
         teamName="Test Team"
       />,
@@ -37,5 +37,25 @@ describe("ExpiryAlertSection", () => {
     expect(onDismiss).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "actions.confirm" }));
     expect(onDismiss).toHaveBeenCalledWith(1, expect.any(String));
+  });
+
+  it("snoozes every alert through a single call", () => {
+    const onSnoozeAll = vi.fn();
+    render(
+      <ExpiryAlertSection
+        reagents={[
+          { id: 1, name: "A", category: "reagents", expiry_date: "2026-08-02", is_archived: false },
+          { id: 2, name: "B", category: "reagents", expiry_date: "2026-08-03", is_archived: false },
+        ]}
+        onSnoozeAll={onSnoozeAll}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "notifications.remindTomorrow" }),
+    );
+    expect(onSnoozeAll).toHaveBeenCalledTimes(1);
+    expect(onSnoozeAll).toHaveBeenCalledWith([1, 2], 1);
   });
 });

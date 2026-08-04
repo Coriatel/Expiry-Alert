@@ -1,10 +1,17 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { config } from '../config.js';
 import { saveSubscription, removeSubscription, sendNotificationToUser } from '../services/push.js';
 
 export const pushRouter = Router();
 
 pushRouter.use(requireAuth);
+
+// The VAPID public key is not a secret. Serving it removes the whole class of
+// failures where the web bundle was built without VITE_VAPID_PUBLIC_KEY.
+pushRouter.get('/public-key', (_req, res) => {
+  res.json({ publicKey: config.vapid.publicKey || null });
+});
 
 pushRouter.post('/subscribe', async (req, res) => {
   const user = req.user as any;

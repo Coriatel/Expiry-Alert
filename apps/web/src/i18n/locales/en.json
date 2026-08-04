@@ -358,7 +358,8 @@
     "reagentDuplicated": "Item duplicated successfully",
     "noteAdded": "Note added successfully",
     "noteDeleted": "Note deleted successfully",
-    "notificationSnoozed": "Notification snoozed"
+    "notificationSnoozed": "Notification snoozed",
+    "notificationsSnoozed": "{{count}} alerts snoozed"
   },
   "errors": {
     "loadFailed": "Failed to load data. Please try again.",
@@ -377,7 +378,8 @@
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "technicalDetails": "Technical details",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "requestTimeout": "The request timed out. Check your connection and try again."
   },
   "validation": {
     "nameRequired": "Name is required",
@@ -467,7 +469,9 @@
     "deniedHelp": "Tap the lock icon next to the address bar → Permissions → Notifications → Allow. Then refresh the page.",
     "testAction": "Send Test",
     "testSent": "Test notification sent",
-    "testFailed": "Failed to send a test notification"
+    "testFailed": "Failed to send a test notification",
+    "notConfigured": "Push notifications are not configured on the server. Contact your administrator.",
+    "enableFailed": "Could not enable notifications. Please try again."
   },
   "indicator": {
     "newInStock": "New in stock"

@@ -431,13 +431,22 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
-  const handleSnooze = async (reagentId: number, days: number) => {
-    try {
-      await snoozeNotification(reagentId, days);
-      loadExpiringReagents();
-      showToast(t("success.notificationSnoozed"), "success");
-    } catch (error) {
-      console.error("Failed to snooze notification:", error);
+  const handleSnoozeAll = async (reagentIds: number[], days: number) => {
+    if (reagentIds.length === 0) return;
+    const results = await Promise.allSettled(
+      reagentIds.map((id) => snoozeNotification(id, days)),
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    await loadExpiringReagents();
+    if (failed === reagentIds.length) {
+      showToast(t("errors.snoozeFailed"), "error");
+      return;
+    }
+    showToast(
+      t("success.notificationsSnoozed", { count: reagentIds.length - failed }),
+      "success",
+    );
+    if (failed > 0) {
       showToast(t("errors.snoozeFailed"), "error");
     }
   };
@@ -567,7 +576,7 @@ export function Dashboard({ teamName }: DashboardProps) {
       {/* Inline Alert Section */}
       <ExpiryAlertSection
         reagents={expiringReagents}
-        onSnooze={handleSnooze}
+        onSnoozeAll={handleSnoozeAll}
         onDismiss={handleDismiss}
         teamName={teamName}
       />

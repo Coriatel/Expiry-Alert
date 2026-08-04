@@ -100,7 +100,7 @@ export function ReagentTable({
       }),
       columnHelper.accessor("name", {
         header: t("table.name"),
-        size: 260,
+        size: 200,
         cell: (info) => (
           <span
             className="block max-w-xs break-words font-medium [overflow-wrap:anywhere]"
@@ -213,7 +213,7 @@ export function ReagentTable({
             getExpiryStatus(row.original.expiry_date) === "expired";
           const inTreatment = row.original.in_treatment === true;
           return (
-            <div className="flex gap-2">
+            <div className="flex gap-0.5">
               <Button
                 variant="ghost"
                 size="sm"
@@ -286,7 +286,7 @@ export function ReagentTable({
             </div>
           );
         },
-        size: 260,
+        size: 240,
       }),
     ],
     [
@@ -346,29 +346,23 @@ export function ReagentTable({
                     "px-4 py-3 text-start text-sm font-medium border-b whitespace-nowrap",
                     (header.id === "select" || header.id === "actions") &&
                       "print-hide",
-                    header.id === "actions" &&
-                      "sticky left-0 z-20 border-e bg-muted",
+                    // Pin the identifying column, not the actions column: on a
+                    // phone a pinned 240px actions cell left almost no room for
+                    // the data that is supposed to scroll.
+                    header.id === "name" &&
+                      "sticky start-0 z-20 border-e bg-muted",
                   )}
                   style={{
                     width: header.getSize(),
                     minWidth: header.getSize(),
                   }}
                 >
-                  {header.isPlaceholder ? null : (
+                  {header.isPlaceholder ? null : header.column.getCanSort() ? (
                     <button
                       type="button"
-                      className={cn(
-                        header.column.getCanSort() &&
-                          "cursor-pointer select-none hover:underline",
-                        "flex min-h-11 items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      )}
+                      className="flex min-h-11 cursor-pointer select-none items-center gap-2 rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={header.column.getToggleSortingHandler()}
-                      disabled={!header.column.getCanSort()}
-                      aria-label={
-                        header.column.getCanSort()
-                          ? t("filters.changeSortDirection")
-                          : undefined
-                      }
+                      aria-label={t("filters.changeSortDirection")}
                     >
                       {flexRender(
                         header.column.columnDef.header,
@@ -380,6 +374,15 @@ export function ReagentTable({
                         </span>
                       )}
                     </button>
+                  ) : (
+                    // Non-sortable headers host their own controls (select all);
+                    // a disabled <button> wrapper made them unclickable.
+                    <div className="flex min-h-11 items-center gap-2">
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                    </div>
                   )}
                 </th>
               ))}
@@ -410,8 +413,8 @@ export function ReagentTable({
                       (cell.column.id === "select" ||
                         cell.column.id === "actions") &&
                         "print-hide",
-                      cell.column.id === "actions" && [
-                        "sticky left-0 z-[1] border-e bg-background",
+                      cell.column.id === "name" && [
+                        "sticky start-0 z-[1] border-e bg-background",
                         status === "expired" && "bg-red-50",
                         status === "expiring-soon" && "bg-orange-50",
                         status === "expiring-week" && "bg-yellow-50",
