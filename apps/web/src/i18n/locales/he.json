@@ -344,7 +344,8 @@
     "deleteMultipleTitle": "מחיקת מספר פריטים",
     "deleteMultipleMessage": "האם אתה בטוח שברצונך למחוק {{count}} פריטים? פעולה זו אינה ניתנת לביטול.",
     "archive": "האם אתה בטוח שברצונך להעביר פריט זה לארכיון?",
-    "archiveMultiple": "האם אתה בטוח שברצונך להעביר {{count}} פריטים לארכיון?"
+    "archiveMultiple": "האם אתה בטוח שברצונך להעביר {{count}} פריטים לארכיון?",
+    "bulkArchiveMessage": "להעביר {{count}} פריטים לארכיון?"
   },
   "success": {
     "reagentAdded": "הפריט נוסף בהצלחה",
@@ -573,7 +574,6 @@
   },
   "import": {
     "title": "ייבוא לצוות אחר",
-    "copyTo": "העתק ל-{{team}}",
     "confirmMessage": "להעתיק {{count}} פריטים ל-{{team}}?",
     "success": "הועתקו {{count}} פריטים בהצלחה"
   },
@@ -619,5 +619,12 @@
       "expiry": "תוקף",
       "quantity": "כמות"
     }
+  },
+  "bulk": {
+    "panelLabel": "פעולות על הפריטים שנבחרו",
+    "copyToPrefix": "העתק ל־",
+    "copyToTeam": "העתק לצוות…",
+    "archiveShort": "ארכיון",
+    "deleteShort": "מחיקה"
   }
 }

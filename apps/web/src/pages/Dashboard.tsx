@@ -3,13 +3,15 @@ import { useTranslation } from "react-i18next";
 import {
   Plus,
   Trash2,
-  Flame,
+  Copy,
+  Archive,
   Printer,
   Calendar,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReagentTable } from "@/components/ReagentTable";
 import { ReagentCardList } from "@/components/ReagentCardList";
@@ -89,6 +91,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   });
 
   const [teams, setTeams] = useState<TeamSummary[]>([]);
+  const [copyTeamId, setCopyTeamId] = useState("");
   const [requestTransferOpen, setRequestTransferOpen] = useState(false);
   const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
 
@@ -176,7 +179,7 @@ export function Dashboard({ teamName }: DashboardProps) {
       title: t("import.title"),
       message: t("import.confirmMessage", {
         count: selectedReagentIds.length,
-        team: team.name,
+        team: `\u2068${team.name}\u2069`,
       }),
       variant: "default",
       onConfirm: async () => {
@@ -414,21 +417,32 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
-  const handleBulkArchive = async () => {
+  // Confirmed like every other bulk operation: the compact toolbar puts this button
+  // next to the destructive one, so an unguarded mis-tap would archive the whole selection.
+  const handleBulkArchive = () => {
     if (selectedReagentIds.length === 0) return;
-
-    try {
-      await archiveReagentsBulk(selectedReagentIds);
-      await loadData();
-      clearSelection();
-      showToast(
-        t("success.reagentsArchived", { count: selectedReagentIds.length }),
-        "success",
-      );
-    } catch (error) {
-      console.error("Failed to archive reagents:", error);
-      showToast(t("errors.archiveFailed"), "error");
-    }
+    setConfirmState({
+      open: true,
+      title: t("actions.bulkArchive"),
+      message: t("confirm.bulkArchiveMessage", {
+        count: selectedReagentIds.length,
+      }),
+      variant: "warning",
+      onConfirm: async () => {
+        try {
+          await archiveReagentsBulk(selectedReagentIds);
+          await loadData();
+          clearSelection();
+          showToast(
+            t("success.reagentsArchived", { count: selectedReagentIds.length }),
+            "success",
+          );
+        } catch (error) {
+          console.error("Failed to archive reagents:", error);
+          showToast(t("errors.archiveFailed"), "error");
+        }
+      },
+    });
   };
 
   const handleSnoozeAll = async (reagentIds: number[], days: number) => {
@@ -478,7 +492,7 @@ export function Dashboard({ teamName }: DashboardProps) {
   };
 
   return (
-    <div className="container mx-auto max-w-full space-y-4 overflow-x-hidden p-3 md:space-y-6 md:p-6">
+    <div className="container mx-auto max-w-full space-y-2.5 overflow-x-hidden p-3 md:space-y-6 md:p-6">
       {/* Print header */}
       <div className="hidden print:block border-b pb-3 mb-4">
         <div className="flex items-center gap-3">
@@ -493,7 +507,7 @@ export function Dashboard({ teamName }: DashboardProps) {
       </div>
 
       {/* Header */}
-      <div className="space-y-2 print:hidden">
+      <div className="space-y-1.5 print:hidden">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold md:text-3xl">{t("dashboard.title")}</h1>
           <Button
@@ -530,41 +544,106 @@ export function Dashboard({ teamName }: DashboardProps) {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          {selectedReagentIds.length > 0 && (
-            <>
+        {/* Mounted at all times: a live region inserted together with its text is not announced. */}
+        <p className="sr-only" aria-live="polite">
+          {selectedReagentIds.length > 0
+            ? t("table.selected", { count: selectedReagentIds.length })
+            : ""}
+        </p>
+
+        {selectedReagentIds.length > 0 && (
+          <div
+            data-testid="bulk-actions"
+            role="group"
+            aria-label={t("bulk.panelLabel")}
+            className="rounded-lg border bg-muted/40 p-2"
+          >
+            <p className="mb-1.5 text-sm font-medium">
+              {t("table.selected", { count: selectedReagentIds.length })}
+            </p>
+            <div className="grid grid-cols-2 gap-1.5 min-[420px]:grid-cols-3">
               <Button
                 variant="outline"
                 onClick={handleBulkArchive}
                 disabled={isLoading}
-                className="min-h-11"
+                aria-label={`${t("bulk.archiveShort")} - ${t("actions.bulkArchive")} (${selectedReagentIds.length})`}
+                className="min-h-11 min-w-0 px-2 text-sm"
               >
-                <Flame className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("actions.bulkArchive")} ({selectedReagentIds.length})
+                <Archive className="h-4 w-4 shrink-0 ltr:mr-1.5 rtl:ml-1.5" />
+                <span className="truncate">{t("bulk.archiveShort")}</span>
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleBulkDelete}
                 disabled={isLoading}
-                className="min-h-11"
+                aria-label={`${t("bulk.deleteShort")} - ${t("actions.bulkDelete")} (${selectedReagentIds.length})`}
+                className="min-h-11 min-w-0 px-2 text-sm"
               >
-                <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("actions.bulkDelete")} ({selectedReagentIds.length})
+                <Trash2 className="h-4 w-4 shrink-0 ltr:mr-1.5 rtl:ml-1.5" />
+                <span className="truncate">{t("bulk.deleteShort")}</span>
               </Button>
-              {otherTeams.map((team) => (
+              {otherTeams.length === 1 && (
                 <Button
-                  key={team.id}
                   variant="outline"
-                  onClick={() => handleImportToTeam(team)}
+                  onClick={() => handleImportToTeam(otherTeams[0])}
                   disabled={isLoading}
-                  className="min-h-11"
+                  title={otherTeams[0].name}
+                  className="col-span-2 min-h-11 min-w-0 px-2 text-sm min-[420px]:col-span-1"
                 >
-                  {t("import.copyTo", { team: team.name })}
+                  <Copy className="h-4 w-4 shrink-0 ltr:mr-1.5 rtl:ml-1.5" />
+                  {/* Truncate the isolated name, not the mixed-direction span: an RTL span
+                      clips the head of an LTR name and hides which team is targeted. */}
+                  <span className="flex min-w-0 items-baseline">
+                    {t("bulk.copyToPrefix")}
+                    <bdi dir="auto" className="truncate">
+                      {otherTeams[0].name}
+                    </bdi>
+                  </span>
                 </Button>
-              ))}
-            </>
-          )}
-        </div>
+              )}
+              {otherTeams.length > 1 && (
+                // One compact destination control instead of a full-width button per team.
+                // The copy fires on the explicit button, never on `change`: arrow-key
+                // navigation on a closed <select> fires change on every keypress.
+                <div className="col-span-2 flex gap-1.5 min-[420px]:col-span-1">
+                  <label htmlFor="bulk-copy-team" className="sr-only">
+                    {t("bulk.copyToTeam")}
+                  </label>
+                  <Select
+                    id="bulk-copy-team"
+                    value={copyTeamId}
+                    disabled={isLoading}
+                    className="min-h-11 min-w-0 flex-1 text-sm"
+                    onChange={(event) => setCopyTeamId(event.target.value)}
+                  >
+                    <option value="">{t("bulk.copyToTeam")}</option>
+                    {otherTeams.map((team) => (
+                      <option key={team.id} value={team.id} dir="auto">
+                        {team.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    variant="outline"
+                    disabled={!copyTeamId || isLoading}
+                    aria-label={t("bulk.copyToTeam")}
+                    title={t("bulk.copyToTeam")}
+                    onClick={() => {
+                      const team = otherTeams.find(
+                        (option) => String(option.id) === copyTeamId,
+                      );
+                      if (team) handleImportToTeam(team);
+                      setCopyTeamId("");
+                    }}
+                    className="h-11 w-11 shrink-0 p-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Push Notification Prompt */}

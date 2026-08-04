@@ -344,7 +344,8 @@
     "deleteMultipleTitle": "Delete Multiple Items",
     "deleteMultipleMessage": "Are you sure you want to delete {{count}} items? This action cannot be undone.",
     "archive": "Are you sure you want to archive this item?",
-    "archiveMultiple": "Are you sure you want to archive {{count}} items?"
+    "archiveMultiple": "Are you sure you want to archive {{count}} items?",
+    "bulkArchiveMessage": "Archive {{count}} items?"
   },
   "success": {
     "reagentAdded": "Item added successfully",
@@ -573,7 +574,6 @@
   },
   "import": {
     "title": "Import to Other Team",
-    "copyTo": "Copy to {{team}}",
     "confirmMessage": "Copy {{count}} items to {{team}}?",
     "success": "Successfully copied {{count}} items"
   },
@@ -619,5 +619,12 @@
       "expiry": "Expiry",
       "quantity": "Quantity"
     }
+  },
+  "bulk": {
+    "panelLabel": "Actions for the selected items",
+    "copyToPrefix": "Copy to ",
+    "copyToTeam": "Copy to team…",
+    "archiveShort": "Archive",
+    "deleteShort": "Delete"
   }
 }

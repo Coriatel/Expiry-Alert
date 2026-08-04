@@ -58,9 +58,9 @@ function MetaField({
   if (value == null || value === "") return null;
   return (
     <div className={cn("min-w-0", className)}>
-      <dt className="text-[10px] leading-4 text-muted-foreground">{label}</dt>
+      <dt className="text-[10px] leading-[13px] text-muted-foreground">{label}</dt>
       <dd
-        className="break-words text-[13px] font-medium leading-4 [overflow-wrap:anywhere]"
+        className="break-words text-[13px] font-medium leading-[15px] [overflow-wrap:anywhere]"
         dir={direction}
       >
         {value}
@@ -98,15 +98,17 @@ export function ReagentCard({
   return (
     <article
       className={cn(
-        "rounded-lg border px-2.5 py-2 shadow-sm",
+        "rounded-lg border px-2.5 py-1.5 shadow-sm",
         getCardBg(status),
       )}
     >
+      {/* Negative margins buy back card height; z-10 keeps all 44px of the button hittable
+          above the metadata list that follows it in DOM order. */}
       <div className="flex items-start gap-1">
         <button
           type="button"
           onClick={() => onToggleSelect(reagent.id)}
-          className="-ms-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="relative z-10 -ms-2 -my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t("table.selectItem")}
           aria-pressed={isSelected}
         >
@@ -116,7 +118,7 @@ export function ReagentCard({
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
         </button>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
           <h2
             className="min-w-0 flex-1 break-words text-lg font-bold leading-6 [overflow-wrap:anywhere]"
             dir="auto"
@@ -145,7 +147,7 @@ export function ReagentCard({
         </div>
       </div>
 
-      <dl className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1.5 border-t pt-1.5">
+      <dl className="mt-0.5 grid grid-cols-3 gap-x-2 gap-y-0.5">
         <MetaField
           label={t("batchHistory.supplier")}
           value={reagent.supplier_name}
@@ -176,7 +178,7 @@ export function ReagentCard({
       </dl>
 
       {(reagent.description || reagent.notes) && (
-        <div className="mt-1.5 space-y-1 border-t pt-1.5 text-[13px] leading-4 text-muted-foreground">
+        <div className="mt-1 space-y-0.5 text-[13px] leading-[15px] text-muted-foreground">
           {reagent.description && (
             <p className="break-words [overflow-wrap:anywhere]" dir="auto">
               {reagent.description.length > 80 && !descExpanded
@@ -218,7 +220,8 @@ export function ReagentCard({
         </div>
       )}
 
-      <div className="-mb-1 mt-1 flex flex-wrap items-center justify-end gap-0.5 border-t">
+      {/* Single compact footer row; the only separator kept, it groups data from actions. */}
+      <div className="-mb-2 mt-0.5 flex items-center justify-end gap-0.5 border-t">
         <Button
           type="button"
           variant="ghost"
