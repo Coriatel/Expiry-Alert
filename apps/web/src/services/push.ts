@@ -6,6 +6,8 @@ const IOS_DEVICE_PATTERN = /iPad|iPhone|iPod/;
 export const PUSH_ERROR_CODES = {
   iosHomeScreenRequired: "push_ios_home_screen_required",
   unsupported: "push_unsupported",
+  notConfigured: "push_not_configured",
+  permissionDenied: "push_permission_denied",
 } as const;
 
 export type PushSupportState = {
@@ -102,6 +104,25 @@ export function getPushSupportState(): PushSupportState {
   };
 }
 
+let cachedServerKey: string | null | undefined;
+
+// Falls back to the server so a bundle built without VITE_VAPID_PUBLIC_KEY
+// still works instead of silently failing on every "enable" click.
+export async function getVapidPublicKey(): Promise<string | null> {
+  if (VAPID_PUBLIC_KEY) return VAPID_PUBLIC_KEY;
+  if (cachedServerKey !== undefined) return cachedServerKey;
+
+  try {
+    const result = await apiFetch<{ publicKey: string | null }>(
+      "/api/push/public-key",
+    );
+    cachedServerKey = result?.publicKey || null;
+  } catch {
+    cachedServerKey = null;
+  }
+  return cachedServerKey;
+}
+
 export async function subscribeToPush() {
   const supportState = getPushSupportState();
   if (!supportState.supported) {
@@ -112,13 +133,14 @@ export async function subscribeToPush() {
     );
   }
 
-  if (!VAPID_PUBLIC_KEY) {
-    throw new Error("VAPID public key not configured");
+  const publicKey = await getVapidPublicKey();
+  if (!publicKey) {
+    throw new Error(PUSH_ERROR_CODES.notConfigured);
   }
 
   const permission = await requestNotificationPermission();
   if (permission !== "granted") {
-    throw new Error("Notification permission denied");
+    throw new Error(PUSH_ERROR_CODES.permissionDenied);
   }
 
   const registration = await navigator.serviceWorker.ready;
@@ -128,7 +150,7 @@ export async function subscribeToPush() {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
   }
 

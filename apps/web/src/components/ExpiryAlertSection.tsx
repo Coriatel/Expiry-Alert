@@ -9,17 +9,19 @@ import { getDaysUntilExpiry } from "@/lib/utils";
 
 interface ExpiryAlertSectionProps {
   reagents: Reagent[];
-  onSnooze: (reagentId: number, days: number) => void;
+  onSnoozeAll: (reagentIds: number[], days: number) => void;
   onDismiss: (reagentId: number, alertType?: string) => void;
   teamName?: string;
 }
 
 function getAlertType(days: number): string {
-  if (days >= 7) return "7day";
-  if (days === 2) return "2day";
-  if (days === 1) return "1day";
+  // 3-6 days used to fall through to "expired", which the server treats as a
+  // recurring alert — dismissing such an item brought the alert back the next day.
+  if (days < 0) return "expired";
   if (days === 0) return "0day";
-  return "expired";
+  if (days === 1) return "1day";
+  if (days === 2) return "2day";
+  return "7day";
 }
 
 function getUrgencyIcon(days: number) {
@@ -54,7 +56,7 @@ function getBgColor(reagents: Reagent[]): string {
 
 export function ExpiryAlertSection({
   reagents,
-  onSnooze,
+  onSnoozeAll,
   onDismiss,
   teamName,
 }: ExpiryAlertSectionProps) {
@@ -93,8 +95,14 @@ export function ExpiryAlertSection({
       >
         <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0" />
-          <span className="font-semibold text-sm truncate">
+          <span className="min-w-0 truncate text-sm font-semibold">
             {t("notifications.alertSummary", { count: reagents.length })}
+            {teamName ? (
+              <span className="font-normal text-muted-foreground">
+                {" · "}
+                {teamName}
+              </span>
+            ) : null}
           </span>
         </div>
         {expanded ? (
@@ -116,30 +124,28 @@ export function ExpiryAlertSection({
               return (
                 <div
                   key={reagent.id}
-                  className="flex items-start justify-between gap-1 rounded-md bg-white/70 py-1.5 ps-2 text-sm"
+                  className="flex items-center justify-between gap-1 rounded-md bg-white/70 ps-2 text-sm"
                 >
-                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <span
-                      className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${indicatorClass}`}
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${indicatorClass}`}
                       aria-hidden="true"
                     />
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className="block break-words font-medium leading-5 [overflow-wrap:anywhere]"
-                        dir="auto"
-                      >
-                        {reagent.name}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {teamName ? `${teamName} - ` : ""}
-                        {days < 0
-                          ? t("status.expired")
-                          : days === 0
-                            ? t("status.expiresToday")
-                            : days === 1
-                              ? t("status.expiresInOneDay")
-                              : t("status.expiresIn", { days })}
-                      </span>
+                    <span
+                      className="min-w-0 flex-1 truncate font-medium leading-5"
+                      dir="auto"
+                      title={reagent.name}
+                    >
+                      {reagent.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {days < 0
+                        ? t("status.expired")
+                        : days === 0
+                          ? t("status.expiresToday")
+                          : days === 1
+                            ? t("status.expiresInOneDay")
+                            : t("status.expiresIn", { days })}
                     </span>
                   </div>
                   <button
@@ -171,7 +177,7 @@ export function ExpiryAlertSection({
           <div className="grid grid-cols-3 gap-1.5 border-t pt-2">
             <Button
               variant="outline"
-              onClick={() => reagents.forEach((r) => onSnooze(r.id, 1))}
+              onClick={() => onSnoozeAll(reagents.map((r) => r.id), 1)}
               className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
               aria-label={t("notifications.remindTomorrow")}
             >
@@ -180,7 +186,7 @@ export function ExpiryAlertSection({
             </Button>
             <Button
               variant="outline"
-              onClick={() => reagents.forEach((r) => onSnooze(r.id, 3))}
+              onClick={() => onSnoozeAll(reagents.map((r) => r.id), 3)}
               className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
               aria-label={t("notifications.remindIn3Days")}
             >

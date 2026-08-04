@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/DateInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { getSuppliers, type Supplier } from "@/lib/tauri";
+import { REQUEST_TIMEOUT_CODE } from "@/lib/http";
 import type { Reagent, ReagentFormData } from "@/types";
 
 const MAX_QUANTITY = 1_000_000;
@@ -23,6 +24,7 @@ function getPrivateError(error: unknown, t: (key: string) => string): string {
     error && typeof error === "object" && "code" in error
       ? String((error as { code?: unknown }).code ?? "")
       : "";
+  if (code === REQUEST_TIMEOUT_CODE) return t("errors.requestTimeout");
   if (code === "STALE_ITEM") return t("errors.itemStale");
   if (code === "ITEM_NOT_FOUND") return t("errors.itemUnavailable");
   if (code === "INVALID_ITEM") return t("errors.invalidItem");

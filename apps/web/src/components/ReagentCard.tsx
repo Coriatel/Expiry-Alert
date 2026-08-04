@@ -58,9 +58,9 @@ function MetaField({
   if (value == null || value === "") return null;
   return (
     <div className={cn("min-w-0", className)}>
-      <dt className="text-[11px] font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-[10px] leading-4 text-muted-foreground">{label}</dt>
       <dd
-        className="mt-0.5 break-words text-sm leading-5 [overflow-wrap:anywhere]"
+        className="break-words text-[13px] font-medium leading-4 [overflow-wrap:anywhere]"
         dir={direction}
       >
         {value}
@@ -98,15 +98,15 @@ export function ReagentCard({
   return (
     <article
       className={cn(
-        "rounded-lg border p-3 shadow-sm",
+        "rounded-lg border px-2.5 py-2 shadow-sm",
         getCardBg(status),
       )}
     >
-      <div className="flex items-start gap-1.5">
+      <div className="flex items-start gap-1">
         <button
           type="button"
           onClick={() => onToggleSelect(reagent.id)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="-ms-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t("table.selectItem")}
           aria-pressed={isSelected}
         >
@@ -116,39 +116,39 @@ export function ReagentCard({
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
         </button>
-        <div className="min-w-0 flex-1 pt-1">
-          <div className="flex items-start gap-2">
-            <h2
-              className="min-w-0 flex-1 break-words text-base font-bold leading-5 [overflow-wrap:anywhere] sm:text-lg"
-              dir="auto"
-            >
-              {reagent.name}
-            </h2>
-            {reagent.replaced_by != null && <NewInStockDot />}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-                getStatusColor(status),
-              )}
-            >
-              {statusLabel}
-            </span>
-            {inTreatment && (
-              <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                {t("status.inTreatment")}
-              </span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
+          <h2
+            className="min-w-0 flex-1 break-words text-lg font-bold leading-6 [overflow-wrap:anywhere]"
+            dir="auto"
+          >
+            {reagent.name}
+            {reagent.replaced_by != null && (
+              <>
+                {" "}
+                <NewInStockDot />
+              </>
             )}
-          </div>
+          </h2>
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+              getStatusColor(status),
+            )}
+          >
+            {statusLabel}
+          </span>
+          {inTreatment && (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+              {t("status.inTreatment")}
+            </span>
+          )}
         </div>
       </div>
 
-      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t pt-2">
+      <dl className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1.5 border-t pt-1.5">
         <MetaField
           label={t("batchHistory.supplier")}
           value={reagent.supplier_name}
-          className="col-span-2"
         />
         <MetaField
           label={t("form.manufacturer")}
@@ -176,7 +176,7 @@ export function ReagentCard({
       </dl>
 
       {(reagent.description || reagent.notes) && (
-        <div className="mt-2 space-y-1.5 border-t pt-2 text-sm text-muted-foreground">
+        <div className="mt-1.5 space-y-1 border-t pt-1.5 text-[13px] leading-4 text-muted-foreground">
           {reagent.description && (
             <p className="break-words [overflow-wrap:anywhere]" dir="auto">
               {reagent.description.length > 80 && !descExpanded
@@ -218,7 +218,7 @@ export function ReagentCard({
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-1 border-t pt-1">
+      <div className="-mb-1 mt-1 flex flex-wrap items-center justify-end gap-0.5 border-t">
         <Button
           type="button"
           variant="ghost"
