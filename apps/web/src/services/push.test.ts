@@ -269,3 +269,105 @@ describe("subscribeToPush", () => {
     );
   });
 });
+
+describe("ensurePushSubscription", () => {
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  function setPermission(permission: NotificationPermission) {
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: { permission, requestPermission: vi.fn() },
+    });
+  }
+
+  function mockApi(registered: boolean) {
+    const calls: string[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      calls.push(url);
+      return Promise.resolve(
+        url.endsWith("/api/push/claim")
+          ? jsonResponse({ registered })
+          : jsonResponse({}, 201),
+      );
+    }) as typeof fetch;
+    return calls;
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_VAPID_PUBLIC_KEY", TEST_VAPID_KEY);
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("never prompts: reports needs-permission when permission was not granted", async () => {
+    const { subscribe } = setPushEnvironment();
+    setPermission("default");
+    const calls = mockApi(false);
+
+    const { ensurePushSubscription } = await import("./push");
+
+    expect(await ensurePushSubscription()).toBe("needs-permission");
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  it("re-subscribes silently when permission is granted but the browser has no subscription", async () => {
+    const { subscribe } = setPushEnvironment({ existingSubscription: null });
+    setPermission("granted");
+    const calls = mockApi(false);
+
+    const { ensurePushSubscription } = await import("./push");
+
+    expect(await ensurePushSubscription()).toBe("subscribed");
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["/api/push/subscribe"]);
+  });
+
+  it("keeps a subscription the server still knows", async () => {
+    const unsubscribe = vi.fn().mockResolvedValue(true);
+    const { subscribe } = setPushEnvironment({
+      existingSubscription: {
+        endpoint: "https://fcm.googleapis.com/fcm/send/live",
+        keys: { p256dh: "p", auth: "a" },
+        unsubscribe,
+      },
+    });
+    setPermission("granted");
+    const calls = mockApi(true);
+
+    const { ensurePushSubscription } = await import("./push");
+
+    expect(await ensurePushSubscription()).toBe("subscribed");
+    expect(unsubscribe).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(calls).toEqual(["/api/push/claim"]);
+  });
+
+  it("replaces a subscription the server dropped as dead", async () => {
+    const unsubscribe = vi.fn().mockResolvedValue(true);
+    const { subscribe } = setPushEnvironment({
+      existingSubscription: {
+        endpoint: "https://fcm.googleapis.com/fcm/send/dead",
+        keys: { p256dh: "p", auth: "a" },
+        unsubscribe,
+      },
+    });
+    setPermission("granted");
+    const calls = mockApi(false);
+
+    const { ensurePushSubscription } = await import("./push");
+
+    expect(await ensurePushSubscription()).toBe("subscribed");
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["/api/push/claim", "/api/push/subscribe"]);
+  });
+});

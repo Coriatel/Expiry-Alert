@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
-import { saveSubscription, removeSubscription, sendNotificationToUser } from '../services/push.js';
+import { claimSubscription, saveSubscription, removeSubscription, sendNotificationToUser } from '../services/push.js';
 
 export const pushRouter = Router();
 
@@ -29,6 +29,23 @@ pushRouter.post('/subscribe', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to save subscription' });
+  }
+});
+
+pushRouter.post('/claim', async (req, res) => {
+  const user = req.user as any;
+  if (!user || !user.id) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { endpoint } = req.body ?? {};
+  if (typeof endpoint !== 'string' || !endpoint) {
+    return res.status(400).json({ error: 'Endpoint required' });
+  }
+
+  try {
+    res.json({ registered: await claimSubscription(user.id, endpoint) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to check subscription' });
   }
 });
 
