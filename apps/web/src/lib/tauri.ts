@@ -712,12 +712,13 @@ export type PullResult = {
 export async function pullReagents(
   requestId: number,
   reagentIds: number[],
+  quantities: Record<number, number> = {},
 ): Promise<PullResult> {
   return apiFetch<PullResult>(
     `/api/transfer-requests/${requestId}/pull`,
     {
       method: "POST",
-      body: JSON.stringify({ reagent_ids: reagentIds }),
+      body: JSON.stringify({ reagent_ids: reagentIds, quantities }),
     },
   );
 }
