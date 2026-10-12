@@ -57,6 +57,29 @@ export async function saveSubscription(userId: number, subscription: PushSubscri
   });
 }
 
+/// Re-attach a device's existing subscription to the signed-in user. Returns
+/// false when the endpoint is no longer stored (dropped after the push service
+/// reported it dead), which tells the client to create a fresh one.
+export async function claimSubscription(userId: number, endpoint: string) {
+  const existing = await listRecords<PushSubscriptionRecord>(collection, {
+    filter: { endpoint: { _eq: endpoint } },
+  });
+  if (existing.length === 0) return false;
+
+  if (Number(existing[0].user) !== userId) {
+    await updateSingleRecord(collection, existing[0].id, { user: userId });
+  }
+  return true;
+}
+
+export async function hasAnySubscription() {
+  const records = await listRecords<PushSubscriptionRecord>(collection, {
+    limit: 1,
+    fields: ['id'],
+  });
+  return records.length > 0;
+}
+
 export async function removeSubscription(endpoint: string) {
   const existing = await listRecords<PushSubscriptionRecord>(collection, {
     filter: { endpoint: { _eq: endpoint } },

@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildGroupedNotificationPayload,
+  buildUnreachedAlertReport,
+  findUnreachedTeams,
   classifyReagentForRun,
   createCalendarDay,
   getCalendarDayInTimeZone,
@@ -149,4 +151,24 @@ test('buildGroupedNotificationPayload uses v2 assets and mixed Friday wording', 
   assert.equal(payload.badge, '/icon-badge-72-v2.png');
   assert.match(payload.title, /QA Lab/);
   assert.match(payload.body, /expires today and 1 reagent expires on Saturday/i);
+});
+
+test('findUnreachedTeams flags a team whose pending alerts reached nobody', () => {
+  const results = [
+    { teamId: 3, teamName: 'Beilinson', usersWithPendingAlerts: 3, usersReached: 0 },
+    { teamId: 5, teamName: 'Hasharon', usersWithPendingAlerts: 3, usersReached: 1 },
+    { teamId: 6, teamName: 'Quiet', usersWithPendingAlerts: 0, usersReached: 0 },
+  ];
+
+  assert.deepEqual(findUnreachedTeams(results).map((team) => team.teamId), [3]);
+});
+
+test('buildUnreachedAlertReport names every unreached team and the fix', () => {
+  const report = buildUnreachedAlertReport([
+    { teamId: 3, teamName: 'Beilinson', usersWithPendingAlerts: 3, usersReached: 0 },
+  ]);
+
+  assert.match(report.subject, /Expiry Alert/);
+  assert.match(report.text, /Beilinson/);
+  assert.match(report.text, /3/);
 });
