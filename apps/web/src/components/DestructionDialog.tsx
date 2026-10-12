@@ -11,6 +11,10 @@ interface DestructionDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (reagentId: number, quantityDestroyed: number) => Promise<void>;
+  /** Items in the bulk queue, this one included. */
+  queueCount?: number;
+  /** Destroys every queued item at its full quantity, without asking again. */
+  onDestroyAll?: () => Promise<void>;
 }
 
 export function DestructionDialog({
@@ -18,16 +22,20 @@ export function DestructionDialog({
   open,
   onClose,
   onConfirm,
+  queueCount = 1,
+  onDestroyAll,
 }: DestructionDialogProps) {
   const { t } = useTranslation();
   const [quantity, setQuantity] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [destroyAllArmed, setDestroyAllArmed] = useState(false);
 
   // Reset quantity when reagent changes
   useEffect(() => {
     if (reagent) {
       setQuantity(reagent.quantity ?? 0);
     }
+    setDestroyAllArmed(false);
   }, [reagent]);
 
   const handleConfirm = async (destroyedCount: number) => {
@@ -35,6 +43,22 @@ export function DestructionDialog({
     setIsSubmitting(true);
     try {
       await onConfirm(reagent.id, destroyedCount);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Sets usually arrive (and expire) eight at a time; answering the same
+  // question once per item was the slow part. Two clicks, because it is bulk.
+  const handleDestroyAll = async () => {
+    if (!onDestroyAll || isSubmitting) return;
+    if (!destroyAllArmed) {
+      setDestroyAllArmed(true);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onDestroyAll();
     } finally {
       setIsSubmitting(false);
     }
@@ -100,6 +124,22 @@ export function DestructionDialog({
             {isSubmitting ? t("actions.processing") : t("destruction.confirm")}
           </Button>
         </div>
+
+        {onDestroyAll && queueCount > 1 && (
+          <Button
+            variant={destroyAllArmed ? "destructive" : "outline"}
+            className="min-h-11 w-full"
+            onClick={handleDestroyAll}
+            disabled={isSubmitting}
+          >
+            {t(
+              destroyAllArmed
+                ? "destruction.destroyAllConfirm"
+                : "destruction.destroyAll",
+              { count: queueCount },
+            )}
+          </Button>
+        )}
       </div>
     </Dialog>
   );
