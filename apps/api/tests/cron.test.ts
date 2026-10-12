@@ -150,7 +150,43 @@ test('buildGroupedNotificationPayload uses v2 assets and mixed Friday wording', 
   assert.equal(payload.icon, '/icon-192-v2.png');
   assert.equal(payload.badge, '/icon-badge-72-v2.png');
   assert.match(payload.title, /QA Lab/);
-  assert.match(payload.body, /expires today and 1 reagent expires on Saturday/i);
+  assert.equal(
+    payload.body,
+    'פריט אחד פג תוקף היום ופריט אחד פג תוקף בשבת: Friday Item, Saturday Item',
+  );
+});
+
+test('buildGroupedNotificationPayload words Hebrew singular and plural naturally', () => {
+  const day = createCalendarDay(2026, 3, 15);
+  assert.ok(day);
+
+  const alertsFor = (names: string[]) =>
+    names.map((name, index) => {
+      const alert = classifyReagentForRun(
+        makeReagent({ id: index + 1, name, expiry_date: '2026-03-15' }),
+        day,
+      )[0];
+      assert.ok(alert);
+      return alert;
+    });
+
+  const single = buildGroupedNotificationPayload(10, null, '0day', alertsFor(['Buffer A']));
+  assert.equal(single.title, 'Expiry Alert');
+  assert.equal(single.body, 'Buffer A פג תוקף היום');
+
+  const several = buildGroupedNotificationPayload(
+    10,
+    null,
+    '0day',
+    alertsFor(['A', 'B', 'C', 'D', 'E']),
+  );
+  assert.equal(several.body, '5 פריטים פגי תוקף היום: A, B, C ועוד 2');
+
+  const summary = buildGroupedNotificationPayload(10, null, '5day_summary', alertsFor(['A', 'B']));
+  assert.equal(summary.body, '2 פריטים פגי תוקף תוך 5 ימים: A, B');
+
+  const one = buildGroupedNotificationPayload(10, null, '5day_summary', alertsFor(['A']));
+  assert.equal(one.body, 'A פג תוקף תוך 5 ימים');
 });
 
 test('findUnreachedTeams flags a team whose pending alerts reached nobody', () => {

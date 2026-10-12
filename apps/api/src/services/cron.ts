@@ -235,11 +235,15 @@ export function classifyReagentForRun(
 }
 
 function formatCountLabel(count: number): string {
-  return `${count} reagent${count === 1 ? '' : 's'}`;
+  return count === 1 ? 'פריט אחד' : `${count} פריטים`;
 }
 
 function formatExpiryClause(count: number, suffix: string): string {
-  return `${formatCountLabel(count)} ${count === 1 ? 'expires' : 'expire'} ${suffix}`;
+  return `${formatCountLabel(count)} ${count === 1 ? 'פג' : 'פגי'} תוקף ${suffix}`;
+}
+
+function joinWithVav(clause: string): string {
+  return /^\d/.test(clause) ? `ו-${clause}` : `ו${clause}`;
 }
 
 function buildNamePreview(alerts: PendingAlert[], limit: number = 3): string {
@@ -248,7 +252,7 @@ function buildNamePreview(alerts: PendingAlert[], limit: number = 3): string {
 
   const preview = names.slice(0, limit).join(', ');
   const remaining = names.length - limit;
-  return remaining > 0 ? `${preview} +${remaining} more` : preview;
+  return remaining > 0 ? `${preview} ועוד ${remaining}` : preview;
 }
 
 export function buildGroupedNotificationPayload(
@@ -263,22 +267,22 @@ export function buildGroupedNotificationPayload(
   let body = '';
   if (alertType === '5day_summary') {
     body = alerts.length === 1
-      ? `${alerts[0]!.reagent.name} expires within 5 days`
-      : `${formatExpiryClause(alerts.length, 'within 5 days')}${preview ? `: ${preview}` : ''}`;
+      ? `${alerts[0]!.reagent.name} פג תוקף תוך 5 ימים`
+      : `${formatExpiryClause(alerts.length, 'תוך 5 ימים')}${preview ? `: ${preview}` : ''}`;
   } else {
     const todayCount = alerts.filter((alert) => alert.reason === 'expires_today').length;
     const saturdayCount = alerts.filter((alert) => alert.reason === 'saturday_advanced').length;
 
     if (todayCount > 0 && saturdayCount > 0) {
-      body = `${formatExpiryClause(todayCount, 'today')} and ${formatExpiryClause(saturdayCount, 'on Saturday')}${preview ? `: ${preview}` : ''}`;
+      body = `${formatExpiryClause(todayCount, 'היום')} ${joinWithVav(formatExpiryClause(saturdayCount, 'בשבת'))}${preview ? `: ${preview}` : ''}`;
     } else if (saturdayCount > 0) {
       body = alerts.length === 1
-        ? `${alerts[0]!.reagent.name} expires on Saturday`
-        : `${formatExpiryClause(alerts.length, 'on Saturday')}${preview ? `: ${preview}` : ''}`;
+        ? `${alerts[0]!.reagent.name} פג תוקף בשבת`
+        : `${formatExpiryClause(alerts.length, 'בשבת')}${preview ? `: ${preview}` : ''}`;
     } else {
       body = alerts.length === 1
-        ? `${alerts[0]!.reagent.name} expires today`
-        : `${formatExpiryClause(alerts.length, 'today')}${preview ? `: ${preview}` : ''}`;
+        ? `${alerts[0]!.reagent.name} פג תוקף היום`
+        : `${formatExpiryClause(alerts.length, 'היום')}${preview ? `: ${preview}` : ''}`;
     }
   }
 

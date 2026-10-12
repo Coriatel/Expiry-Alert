@@ -66,8 +66,8 @@ pushRouter.post('/test', async (req, res) => {
     const user = req.user as any;
     try {
         const result = await sendNotificationToUser(user.id, {
-            title: 'Test Notification',
-            body: 'This is a test notification from Expiry Alert',
+            title: 'התראת בדיקה',
+            body: 'זוהי התראת בדיקה מ-Expiry Alert',
             icon: '/icon-192.png'
         });
         if (result.total === 0) {
