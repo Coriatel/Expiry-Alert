@@ -401,7 +401,9 @@
     "ok": "תקין",
     "expiryDate": "תאריך תפוגה",
     "name": "שם",
-    "daysLeft": "ימים עד תפוגה"
+    "daysLeft": "ימים עד תפוגה",
+    "searchPlaceholder": "חיפוש לפי שם או מספר אצווה",
+    "clearSearch": "ניקוי החיפוש"
   },
   "install": {
     "title": "התקן ExpiryAlert",
