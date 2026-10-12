@@ -160,12 +160,16 @@ for (const width of [360, 390, 430]) {
     ).toBeVisible();
     await assertNoPageOverflow(page);
     await attachRenderedEvidence(page, testInfo, `dashboard-${width}`);
+    // The alert bar is one line until opened and must not repeat the items below it.
+    const alertBar = page.getByRole("button", { name: /פגי תוקף בקרוב/ });
+    await expect(page.getByRole("button", { name: "הזכר לי מחר" })).toHaveCount(0);
+    await alertBar.click();
+    await expect(page.getByRole("button", { name: "אל תזכיר לי יותר" })).toHaveCount(0);
     await assertNamedButtons(page, [
       "הדפס",
       "הוספת פריטים",
       "תצוגת טבלה",
       "תצוגת כרטיסים",
-      "אל תזכיר לי יותר",
       "הזכר לי מחר",
       "הזכר לי בעוד 3 ימים",
       "סגור הכל",

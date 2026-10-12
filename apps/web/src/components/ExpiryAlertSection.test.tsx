@@ -10,7 +10,7 @@ vi.mock("react-i18next", () => ({
 describe("ExpiryAlertSection", () => {
   beforeEach(() => useStore.setState({ alertExpanded: true }));
 
-  it("uses compact safe actions and confirms dismissals", () => {
+  it("summarises the alerts without repeating the items listed below", () => {
     const onDismiss = vi.fn();
     render(
       <ExpiryAlertSection
@@ -29,14 +29,33 @@ describe("ExpiryAlertSection", () => {
       />,
     );
 
-    expect(screen.getByText("Long English Item Name")).toHaveAttribute("dir", "auto");
-    expect(screen.getByRole("button", { name: "notifications.dismiss" })).toHaveClass("h-11");
+    expect(screen.getByText("notifications.alertSummary")).toBeInTheDocument();
+    expect(screen.queryByText("Long English Item Name")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "notifications.dismiss" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "notifications.remindTomorrow" })).toHaveClass("min-h-11");
 
-    fireEvent.click(screen.getByRole("button", { name: "notifications.dismiss" }));
+    fireEvent.click(screen.getByRole("button", { name: "notifications.dismissAll" }));
     expect(onDismiss).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "actions.confirm" }));
     expect(onDismiss).toHaveBeenCalledWith(1, expect.any(String));
+  });
+
+  it("stays a single line until it is opened, even for expired items", () => {
+    useStore.setState({ alertExpanded: null });
+    render(
+      <ExpiryAlertSection
+        reagents={[
+          { id: 1, name: "A", category: "reagents", expiry_date: "2020-01-01", is_archived: false },
+        ]}
+        onSnoozeAll={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("notifications.alertSummary")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "notifications.remindTomorrow" }),
+    ).not.toBeInTheDocument();
   });
 
   it("snoozes every alert through a single call", () => {
