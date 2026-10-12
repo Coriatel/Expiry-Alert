@@ -118,6 +118,11 @@ app.use("/api/duplication-log", duplicationLogRouter);
 app.use("/api/import", importRouter);
 app.use("/api/transfer-requests", transferRequestsRouter);
 
+// Keep unknown API paths from falling through to the SPA fallback below.
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(__dirname, "../../web/dist");
 if (fs.existsSync(webDist)) {
