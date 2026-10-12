@@ -27,6 +27,12 @@ apps/mobile/ios/
 .env
 .env.local
 
+# Local credentials and signing material - never commit
+CREDENTIALS.txt
+apps/mobile/credentials.json
+*.jks
+*.keystore
+
 # IDE
 .vscode/
 .idea/
