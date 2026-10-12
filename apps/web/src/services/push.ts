@@ -169,6 +169,41 @@ export async function subscribeToPush() {
   return subscription;
 }
 
+export type EnsurePushResult = "subscribed" | "needs-permission" | "unsupported";
+
+// Runs on app load and never prompts. The server drops a subscription as soon
+// as the push service reports it dead and nothing tells the device, so alerts
+// used to stop silently until someone thought to re-enable them.
+export async function ensurePushSubscription(): Promise<EnsurePushResult> {
+  if (!getPushSupportState().supported) return "unsupported";
+  if (Notification.permission !== "granted") return "needs-permission";
+
+  const publicKey = await getVapidPublicKey();
+  if (!publicKey) return "unsupported";
+
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+
+  if (existing) {
+    const { registered } = await apiFetch<{ registered: boolean }>(
+      "/api/push/claim",
+      { method: "POST", body: JSON.stringify({ endpoint: existing.endpoint }) },
+    );
+    if (registered) return "subscribed";
+    await existing.unsubscribe().catch(() => undefined);
+  }
+
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+  await apiFetch<void>("/api/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify(subscription),
+  });
+  return "subscribed";
+}
+
 export async function unsubscribeFromPush() {
   const supportState = getPushSupportState();
   if (!supportState.supported) {

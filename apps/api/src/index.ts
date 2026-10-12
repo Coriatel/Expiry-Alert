@@ -27,6 +27,7 @@ import { duplicationLogRouter } from "./routes/duplicationLog.js";
 import { importRouter } from "./routes/import.js";
 import { transferRequestsRouter } from "./routes/transferRequests.js";
 import { initCron } from "./services/cron.js";
+import { hasAnySubscription } from "./services/push.js";
 
 warnMissingConfig();
 configurePassport();
@@ -85,6 +86,20 @@ app.use(passport.session());
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// For the external uptime monitor: an alert app with no device able to receive
+// alerts is down, even though every page still loads.
+app.get("/api/health/alerts", async (_req, res) => {
+  try {
+    const deliverable = await hasAnySubscription();
+    res.status(deliverable ? 200 : 503).json({
+      status: deliverable ? "ok" : "no_push_subscriptions",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(503).json({ status: "unknown" });
+  }
 });
 
 app.use("/api/auth", authRouter);

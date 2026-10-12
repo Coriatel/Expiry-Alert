@@ -60,30 +60,32 @@ self.addEventListener("notificationclick", (event) => {
   const notifData = notification.data || {};
   const baseUrl = self.location.origin;
 
-  if (action === "snooze" && notifData.reagentId) {
-    // Snooze for 1 day via API
-    event.waitUntil(
-      fetch(`${baseUrl}/api/notifications/${notifData.reagentId}/snooze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ days: 1 }),
-      }).catch((err) => console.error("Snooze failed:", err)),
-    );
+  // Alerts are grouped per team, so the payload carries reagentIds (plural).
+  const reagentIds: number[] =
+    notifData.reagentIds ?? (notifData.reagentId ? [notifData.reagentId] : []);
+  const postForEach = (path: string, body: unknown) =>
+    Promise.all(
+      reagentIds.map((id) =>
+        fetch(`${baseUrl}/api/notifications/${id}/${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(body),
+        }),
+      ),
+    ).catch((err) => console.error(`${path} failed:`, err));
+
+  if (action === "snooze" && reagentIds.length > 0) {
+    event.waitUntil(postForEach("snooze", { days: 1 }));
     return;
   }
 
-  if (action === "dismiss" && notifData.reagentId) {
-    // Dismiss via API with alertType
-    const body: any = {};
-    if (notifData.alertType) body.alertType = notifData.alertType;
+  if (action === "dismiss" && reagentIds.length > 0) {
     event.waitUntil(
-      fetch(`${baseUrl}/api/notifications/${notifData.reagentId}/dismiss`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      }).catch((err) => console.error("Dismiss failed:", err)),
+      postForEach(
+        "dismiss",
+        notifData.alertType ? { alertType: notifData.alertType } : {},
+      ),
     );
     return;
   }
