@@ -45,8 +45,8 @@ self.addEventListener("push", (event) => {
     renotify: !!data.tag,
     data: data.data,
     actions: [
-      { action: "snooze", title: "Remind Later" },
-      { action: "dismiss", title: "Dismiss" },
+      { action: "snooze", title: "הזכר לי מחר" },
+      { action: "dismiss", title: "אל תזכיר לי יותר" },
     ],
   };
 
