@@ -26,7 +26,8 @@
     "react-i18next": "^14.0.0",
     "vite-plugin-pwa": "^1.2.0",
     "workbox-window": "^7.4.0",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "zxing-wasm": "^2.2.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Save, X, PlusCircle } from 'lucide-react';
+import { Plus, Save, X, PlusCircle, ScanLine } from 'lucide-react';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -14,6 +14,8 @@ import {
   type ReagentCatalogItem,
 } from '@/lib/tauri';
 import { CreateCatalogItemDialog } from './CreateCatalogItemDialog';
+import { BarcodeScanDialog } from './BarcodeScanDialog';
+import type { Gs1Label } from '@/lib/gs1';
 
 interface BulkAddFormProps {
   onSave: (reagents: ReagentFormData[]) => void;
@@ -45,6 +47,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
   ]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [createDialogRowIndex, setCreateDialogRowIndex] = useState<number | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   useEffect(() => {
     getSuppliers()
@@ -140,6 +143,21 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
     setRows(updated);
   };
 
+  const handleScanned = (label: Gs1Label) => {
+    setScanOpen(false);
+    setRows((prev) => {
+      const next = [...prev];
+      let index = next.findIndex((r) => !r.expiryDate && !r.lotNumber);
+      if (index === -1) index = next.push(emptyRow()) - 1;
+      next[index] = {
+        ...next[index],
+        expiryDate: label.expiryDate ?? '',
+        lotNumber: label.lot ?? '',
+      };
+      return next;
+    });
+  };
+
   const handleSave = () => {
     const validReagents: ReagentFormData[] = rows
       .filter((r) => r.name && r.expiryDate)
@@ -153,12 +171,16 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
 
   return (
     <div className="space-y-4 p-6 bg-muted/30 border rounded-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2 whitespace-nowrap">
           <Plus className="h-5 w-5" />
           {t('dashboard.addMultiple')}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
+            <ScanLine className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            {t('scan.button')}
+          </Button>
           <Button variant="outline" size="sm" onClick={onCancel}>
             <X className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
             {t('actions.cancel')}
@@ -281,6 +303,12 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
           </div>
         ))}
       </div>
+
+      <BarcodeScanDialog
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onScanned={handleScanned}
+      />
 
       <CreateCatalogItemDialog
         open={createDialogRowIndex !== null}
