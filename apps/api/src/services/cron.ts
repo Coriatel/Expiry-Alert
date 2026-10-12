@@ -4,6 +4,7 @@ import { listRecords } from './directus.js';
 import { ReagentRecord } from './reagents.js';
 import { MembershipRecord, getTeamById } from './teams.js';
 import { sendNotificationToUser } from './push.js';
+import { notifySystemAdmin } from './adminNotifications.js';
 import {
   AlertType,
   findExistingLog,
@@ -48,6 +49,15 @@ export interface PendingAlert {
   reason: AlertReason;
   expiryDay: CalendarDay;
 }
+
+export interface TeamDeliveryResult {
+  teamId: number;
+  teamName: string | null;
+  usersWithPendingAlerts: number;
+  usersReached: number;
+}
+
+type SendOutcome = 'nothing_pending' | 'sent' | 'unreached';
 
 interface TeamAlertBuckets {
   sameDay: PendingAlert[];
@@ -302,6 +312,31 @@ function getOrCreateTeamBuckets(
   return created;
 }
 
+export function findUnreachedTeams(results: TeamDeliveryResult[]): TeamDeliveryResult[] {
+  return results.filter(
+    (result) => result.usersWithPendingAlerts > 0 && result.usersReached === 0,
+  );
+}
+
+export function buildUnreachedAlertReport(teams: TeamDeliveryResult[]) {
+  const lines = teams.map(
+    (team) =>
+      `- ${team.teamName ?? `צוות ${team.teamId}`}: ${team.usersWithPendingAlerts} חברי צוות היו אמורים לקבל התראה, אף אחד לא קיבל`,
+  );
+
+  return {
+    subject: 'Expiry Alert: התראות פג תוקף לא הגיעו לאף אחד היום',
+    text: [
+      'הבדיקה היומית מצאה פריטים שתוקפם פג או עומד לפוג, אבל ההתראה לא נמסרה לאף מכשיר:',
+      '',
+      ...lines,
+      '',
+      'הסיבה הרגילה: לאף אחד מחברי הצוות אין מנוי התראות פעיל.',
+      'מה לעשות: לפתוח את האפליקציה במכשיר וללחוץ "הפעל התראות".',
+    ].join('\n'),
+  };
+}
+
 function getEligibleUserIds(memberships: MembershipRecord[]): number[] {
   return [...new Set(
     memberships
@@ -337,7 +372,8 @@ export async function checkAndNotify(now: Date = new Date()) {
     }
   }
 
-  if (teamAlerts.size === 0) return;
+  const deliveryResults: TeamDeliveryResult[] = [];
+  if (teamAlerts.size === 0) return deliveryResults;
 
   for (const [teamId, buckets] of teamAlerts.entries()) {
     if (buckets.sameDay.length === 0 && buckets.fiveDaySummary.length === 0) continue;
@@ -353,17 +389,42 @@ export async function checkAndNotify(now: Date = new Date()) {
     const userIds = getEligibleUserIds(memberships);
     if (userIds.length === 0) continue;
 
+    const result: TeamDeliveryResult = {
+      teamId,
+      teamName: team?.name ?? null,
+      usersWithPendingAlerts: 0,
+      usersReached: 0,
+    };
+
     for (const userId of userIds) {
-      await sendGroupedAlert(userId, teamId, team?.name ?? null, buckets.sameDay, '0day');
-      await sendGroupedAlert(
-        userId,
-        teamId,
-        team?.name ?? null,
-        buckets.fiveDaySummary,
-        '5day_summary',
-      );
+      const outcomes = [
+        await sendGroupedAlert(userId, teamId, result.teamName, buckets.sameDay, '0day'),
+        await sendGroupedAlert(
+          userId,
+          teamId,
+          result.teamName,
+          buckets.fiveDaySummary,
+          '5day_summary',
+        ),
+      ];
+      if (outcomes.some((outcome) => outcome !== 'nothing_pending')) {
+        result.usersWithPendingAlerts += 1;
+      }
+      if (outcomes.includes('sent')) result.usersReached += 1;
     }
+
+    deliveryResults.push(result);
   }
+
+  // A run that had something to say and reached nobody used to end silently.
+  const unreached = findUnreachedTeams(deliveryResults);
+  if (unreached.length > 0) {
+    const report = buildUnreachedAlertReport(unreached);
+    console.warn(`Expiry alerts reached nobody: ${JSON.stringify(unreached)}`);
+    await notifySystemAdmin(report.subject, report.text);
+  }
+
+  return deliveryResults;
 }
 
 async function sendGroupedAlert(
@@ -372,8 +433,8 @@ async function sendGroupedAlert(
   teamName: string | null,
   alerts: PendingAlert[],
   alertType: GroupedAlertType,
-) {
-  if (alerts.length === 0) return;
+): Promise<SendOutcome> {
+  if (alerts.length === 0) return 'nothing_pending';
 
   const eligible: PendingAlert[] = [];
 
@@ -391,7 +452,7 @@ async function sendGroupedAlert(
     eligible.push(alert);
   }
 
-  if (eligible.length === 0) return;
+  if (eligible.length === 0) return 'nothing_pending';
 
   const payload = buildGroupedNotificationPayload(teamId, teamName, alertType, eligible);
 
@@ -401,8 +462,10 @@ async function sendGroupedAlert(
       for (const alert of eligible) {
         await logNotificationSent(alert.reagent.id, userId, teamId, alert.alertType);
       }
+      return 'sent';
     }
   } catch (error) {
     console.error(`Failed to send ${alertType} alert to user ${userId}:`, error);
   }
+  return 'unreached';
 }

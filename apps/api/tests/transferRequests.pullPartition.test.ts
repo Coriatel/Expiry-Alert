@@ -106,3 +106,23 @@ test("eligibleForPullTransfer: drops archived items, keeps active ones", () => {
     [1, 3],
   );
 });
+
+test("partition: a quantity override replaces the source quantity for that item only", () => {
+  const src = [
+    { ...r(1, "AB1"), quantity: "8" },
+    { ...r(2, "CD2"), quantity: "8" },
+  ];
+  const out = partitionPullRequest(src, [], [1, 2], { 1: 3 });
+  assert.deepEqual(
+    out.toImport.map((x) => [x.id, x.quantity]),
+    [
+      [1, "3"],
+      [2, "8"],
+    ],
+  );
+});
+
+test("partition: an override of 0 is kept, not treated as missing", () => {
+  const out = partitionPullRequest([{ ...r(1, "AB1"), quantity: "8" }], [], [1], { 1: 0 });
+  assert.equal(out.toImport[0].quantity, "0");
+});

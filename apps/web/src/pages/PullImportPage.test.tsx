@@ -138,4 +138,33 @@ describe("PullImportPage", () => {
       screen.getAllByRole("link", { name: /חזרה ללוח הבקרה/ }).length,
     ).toBeGreaterThanOrEqual(1);
   });
+
+  it("imports with the quantity typed for this hospital, not the source one", async () => {
+    getSourceReagents.mockResolvedValueOnce([
+      makeReagent({ id: 1, name: "Anti-Fyb", lot_number: "AAA1", quantity: 8 }),
+      makeReagent({ id: 2, name: "Anti-Lua", lot_number: "BBB2", quantity: 8 }),
+    ]);
+    getAllReagents.mockResolvedValue([]);
+    pullReagents.mockResolvedValueOnce({
+      imported: [
+        { old_id: 1, new_id: 101 },
+        { old_id: 2, new_id: 102 },
+      ],
+      skipped: [],
+    });
+
+    render(<PullImportPage requestId={42} />);
+    await waitFor(() => expect(screen.getByText("Anti-Fyb")).toBeInTheDocument());
+
+    const quantity = screen.getByLabelText("כמות: Anti-Fyb");
+    expect(quantity).toHaveValue(8);
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, "3");
+
+    await userEvent.click(screen.getByLabelText("select-1"));
+    await userEvent.click(screen.getByLabelText("select-2"));
+    await userEvent.click(screen.getByRole("button", { name: /ייבא/ }));
+
+    await waitFor(() => expect(pullReagents).toHaveBeenCalledWith(42, [1, 2], { 1: 3 }));
+  });
 });

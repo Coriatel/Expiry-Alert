@@ -378,6 +378,41 @@ export function Dashboard({ teamName }: DashboardProps) {
     setDestroyingReagent(reagent);
   };
 
+  const destroyOne = (reagent: Reagent, quantityDestroyed: number) =>
+    destroyReagent({
+      reagent_id: reagent.id,
+      reagent_name: reagent.name,
+      supplier_name: reagent.supplier_name ?? undefined,
+      lot_number: reagent.lot_number ?? undefined,
+      expiry_date: reagent.expiry_date,
+      quantity_original: reagent.quantity ?? undefined,
+      quantity_destroyed: quantityDestroyed,
+    });
+
+  const handleDestroyAllQueued = async () => {
+    if (!destroyingReagent) return;
+    const ids = [destroyingReagent.id, ...bulkDestroyQueueRef.current];
+    bulkDestroyQueueRef.current = [];
+    let failed = 0;
+    for (const id of ids) {
+      const reagent = reagents.find((r) => r.id === id);
+      if (!reagent) continue;
+      try {
+        await destroyOne(reagent, reagent.quantity ?? 0);
+        bulkDestroyDoneRef.current += 1;
+      } catch (error) {
+        console.error("Failed to destroy reagent:", error);
+        failed += 1;
+      }
+    }
+    if (failed > 0) showToast(t("errors.archiveFailed"), "error");
+    await finishBulkDestroy(false);
+  };
+
+  const replacedIds = filteredReagents
+    .filter((r) => r.replaced_by != null)
+    .map((r) => r.id);
+
   const handleDestroyConfirm = async (
     reagentId: number,
     quantityDestroyed: number,
@@ -385,15 +420,7 @@ export function Dashboard({ teamName }: DashboardProps) {
     const reagent = reagents.find((r) => r.id === reagentId);
     if (!reagent) return;
     try {
-      await destroyReagent({
-        reagent_id: reagentId,
-        reagent_name: reagent.name,
-        supplier_name: reagent.supplier_name ?? undefined,
-        lot_number: reagent.lot_number ?? undefined,
-        expiry_date: reagent.expiry_date,
-        quantity_original: reagent.quantity ?? undefined,
-        quantity_destroyed: quantityDestroyed,
-      });
+      await destroyOne(reagent, quantityDestroyed);
       const isBulk =
         bulkDestroyQueueRef.current.length > 0 ||
         bulkDestroyDoneRef.current > 0;
@@ -708,6 +735,17 @@ export function Dashboard({ teamName }: DashboardProps) {
         onViewModeChange={setViewMode}
       />
 
+      {replacedIds.length > 0 && (
+        <Button
+          variant="outline"
+          className="min-h-11 w-full justify-start gap-2 border-yellow-300 bg-yellow-50 text-start text-yellow-900 hover:bg-yellow-100 print:hidden sm:w-auto"
+          onClick={() => setSelectedReagentIds(replacedIds)}
+        >
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-yellow-500" aria-hidden />
+          <span className="min-w-0">{t("bulk.selectReplaced", { count: replacedIds.length })}</span>
+        </Button>
+      )}
+
       {/* Reagents View */}
       {effectiveViewMode === "cards" ? (
         <>
@@ -789,6 +827,8 @@ export function Dashboard({ teamName }: DashboardProps) {
       <DestructionDialog
         reagent={destroyingReagent}
         open={destroyingReagent !== null}
+        queueCount={bulkDestroyQueueRef.current.length + 1}
+        onDestroyAll={handleDestroyAllQueued}
         onClose={() => {
           const inBulk =
             bulkDestroyQueueRef.current.length > 0 ||

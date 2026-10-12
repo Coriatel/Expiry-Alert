@@ -536,6 +536,8 @@
     "deleteAndClearFlag": "מחק והסר את הסימון \"הגיע חדש\""
   },
   "destruction": {
+    "destroyAll": "השמד את כל {{count}} הפריטים בכמות מלאה",
+    "destroyAllConfirm": "לחץ שוב לאישור: {{count}} פריטים יושמדו",
     "title": "השמדה",
     "question": "המוצר פג תוקף. האם נשארו במלאי יחידות שיש להשמיד?",
     "unitsDestroyed": "כמות שהושמדה",
@@ -621,6 +623,7 @@
     }
   },
   "bulk": {
+    "selectReplaced": "בחר את {{count}} הפריטים שכבר הגיע להם חדש",
     "panelLabel": "פעולות על הפריטים שנבחרו",
     "copyToPrefix": "העתק ל־",
     "copyToTeam": "העתק לצוות…",

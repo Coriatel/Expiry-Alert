@@ -4,14 +4,21 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   subscribeToPush,
-  checkPushSubscription,
+  ensurePushSubscription,
   getPushSupportState,
   getVapidPublicKey,
   PUSH_ERROR_CODES,
 } from "@/services/push";
 import { useToast } from "@/components/ui/Toast";
 
-const DISMISSED_KEY = "push-prompt-dismissed";
+// "Not now" only snoozes: an alert app whose alerts are off must keep saying so.
+const SNOOZED_UNTIL_KEY = "push-prompt-snoozed-until";
+const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isSnoozed() {
+  const until = Number(localStorage.getItem(SNOOZED_UNTIL_KEY));
+  return Number.isFinite(until) && until > Date.now();
+}
 
 export function PushPromptBanner() {
   const { t } = useTranslation();
@@ -23,12 +30,9 @@ export function PushPromptBanner() {
 
   useEffect(() => {
     (async () => {
-      // Don't show if dismissed
-      if (localStorage.getItem(DISMISSED_KEY)) return;
-
       const supportState = getPushSupportState();
       if (!supportState.supported) {
-        if (supportState.reason === "ios-home-screen") {
+        if (supportState.reason === "ios-home-screen" && !isSnoozed()) {
           setIsIosNotStandalone(true);
           setVisible(true);
         }
@@ -38,18 +42,19 @@ export function PushPromptBanner() {
       // Don't show if permission denied
       if (Notification.permission === "denied") return;
 
-      // Don't show if already subscribed
+      // Already allowed on this device: repair the subscription silently.
       try {
-        const sub = await checkPushSubscription();
-        if (sub) return;
-      } catch {
-        return;
+        const result = await ensurePushSubscription();
+        if (result !== "needs-permission") return;
+      } catch (err) {
+        console.error("Push subscription repair failed", err);
       }
 
       // Don't offer a button that cannot work: no key configured anywhere.
       const publicKey = await getVapidPublicKey();
       if (!publicKey) return;
 
+      if (isSnoozed()) return;
       setVisible(true);
     })();
   }, []);
@@ -61,7 +66,6 @@ export function PushPromptBanner() {
     setError(null);
     try {
       await subscribeToPush();
-      localStorage.setItem(DISMISSED_KEY, "1");
       setVisible(false);
       showToast(t("settings.notificationsEnabled"), "success");
     } catch (err) {
@@ -87,7 +91,7 @@ export function PushPromptBanner() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, "1");
+    localStorage.setItem(SNOOZED_UNTIL_KEY, String(Date.now() + SNOOZE_MS));
     setVisible(false);
   };
 

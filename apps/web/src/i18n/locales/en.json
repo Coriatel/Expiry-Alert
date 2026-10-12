@@ -536,6 +536,8 @@
     "deleteAndClearFlag": "Delete and remove the \"new in stock\" mark"
   },
   "destruction": {
+    "destroyAll": "Destroy all {{count}} items at full quantity",
+    "destroyAllConfirm": "Click again to confirm: {{count}} items will be destroyed",
     "title": "Destruction",
     "question": "Product expired. Are there remaining units in stock to destroy?",
     "unitsDestroyed": "Units Destroyed",
@@ -621,6 +623,7 @@
     }
   },
   "bulk": {
+    "selectReplaced": "Select the {{count}} items that already have a new batch",
     "panelLabel": "Actions for the selected items",
     "copyToPrefix": "Copy to ",
     "copyToTeam": "Copy to team…",
