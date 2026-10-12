@@ -307,4 +307,30 @@ test("mobile empty, loading, and error states render evidence", async ({ browser
   await assertNoPageOverflow(errorPage);
   await attachRenderedEvidence(errorPage, testInfo, "dashboard-error-390");
   await errorContext.close();
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 390, height: 932 },
+    { width: 430, height: 932 },
+    { width: 1440, height: 900 },
+  ]) {
+    const emptyContext = await browser.newContext({
+      viewport,
+      locale: "he-IL",
+      isMobile: viewport.width < 768,
+      reducedMotion: "reduce",
+    });
+    await installReadOnlyFixtures(emptyContext);
+    await emptyContext.route("**/api/reagents**", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    });
+    const emptyPage = await emptyContext.newPage();
+    await emptyPage.goto("/");
+    await expect(
+      emptyPage.getByText("לא נמצאו פריטים").filter({ visible: true }),
+    ).toHaveCount(1);
+    await assertNoPageOverflow(emptyPage);
+    await attachRenderedEvidence(emptyPage, testInfo, `dashboard-empty-${viewport.width}`);
+    await emptyContext.close();
+  }
 });
