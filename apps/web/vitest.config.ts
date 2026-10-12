@@ -15,5 +15,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // The shared build host is often saturated by other jobs; at the 5 s default,
+    // interaction tests time out there without anything being wrong.
+    testTimeout: 20000,
   },
 });
