@@ -319,7 +319,7 @@ export function ReagentTable({
 
   if (reagents.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className={cn("text-center py-12 text-muted-foreground", className)}>
         {t("dashboard.noReagents")}
       </div>
     );
