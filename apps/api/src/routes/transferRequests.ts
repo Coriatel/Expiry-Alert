@@ -234,6 +234,8 @@ export function partitionPullRequest(
   sourceReagents: ReagentRecord[],
   callerReagents: ReagentRecord[],
   requestedIds: number[],
+  // The receiving hospital rarely gets the same count as the source did.
+  quantityOverrides: Record<string, number> = {},
 ): PullPartition {
   const dupLots = new Set<string>();
   for (const r of callerReagents) {
@@ -270,7 +272,11 @@ export function partitionPullRequest(
       supplier_name: src.supplier_name ?? null,
       manufacturer: src.manufacturer ?? null,
       description: src.description ?? null,
-      quantity: src.quantity ?? null,
+      // Stored as free text, like every other quantity on a reagent.
+      quantity:
+        quantityOverrides[src.id] != null
+          ? String(quantityOverrides[src.id])
+          : (src.quantity ?? null),
       catalog_reagent_id: src.catalog_reagent_id ?? null,
       received_date: src.received_date ?? null,
     });
@@ -281,6 +287,9 @@ export function partitionPullRequest(
 
 const pullSchema = z.object({
   reagent_ids: z.array(z.coerce.number().int()).min(1).max(500),
+  quantities: z
+    .record(z.string().regex(/^\d+$/), z.number().int().min(0).max(1_000_000))
+    .optional(),
 });
 
 transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
@@ -310,6 +319,7 @@ transferRequestsRouter.post("/:id/pull", asyncHandler(async (req, res) => {
     sourceReagents,
     callerReagents,
     parsed.data.reagent_ids,
+    parsed.data.quantities,
   );
 
   const imported: Array<{ old_id: number; new_id: number }> = [];

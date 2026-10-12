@@ -27,6 +27,8 @@ function normalizeLot(value: string | null | undefined): string | null {
   return s.length === 0 ? null : s;
 }
 
+const MAX_QUANTITY = 1_000_000;
+
 export function PullImportPage({ requestId }: PullImportPageProps) {
   const { t } = useTranslation();
   const [reagents, setReagents] = useState<Reagent[]>([]);
@@ -35,6 +37,7 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [notActionable, setNotActionable] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [quantityEdits, setQuantityEdits] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PullResult | null>(null);
 
@@ -116,7 +119,19 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
     setError(null);
     try {
       const ids = Array.from(selected);
-      const res = await pullReagents(requestId, ids);
+      const quantities: Record<number, number> = {};
+      for (const id of ids) {
+        const typed = quantityEdits[id]?.trim();
+        if (!typed) continue;
+        const value = Number(typed);
+        if (!Number.isInteger(value) || value < 0 || value > MAX_QUANTITY) {
+          setError(t("validation.invalidQuantity"));
+          setSubmitting(false);
+          return;
+        }
+        quantities[id] = value;
+      }
+      const res = await pullReagents(requestId, ids, quantities);
       setResult(res);
       setSelected(new Set());
       if (res.imported.length > 0) {
@@ -222,15 +237,15 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
                   <th className="px-3 py-2 text-start font-medium">
                     {t("pullImport.columns.name", { defaultValue: "שם" })}
                   </th>
-                  <th className="px-3 py-2 text-start font-medium">
+                  <th className="hidden px-3 py-2 text-start font-medium sm:table-cell">
                     {t("pullImport.columns.supplier", {
                       defaultValue: "ספק",
                     })}
                   </th>
-                  <th className="px-3 py-2 text-start font-medium">
+                  <th className="hidden px-3 py-2 text-start font-medium sm:table-cell">
                     {t("pullImport.columns.lot", { defaultValue: "מספר אצווה" })}
                   </th>
-                  <th className="px-3 py-2 text-start font-medium">
+                  <th className="hidden px-3 py-2 text-start font-medium sm:table-cell">
                     {t("pullImport.columns.expiry", {
                       defaultValue: "תוקף",
                     })}
@@ -262,6 +277,10 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
                       </td>
                       <td className="px-3 py-2">
                         <span>{r.name}</span>
+                        {/* Phones show only name + quantity; the rest folds in here. */}
+                        <div className="text-xs text-muted-foreground sm:hidden">
+                          <bdi>{r.lot_number ?? "—"}</bdi> · {formatDate(r.expiry_date)}
+                        </div>
                         {isDup && (
                           <span
                             className="ms-2 inline-block rounded-full bg-yellow-200 text-yellow-900 px-2 py-0.5 text-xs"
@@ -276,13 +295,29 @@ export function PullImportPage({ requestId }: PullImportPageProps) {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2">{r.supplier_name ?? "—"}</td>
-                      <td className="px-3 py-2">{r.lot_number ?? "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      <td className="hidden px-3 py-2 sm:table-cell">{r.supplier_name ?? "—"}</td>
+                      <td className="hidden px-3 py-2 sm:table-cell">{r.lot_number ?? "—"}</td>
+                      <td className="hidden px-3 py-2 whitespace-nowrap sm:table-cell">
                         {formatDate(r.expiry_date)}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {r.quantity ?? "—"}
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={MAX_QUANTITY}
+                          value={quantityEdits[r.id] ?? r.quantity ?? ""}
+                          onChange={(event) =>
+                            setQuantityEdits((cur) => ({
+                              ...cur,
+                              [r.id]: event.target.value,
+                            }))
+                          }
+                          aria-label={`${t("pullImport.columns.quantity", {
+                            defaultValue: "כמות",
+                          })}: ${r.name}`}
+                          className="h-11 w-20 rounded-md border border-input bg-background px-2 text-center"
+                        />
                       </td>
                     </tr>
                   );
