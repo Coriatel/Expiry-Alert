@@ -138,8 +138,10 @@ async function expectNoOverflow(page: Page) {
 }
 
 async function expectTouchTarget(locator: Locator) {
-  // elementFromPoint works in viewport coordinates, so the control must be on screen first
-  await locator.scrollIntoViewIfNeeded();
+  // elementFromPoint works in viewport coordinates, so the control must be on screen first.
+  // Centre it: scrollIntoViewIfNeeded parks it on the viewport edge, where a fractional
+  // offset pushes the last hit-test sample off screen and reads as 43px.
+  await locator.evaluate((el) => el.scrollIntoView({ block: "center" }));
   const box = await locator.boundingBox();
   expect(box, "control must be laid out").not.toBeNull();
   expect(Math.round(box!.height)).toBeGreaterThanOrEqual(TOUCH_MIN);

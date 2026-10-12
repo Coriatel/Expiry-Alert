@@ -9,9 +9,11 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ReagentTable } from "@/components/ReagentTable";
 import { ReagentCardList } from "@/components/ReagentCardList";
@@ -44,7 +46,7 @@ import {
   getTeams,
 } from "@/lib/tauri";
 import type { TeamSummary } from "@/lib/tauri";
-import { getExpiryStatus, getDaysUntilExpiry } from "@/lib/utils";
+import { getExpiryStatus, getDaysUntilExpiry, searchReagents } from "@/lib/utils";
 import type { Reagent, ReagentFormData } from "@/types";
 import type { SortingState } from "@tanstack/react-table";
 
@@ -82,6 +84,8 @@ export function Dashboard({ teamName }: DashboardProps) {
   const bulkDestroyQueueRef = useRef<number[]>([]);
   const bulkDestroyDoneRef = useRef<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+  // Local on purpose: the search text must not survive a reload like the persisted filters.
+  const [searchQuery, setSearchQuery] = useState("");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
     title: "",
@@ -214,7 +218,7 @@ export function Dashboard({ teamName }: DashboardProps) {
 
   // Filter & sort reagents
   const filteredReagents = useMemo(() => {
-    let result = reagents;
+    let result = searchReagents(reagents, searchQuery);
 
     // Status filter
     if (statusFilter !== "all") {
@@ -249,7 +253,7 @@ export function Dashboard({ teamName }: DashboardProps) {
     });
 
     return sorted;
-  }, [reagents, statusFilter, categoryFilter, sortField, sortDirection]);
+  }, [reagents, searchQuery, statusFilter, categoryFilter, sortField, sortDirection]);
 
   // Convert sort state for TanStack table
   const tableSorting: SortingState = [
@@ -501,6 +505,12 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
+  // Bulk actions run on selectedReagentIds, so a selection must never hide behind a search.
+  const updateSearch = (value: string) => {
+    setSearchQuery(value);
+    clearSelection();
+  };
+
   const handleSelectAll = () => {
     if (selectedReagentIds.length === filteredReagents.length) {
       clearSelection();
@@ -720,6 +730,28 @@ export function Dashboard({ teamName }: DashboardProps) {
           />
         </div>
       )}
+
+      <div className="relative print:hidden">
+        <Input
+          type="search"
+          dir="auto"
+          value={searchQuery}
+          onChange={(e) => updateSearch(e.target.value)}
+          placeholder={t("filters.searchPlaceholder")}
+          aria-label={t("filters.searchPlaceholder")}
+          className="min-h-11 pe-11 [&::-webkit-search-cancel-button]:hidden"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => updateSearch("")}
+            aria-label={t("filters.clearSearch")}
+            className="absolute end-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+      </div>
 
       {/* Filter/Sort Toolbar */}
       <FilterSortToolbar

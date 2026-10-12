@@ -401,7 +401,9 @@
     "ok": "OK",
     "expiryDate": "Expiry Date",
     "name": "Name",
-    "daysLeft": "Days Left"
+    "daysLeft": "Days Left",
+    "searchPlaceholder": "Search by name or lot number",
+    "clearSearch": "Clear search"
   },
   "install": {
     "title": "Install ExpiryAlert",

@@ -160,6 +160,21 @@ for (const width of [360, 390, 430]) {
     ).toBeVisible();
     await assertNoPageOverflow(page);
     await attachRenderedEvidence(page, testInfo, `dashboard-${width}`);
+    const search = page.getByRole("searchbox", { name: "חיפוש לפי שם או מספר אצווה" });
+    await assertMinimumTouchTarget(search);
+    await assertNotClipped(search);
+    await search.fill("qc-he");
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await expect(page.getByRole("article").filter({ hasText: "QC-HE-002" })).toBeVisible();
+    await expect(page.getByRole("article").filter({ hasText: itemName })).toHaveCount(0);
+    const clearSearch = page.getByRole("button", { name: "ניקוי החיפוש" });
+    await assertMinimumTouchTarget(clearSearch);
+    await search.fill("no-such-lot");
+    await expect(page.getByRole("article")).toHaveCount(0);
+    await clearSearch.click();
+    await expect(search).toHaveValue("");
+    await expect(page.getByRole("article")).toHaveCount(2);
+    await expect(clearSearch).toHaveCount(0);
     // The alert bar is one line until opened and must not repeat the items below it.
     const alertBar = page.getByRole("button", { name: /פגי תוקף בקרוב/ });
     await expect(page.getByRole("button", { name: "הזכר לי מחר" })).toHaveCount(0);
