@@ -24,12 +24,6 @@ function getAlertType(days: number): string {
   return "7day";
 }
 
-function getUrgencyIcon(days: number) {
-  if (days < 0) return "bg-red-500";
-  if (days <= 2) return "bg-orange-500";
-  return "bg-yellow-500";
-}
-
 function getBorderColor(reagents: Reagent[]): string {
   const hasExpired = reagents.some(
     (r) => getDaysUntilExpiry(r.expiry_date) < 0,
@@ -62,25 +56,13 @@ export function ExpiryAlertSection({
 }: ExpiryAlertSectionProps) {
   const { t } = useTranslation();
   const { alertExpanded, setAlertExpanded } = useStore();
-  const [pendingDismiss, setPendingDismiss] = useState<
-    | { reagentId: number; alertType: string; itemName: string }
-    | "all"
-    | null
-  >(null);
+  const [confirmDismissAll, setConfirmDismissAll] = useState(false);
 
   if (reagents.length === 0) return null;
 
-  // Auto-expand when any item is urgent (expired or ≤2 days away)
-  const hasUrgent = reagents.some(
-    (r) => getDaysUntilExpiry(r.expiry_date) <= 2,
-  );
-
-  const expanded = alertExpanded ?? hasUrgent;
-
-  const sorted = [...reagents].sort(
-    (a, b) =>
-      getDaysUntilExpiry(a.expiry_date) - getDaysUntilExpiry(b.expiry_date),
-  );
+  // The items themselves are in the list below. This bar only
+  // counts them and offers the reminder actions, so it stays one line until opened.
+  const expanded = alertExpanded ?? false;
 
   return (
     <div
@@ -115,61 +97,8 @@ export function ExpiryAlertSection({
       {/* Expanded content */}
       {expanded && (
         <div className="space-y-2 px-3 pb-3">
-          {/* Reagent list */}
-          <div className="space-y-1.5">
-            {sorted.map((reagent) => {
-              const days = getDaysUntilExpiry(reagent.expiry_date);
-              const alertType = getAlertType(days);
-              const indicatorClass = getUrgencyIcon(days);
-              return (
-                <div
-                  key={reagent.id}
-                  className="flex items-center justify-between gap-1 rounded-md bg-white/70 ps-2 text-sm"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${indicatorClass}`}
-                      aria-hidden="true"
-                    />
-                    <span
-                      className="min-w-0 flex-1 truncate font-medium leading-5"
-                      dir="auto"
-                      title={reagent.name}
-                    >
-                      {reagent.name}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {days < 0
-                        ? t("status.expired")
-                        : days === 0
-                          ? t("status.expiresToday")
-                          : days === 1
-                            ? t("status.expiresInOneDay")
-                            : t("status.expiresIn", { days })}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPendingDismiss({
-                        reagentId: reagent.id,
-                        alertType,
-                        itemName: reagent.name,
-                      })
-                    }
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    title={t("notifications.dismiss")}
-                    aria-label={t("notifications.dismiss")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
           {/* Guidance text */}
-          <p className="border-t pt-2 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t("notifications.guidance")}
           </p>
 
@@ -195,7 +124,7 @@ export function ExpiryAlertSection({
             </Button>
             <Button
               variant="outline"
-              onClick={() => setPendingDismiss("all")}
+              onClick={() => setConfirmDismissAll(true)}
               className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
               aria-label={t("notifications.dismissAll")}
             >
@@ -206,26 +135,16 @@ export function ExpiryAlertSection({
         </div>
       )}
       <ConfirmDialog
-        open={pendingDismiss !== null}
-        onClose={() => setPendingDismiss(null)}
+        open={confirmDismissAll}
+        onClose={() => setConfirmDismissAll(false)}
         onConfirm={() => {
-          if (pendingDismiss === "all") {
-            reagents.forEach((reagent) => {
-              const days = getDaysUntilExpiry(reagent.expiry_date);
-              onDismiss(reagent.id, getAlertType(days));
-            });
-          } else if (pendingDismiss) {
-            onDismiss(pendingDismiss.reagentId, pendingDismiss.alertType);
-          }
+          reagents.forEach((reagent) => {
+            const days = getDaysUntilExpiry(reagent.expiry_date);
+            onDismiss(reagent.id, getAlertType(days));
+          });
         }}
         title={t("notifications.dismissConfirmTitle")}
-        message={
-          pendingDismiss === "all"
-            ? t("notifications.dismissAllConfirm")
-            : t("notifications.dismissItemConfirm", {
-                item: pendingDismiss?.itemName ?? "",
-              })
-        }
+        message={t("notifications.dismissAllConfirm")}
         variant="warning"
       />
     </div>
