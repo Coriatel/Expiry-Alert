@@ -98,6 +98,7 @@ test("snooze-all raises a single toast", async ({ browser }) => {
   await installFixtures(context);
   const page = await context.newPage();
   await page.goto("/");
+  await page.getByRole("button", { name: /פגי תוקף בקרוב/ }).click();
   await page.getByRole("button", { name: "הזכר לי מחר" }).click();
   await page.waitForTimeout(1500);
   expect(await page.getByText(/התראות נדחו/).count()).toBe(1);
