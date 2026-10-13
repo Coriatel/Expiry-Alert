@@ -61,3 +61,21 @@ describe("BulkAddForm — scanning a label", () => {
     expect(dates().slice(0, 2)).toEqual(["2026-10-12", "2027-03-31"]);
   });
 });
+
+describe("BulkAddForm — number of rows", () => {
+  it("opens with one row and adds one more per press", () => {
+    render(<BulkAddForm onSave={vi.fn()} onCancel={vi.fn()} />);
+    const lotInputs = () => screen.getAllByPlaceholderText("form.lotNumber");
+
+    expect(lotInputs()).toHaveLength(1);
+
+    fireEvent.change(lotInputs()[0], { target: { value: "LOT-1" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "dashboard.addAnotherItem" }),
+    );
+
+    expect(lotInputs()).toHaveLength(2);
+    expect((lotInputs()[0] as HTMLInputElement).value).toBe("LOT-1");
+    expect((lotInputs()[1] as HTMLInputElement).value).toBe("");
+  });
+});

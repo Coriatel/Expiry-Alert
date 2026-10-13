@@ -39,12 +39,7 @@ const emptyRow = (): BulkRow => ({
 
 export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<BulkRow[]>([
-    emptyRow(),
-    emptyRow(),
-    emptyRow(),
-    emptyRow(),
-  ]);
+  const [rows, setRows] = useState<BulkRow[]>([emptyRow()]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [createDialogRowIndex, setCreateDialogRowIndex] = useState<number | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
@@ -303,6 +298,15 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
           </div>
         ))}
       </div>
+
+      <Button
+        variant="outline"
+        onClick={() => setRows((prev) => [...prev, emptyRow()])}
+        className="min-h-11 w-full sm:w-auto"
+      >
+        <Plus className="h-4 w-4 shrink-0 ltr:mr-2 rtl:ml-2" />
+        {t('dashboard.addAnotherItem')}
+      </Button>
 
       <BarcodeScanDialog
         open={scanOpen}
