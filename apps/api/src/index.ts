@@ -44,7 +44,14 @@ app.use(
   }),
 );
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(morgan("dev"));
+// The container health check and the uptime monitor call /api/health* every few
+// seconds; logging each success buries the real requests. Failures are still logged.
+app.use(
+  morgan("dev", {
+    skip: (req, res) =>
+      req.originalUrl.startsWith("/api/health") && res.statusCode < 400,
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 
 // Session store — prefer PostgreSQL if configured, fall back to MemoryStore
