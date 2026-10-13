@@ -218,6 +218,21 @@ for (const width of [360, 390, 430]) {
     await assertNamedButtons(page, ["ביטול", "שמור"]);
     await page.keyboard.press("Escape");
 
+    // The add form opens with a single row; more are added on request.
+    await page.getByRole("button", { name: "הוספת פריטים", exact: true }).click();
+    const lotInputs = page.getByPlaceholder("מספר אצווה", { exact: true });
+    await expect(lotInputs).toHaveCount(1);
+    const addAnother = page.getByRole("button", { name: "הוסף פריט נוסף" });
+    await assertMinimumTouchTarget(addAnother);
+    await assertNotClipped(addAnother);
+    await assertNoPageOverflow(page);
+    await attachRenderedEvidence(page, testInfo, `add-form-${width}`);
+    await addAnother.click();
+    await expect(lotInputs).toHaveCount(2);
+    await assertNoPageOverflow(page);
+    await page.getByRole("button", { name: "ביטול", exact: true }).click();
+    await expect(lotInputs).toHaveCount(0);
+
     await navigate(page, "היסטוריית אצוות");
     await expect(page.getByTestId("history-card")).toHaveCount(2);
     await assertNoPageOverflow(page);
