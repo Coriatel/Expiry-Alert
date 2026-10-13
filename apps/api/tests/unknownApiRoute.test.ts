@@ -71,3 +71,29 @@ test("unknown /api paths answer 404 JSON for any method; known routes are unaffe
     child.kill();
   }
 });
+
+test("successful health checks stay out of the request log; failing ones do not", async () => {
+  const port = await freePort();
+  const child = await startApi(port);
+  let log = "";
+  child.stdout!.on("data", (chunk) => {
+    log += String(chunk);
+  });
+  try {
+    const base = `http://127.0.0.1:${port}`;
+    assert.equal((await fetch(`${base}/api/health`)).status, 200);
+    // No device is subscribed in this environment, so the alert check fails.
+    assert.equal((await fetch(`${base}/api/health/alerts`)).status, 503);
+    assert.equal((await fetch(`${base}/api/no-such-route`)).status, 404);
+
+    const deadline = Date.now() + 5000;
+    while (!log.includes("/api/no-such-route") && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.match(log, /GET \/api\/no-such-route/);
+    assert.match(log, /GET \/api\/health\/alerts/);
+    assert.doesNotMatch(log, /GET \/api\/health /);
+  } finally {
+    child.kill();
+  }
+});
