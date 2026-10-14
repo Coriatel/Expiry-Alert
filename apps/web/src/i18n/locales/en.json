@@ -85,6 +85,10 @@
     "viewTable": "Table view",
     "viewCards": "Card view"
   },
+  "card": {
+    "showDetails": "Show details",
+    "hideDetails": "Hide details"
+  },
   "table": {
     "selectItem": "Select item",
     "name": "Name",
