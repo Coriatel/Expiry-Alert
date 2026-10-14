@@ -225,6 +225,14 @@ for (const width of [360, 390, 430]) {
     const addAnother = page.getByRole("button", { name: "הוסף פריט נוסף" });
     await assertMinimumTouchTarget(addAnother);
     await assertNotClipped(addAnother);
+    // An empty date field shows only our placeholder, not the browser's dd/mm/yyyy under it.
+    // (The hidden hint itself is checked in the screenshot; Chrome does not report
+    // ::-webkit-datetime-edit styles through getComputedStyle.)
+    const expiryInput = page.locator('input[type="date"]').first();
+    await expect(page.getByText("תאריך / Date", { exact: true })).toBeVisible();
+    await expiryInput.focus();
+    await expect(page.getByText("תאריך / Date", { exact: true })).toBeHidden();
+    await expiryInput.blur();
     await assertNoPageOverflow(page);
     await attachRenderedEvidence(page, testInfo, `add-form-${width}`);
     await addAnother.click();
