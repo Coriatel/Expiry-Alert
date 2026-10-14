@@ -13,6 +13,7 @@ import { Settings } from "@/pages/Settings";
 import { LegalPage } from "@/pages/LegalPage";
 import { PullImportPage } from "@/pages/PullImportPage";
 import { Button } from "@/components/ui/Button";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Sidebar } from "@/components/Sidebar";
@@ -183,11 +184,7 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <img
-          src="/logo-icon-v2.png"
-          alt="Expiry Alert"
-          className="h-20 w-20 object-contain logo-entrance"
-        />
+        <AnimatedLogo className="h-20 w-20 logo-entrance" />
         <div className="text-muted-foreground splash-text">
           {t("auth.loading")}
         </div>
