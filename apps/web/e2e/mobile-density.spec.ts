@@ -3,9 +3,9 @@ import { expect, test, type BrowserContext, type Locator, type Page } from "@pla
 // Density regression for the active-items mobile view.
 // Baseline (production build 60369f0, same fixture): typical card 190px, sparse 152px,
 // bulk actions 200px tall over 4 rows at 360px. These assertions fail if that shape returns.
-const BASELINE_TYPICAL_CARD = 190; // production build 60369f0, same fixture
-const TYPICAL_CARD_MAX = Math.floor(BASELINE_TYPICAL_CARD * 0.8); // hard ceiling: 152px
-const TYPICAL_CARD_TARGET = BASELINE_TYPICAL_CARD * 0.75; // the -25% the lane promised
+// Owner, 2026-10-14: a card shows name, expiry, duplicate, delete and a toggle; the rest
+// opens on request. (The pre-redesign card on this fixture was 190px, build 60369f0.)
+const CLOSED_CARD_MAX = 72;
 const BULK_PANEL_MAX = 170;
 const TOUCH_MIN = 44;
 
@@ -164,27 +164,28 @@ for (const width of [360, 390, 430]) {
   test(`mobile card density holds at ${width}px`, async ({ browser }) => {
     const { context, page } = await openDashboard(browser, width);
 
-    // 1. typical card is materially shorter than the pre-redesign 190px baseline
+    // 1. a closed card is one summary block, far under the pre-redesign 190px baseline
     const typicalBox = await cardFor(page, "Anti-Fyb").boundingBox();
-    expect(Math.round(typicalBox!.height)).toBeLessThanOrEqual(TYPICAL_CARD_MAX);
-    expect(
-      typicalBox!.height,
-      `typical card must stay at least 25% under the ${BASELINE_TYPICAL_CARD}px baseline`,
-    ).toBeLessThan(TYPICAL_CARD_TARGET);
+    expect(Math.round(typicalBox!.height)).toBeLessThanOrEqual(CLOSED_CARD_MAX);
+    await expect(cardFor(page, "Anti-Fyb").locator("dd")).toHaveCount(0);
 
-    // 2. missing fields collapse rather than reserving blank rows
+    // 2. opening a sparse card shows only the fields it has
     const sparseCard = cardFor(page, "PANOCELL 10");
-    const sparseBox = await sparseCard.boundingBox();
-    expect(Math.round(sparseBox!.height)).toBeLessThan(Math.round(typicalBox!.height));
-    await expect(sparseCard.locator("dd")).toHaveCount(2); // expiry + category only
+    await sparseCard.getByRole("button", { name: "הצג פרטים" }).click();
+    await expect(sparseCard.locator("dd")).toHaveCount(1); // category only
     for (const value of await sparseCard.locator("dd").allInnerTexts()) {
       expect(value.trim().length, "no blank metadata value").toBeGreaterThan(0);
     }
 
-    // 3. rich card still renders every field it has
+    // 3. an open rich card renders every field it has
     const richCard = cardFor(page, "Pacific Blue");
-    await expect(richCard.locator("dd")).toHaveCount(7);
+    await richCard.getByRole("button", { name: "הצג פרטים" }).click();
+    await expect(richCard.locator("dd")).toHaveCount(6);
     await expect(richCard.getByText("כדוריות QC לשיטת הכרטיסיות")).toBeVisible();
+    await expect(richCard.getByRole("button", { name: "הסתר פרטים" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
 
     // 4. long values never overlap inside the metadata grid
     const boxes = [];
@@ -205,10 +206,17 @@ for (const width of [360, 390, 430]) {
       }
     }
 
-    // 5. actions stay available with accessible touch targets
-    for (const label of ["ערוך", "שכפל", "השמדה", "מחק"]) {
-      await expectTouchTarget(cardFor(page, "Anti-Fyb").getByRole("button", { name: label }));
+    // 5. actions stay available with accessible touch targets, closed and open
+    const typicalCard = cardFor(page, "Anti-Fyb");
+    for (const label of ["שכפל", "מחק", "הצג פרטים"]) {
+      await expectTouchTarget(typicalCard.getByRole("button", { name: label }));
     }
+    await typicalCard.getByRole("button", { name: "הצג פרטים" }).click();
+    for (const label of ["ערוך", "השמדה"]) {
+      await expectTouchTarget(typicalCard.getByRole("button", { name: label }));
+    }
+    await typicalCard.getByRole("button", { name: "הסתר פרטים" }).click();
+    await expect(typicalCard.getByRole("button", { name: "ערוך" })).toHaveCount(0);
     await expectTouchTarget(
       cardFor(page, "Anti-Fyb").getByRole("button", { name: "בחר פריט" }),
     );

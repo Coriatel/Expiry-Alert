@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CheckSquare,
+  ChevronDown,
   Copy,
   Flame,
   Pencil,
@@ -31,16 +32,17 @@ interface ReagentCardProps {
   onToggleInTreatment?: (id: number, value: boolean) => void;
 }
 
-function getCardBg(status: string): string {
+// A thin stripe on the leading edge carries the status; the card itself stays white.
+function getStatusStripe(status: string): string {
   switch (status) {
     case "expired":
-      return "bg-red-50 border-red-200";
+      return "border-s-red-500";
     case "expiring-soon":
-      return "bg-orange-50 border-orange-200";
+      return "border-s-orange-400";
     case "expiring-week":
-      return "bg-yellow-50 border-yellow-200";
+      return "border-s-amber-300";
     default:
-      return "bg-card border-border";
+      return "border-s-emerald-300";
   }
 }
 
@@ -80,8 +82,7 @@ export function ReagentCard({
   onToggleInTreatment,
 }: ReagentCardProps) {
   const { t } = useTranslation();
-  const [descExpanded, setDescExpanded] = useState(false);
-  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const days = getDaysUntilExpiry(reagent.expiry_date);
   const status = getExpiryStatus(reagent.expiry_date);
   const isExpired = status === "expired";
@@ -94,21 +95,20 @@ export function ReagentCard({
         : days === 1
           ? t("status.expiresInOneDay")
           : t("status.expiresIn", { days });
+  const iconButton = "h-11 w-11 shrink-0 p-0";
 
   return (
     <article
       className={cn(
-        "rounded-lg border px-2.5 py-1.5 shadow-sm",
-        getCardBg(status),
+        "rounded-lg border border-s-4 bg-card shadow-sm",
+        getStatusStripe(status),
       )}
     >
-      {/* Negative margins buy back card height; z-10 keeps all 44px of the button hittable
-          above the metadata list that follows it in DOM order. */}
-      <div className="flex items-start gap-1">
+      <div className="flex items-center gap-0.5 py-0.5 pe-0.5">
         <button
           type="button"
           onClick={() => onToggleSelect(reagent.id)}
-          className="relative z-10 -ms-2 -my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t("table.selectItem")}
           aria-pressed={isSelected}
         >
@@ -118,9 +118,9 @@ export function ReagentCard({
             <Square className="h-5 w-5 text-muted-foreground" />
           )}
         </button>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+        <div className="min-w-0 flex-1 py-1">
           <h2
-            className="min-w-0 flex-1 break-words text-lg font-bold leading-6 [overflow-wrap:anywhere]"
+            className="break-words text-[15px] font-semibold leading-5 [overflow-wrap:anywhere]"
             dir="auto"
           >
             {reagent.name}
@@ -131,162 +131,155 @@ export function ReagentCard({
               </>
             )}
           </h2>
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
-              getStatusColor(status),
-            )}
-          >
-            {statusLabel}
-          </span>
-          {inTreatment && (
-            <span className="inline-flex shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-              {t("status.inTreatment")}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] leading-4">
+            <span className="tabular-nums text-muted-foreground" dir="ltr">
+              {formatDate(reagent.expiry_date)}
             </span>
-          )}
-        </div>
-      </div>
-
-      <dl className="mt-0.5 grid grid-cols-3 gap-x-2 gap-y-0.5">
-        <MetaField
-          label={t("batchHistory.supplier")}
-          value={reagent.supplier_name}
-        />
-        <MetaField
-          label={t("form.manufacturer")}
-          value={reagent.manufacturer}
-        />
-        <MetaField label={t("form.lotNumber")} value={reagent.lot_number} />
-        <MetaField
-          label={t("form.receivedDate")}
-          value={reagent.received_date ? formatDate(reagent.received_date) : null}
-          direction="ltr"
-        />
-        <MetaField
-          label={t("form.expiryDate")}
-          value={formatDate(reagent.expiry_date)}
-          direction="ltr"
-        />
-        <MetaField
-          label={t("newShipment.quantity")}
-          value={reagent.quantity}
-        />
-        <MetaField
-          label={t("form.category")}
-          value={t(`category.${reagent.category}`, { defaultValue: "—" })}
-        />
-      </dl>
-
-      {(reagent.description || reagent.notes) && (
-        <div className="mt-1 space-y-0.5 text-[13px] leading-[15px] text-muted-foreground">
-          {reagent.description && (
-            <p className="break-words [overflow-wrap:anywhere]" dir="auto">
-              {reagent.description.length > 80 && !descExpanded
-                ? `${reagent.description.slice(0, 80)}…`
-                : reagent.description}
-              {reagent.description.length > 80 && (
-                <button
-                  type="button"
-                  onClick={() => setDescExpanded((value) => !value)}
-                  className="ms-1 min-h-11 rounded px-2 text-xs text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {descExpanded ? t("actions.close") : t("actions.showMore")}
-                </button>
+            <span
+              className={cn(
+                "rounded-full border px-1.5 text-[11px] font-medium leading-4",
+                getStatusColor(status),
               )}
-            </p>
-          )}
-          {reagent.notes && (
-            <div>
-              <p
-                className={cn(
-                  "break-words whitespace-pre-wrap [overflow-wrap:anywhere]",
-                  !notesExpanded && "line-clamp-2",
-                )}
-                dir="auto"
-              >
-                {reagent.notes}
-              </p>
-              {reagent.notes.length > 100 && (
-                <button
-                  type="button"
-                  onClick={() => setNotesExpanded((value) => !value)}
-                  className="min-h-11 rounded px-2 text-xs text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {notesExpanded ? t("actions.close") : t("actions.showMore")}
-                </button>
-              )}
-            </div>
-          )}
+            >
+              {statusLabel}
+            </span>
+            {inTreatment && (
+              <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[11px] font-medium leading-4 text-amber-800">
+                {t("status.inTreatment")}
+              </span>
+            )}
+          </div>
         </div>
-      )}
-
-      {/* Single compact footer row; the only separator kept, it groups data from actions. */}
-      <div className="-mb-2 mt-0.5 flex items-center justify-end gap-0.5 border-t">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onEdit(reagent)}
-          className="h-11 w-11 p-0"
-          aria-label={t("actions.edit")}
-          title={t("actions.edit")}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
         {onDuplicate && (
           <Button
             type="button"
             variant="ghost"
             onClick={() => onDuplicate(reagent)}
-            className="h-11 w-11 p-0"
+            className={iconButton}
             aria-label={t("actions.duplicate")}
             title={t("actions.duplicate")}
           >
             <Copy className="h-4 w-4" />
           </Button>
         )}
-        {isExpired && onToggleInTreatment && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onToggleInTreatment(reagent.id, !inTreatment)}
-            className="h-11 w-11 p-0"
-            aria-label={
-              inTreatment
-                ? t("actions.removeInTreatment")
-                : t("actions.inTreatment")
-            }
-            title={
-              inTreatment
-                ? t("actions.removeInTreatment")
-                : t("actions.inTreatment")
-            }
-          >
-            <Stethoscope
-              className={cn("h-4 w-4", inTreatment && "text-amber-600")}
-            />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onArchive(reagent.id)}
-          className="h-11 w-11 p-0"
-          aria-label={t("actions.destroy")}
-          title={t("actions.destroy")}
-        >
-          <Flame className="h-4 w-4 text-destructive" />
-        </Button>
         <Button
           type="button"
           variant="ghost"
           onClick={() => onDelete(reagent.id)}
-          className="h-11 w-11 p-0"
+          className={iconButton}
           aria-label={t("actions.delete")}
           title={t("actions.delete")}
         >
           <Trash2 className="h-4 w-4 text-muted-foreground" />
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setExpanded((value) => !value)}
+          className={iconButton}
+          aria-expanded={expanded}
+          aria-label={expanded ? t("card.hideDetails") : t("card.showDetails")}
+          title={expanded ? t("card.hideDetails") : t("card.showDetails")}
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </Button>
       </div>
+
+      {expanded && (
+        <div className="border-t px-3 pt-1.5">
+          <dl className="grid grid-cols-3 gap-x-2 gap-y-1">
+            <MetaField
+              label={t("batchHistory.supplier")}
+              value={reagent.supplier_name}
+            />
+            <MetaField
+              label={t("form.manufacturer")}
+              value={reagent.manufacturer}
+            />
+            <MetaField label={t("form.lotNumber")} value={reagent.lot_number} />
+            <MetaField
+              label={t("form.receivedDate")}
+              value={reagent.received_date ? formatDate(reagent.received_date) : null}
+              direction="ltr"
+            />
+            <MetaField
+              label={t("newShipment.quantity")}
+              value={reagent.quantity}
+            />
+            <MetaField
+              label={t("form.category")}
+              value={t(`category.${reagent.category}`, { defaultValue: "—" })}
+            />
+          </dl>
+
+          {reagent.description && (
+            <p
+              className="mt-1 break-words text-[13px] leading-[15px] text-muted-foreground [overflow-wrap:anywhere]"
+              dir="auto"
+            >
+              {reagent.description}
+            </p>
+          )}
+          {reagent.notes && (
+            <p
+              className="mt-1 break-words whitespace-pre-wrap text-[13px] leading-[15px] text-muted-foreground [overflow-wrap:anywhere]"
+              dir="auto"
+            >
+              {reagent.notes}
+            </p>
+          )}
+
+          <div className="mt-0.5 flex items-center justify-end gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onEdit(reagent)}
+              className={iconButton}
+              aria-label={t("actions.edit")}
+              title={t("actions.edit")}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {isExpired && onToggleInTreatment && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onToggleInTreatment(reagent.id, !inTreatment)}
+                className={iconButton}
+                aria-label={
+                  inTreatment
+                    ? t("actions.removeInTreatment")
+                    : t("actions.inTreatment")
+                }
+                title={
+                  inTreatment
+                    ? t("actions.removeInTreatment")
+                    : t("actions.inTreatment")
+                }
+              >
+                <Stethoscope
+                  className={cn("h-4 w-4", inTreatment && "text-amber-600")}
+                />
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onArchive(reagent.id)}
+              className={iconButton}
+              aria-label={t("actions.destroy")}
+              title={t("actions.destroy")}
+            >
+              <Flame className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
