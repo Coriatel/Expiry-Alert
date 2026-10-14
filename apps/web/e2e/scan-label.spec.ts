@@ -7,6 +7,7 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
+import { attachRenderedEvidence } from "./mobile-release-assertions";
 
 // Each fixture is a photo of a real label taken in the lab, replayed as the
 // camera feed, so the whole path runs: camera -> decoder -> form fields.
@@ -80,10 +81,11 @@ async function installFixtures(context: BrowserContext) {
 const labels = [
   { file: "label-biorad-gs1.mjpeg", lot: "137061321", expiry: "2026-10-12" },
   { file: "label-diagast-gs1.mjpeg", lot: "872000", expiry: "2027-03-31" },
+  { file: "label-immucor-vial.mjpeg", lot: "954285", expiry: "2027-05-12" },
 ];
 
 for (const label of labels) {
-  test(`scanning ${label.file} fills lot and expiry in the first row`, async () => {
+  test(`scanning ${label.file} fills lot and expiry in the first row`, async ({}, testInfo) => {
     await withCamera(label.file, async (page) => {
       await expect(page.getByPlaceholder("מספר אצווה").first()).toHaveValue(
         label.lot,
@@ -93,12 +95,14 @@ for (const label of labels) {
         label.expiry,
       );
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      await attachRenderedEvidence(page, testInfo, `scan-${label.file.replace(".mjpeg", "")}`);
     });
   });
 }
 
+// A synthetic Code 128 holding only a catalog number, like the one on an Immucor box.
 test("a barcode without lot and expiry says so and fills nothing", async () => {
-  await withCamera("label-vial-not-gs1.mjpeg", async (page) => {
+  await withCamera("label-catalog-number.mjpeg", async (page) => {
     await expect(page.getByRole("status")).toContainText(
       "אין בו מספר אצווה ותוקף",
       { timeout: 20_000 },
