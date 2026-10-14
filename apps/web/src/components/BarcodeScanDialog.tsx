@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "@/components/ui/Dialog";
-import { parseGs1Label, type Gs1Label } from "@/lib/gs1";
+import { parseGs1Label, parseImmucorVial, type Gs1Label } from "@/lib/gs1";
 
 interface BarcodeScanDialogProps {
   open: boolean;
@@ -76,8 +76,11 @@ export function BarcodeScanDialog({
             );
             if (stopped) return;
             const label = results
-              .filter((result) => result.contentType === "GS1")
-              .map((result) => parseGs1Label(result.text))
+              .map((result) =>
+                result.contentType === "GS1"
+                  ? parseGs1Label(result.text)
+                  : parseImmucorVial(result.text),
+              )
               .find((parsed) => parsed !== null);
             if (label) {
               onScannedRef.current(label);

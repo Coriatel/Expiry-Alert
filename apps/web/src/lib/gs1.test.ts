@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGs1Label } from "./gs1";
+import { parseGs1Label, parseImmucorVial } from "./gs1";
 
 // Raw contents decoded from photos of labels in the blood bank (2026-10-11).
 describe("parseGs1Label", () => {
@@ -41,5 +41,40 @@ describe("parseGs1Label", () => {
 
   it("rejects an impossible expiry date instead of guessing", () => {
     expect(parseGs1Label("(17)271345(10)A1")).toBeNull();
+  });
+});
+
+// Plain 18-digit Code 128 on Immucor vials, decoded from photos of five vials (four lots)
+// in the blood bank (2026-10-11 and 2026-10-14), checked against the printed LOT and date.
+describe("parseImmucorVial", () => {
+  it.each([
+    ["954132272850142314", "954285", "2027-05-12"],
+    ["954132272850273020", "954285", "2027-05-12"],
+    ["964140272250682531", "964225", "2027-05-20"],
+    ["619294271050329048", "619105", "2027-10-21"],
+    ["344206270260149606", "344026", "2027-07-25"],
+  ])("reads lot and expiry from %s", (raw, lot, expiryDate) => {
+    expect(parseImmucorVial(raw)).toEqual({ lot, expiryDate });
+  });
+
+  it("counts day 60 as 29 February in a leap year", () => {
+    expect(parseImmucorVial("123060284560000000")).toEqual({
+      lot: "123456",
+      expiryDate: "2028-02-29",
+    });
+    expect(parseImmucorVial("123060274560000000")?.expiryDate).toBe(
+      "2027-03-01",
+    );
+  });
+
+  it.each([
+    ["3009-2", "a catalog number"],
+    ["95413227285014231", "17 digits"],
+    ["9541322728501423145", "19 digits"],
+    ["954000272850142314", "day 0"],
+    ["954366272850142314", "day 366 in a common year"],
+    ["95413227285014231X", "a non-digit"],
+  ])("ignores %s (%s)", (raw) => {
+    expect(parseImmucorVial(raw)).toBeNull();
   });
 });

@@ -83,3 +83,19 @@ export function parseGs1Label(raw: string): Gs1Label | null {
   if (lot) label.lot = lot;
   return label;
 }
+
+// Immucor vials carry a plain 18-digit Code 128, not GS1. Read from five vials:
+// lot digits 1-3, expiry day of year (3 digits), expiry year (2), lot digits 4-6,
+// then 7 digits that differ per vial. The "L" printed after some lots is not encoded.
+export function parseImmucorVial(raw: string): Gs1Label | null {
+  const match = /^(\d{3})(\d{3})(\d{2})(\d{3})\d{7}$/.exec(raw);
+  if (!match) return null;
+  const [, lotStart, dayOfYear, year, lotEnd] = match;
+  const day = Number(dayOfYear);
+  const date = new Date(Date.UTC(2000 + Number(year), 0, day));
+  if (day < 1 || date.getUTCFullYear() !== 2000 + Number(year)) return null;
+  return {
+    lot: lotStart + lotEnd,
+    expiryDate: date.toISOString().slice(0, 10),
+  };
+}
