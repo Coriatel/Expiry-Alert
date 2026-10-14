@@ -16,11 +16,17 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
           type="date"
           ref={ref}
           value={value}
-          className={cn('date-input', className)}
+          className={cn(
+            'date-input peer',
+            // An empty date field also shows the browser's own format hint (dd.mm.yyyy),
+            // which would sit under our placeholder. Hide it, and its width, until the field is focused.
+            !hasValue && '[&:not(:focus)::-webkit-datetime-edit]:max-w-0 [&:not(:focus)::-webkit-datetime-edit]:text-transparent',
+            className,
+          )}
           {...props}
         />
         {!hasValue && (
-          <span className="pointer-events-none absolute inset-y-0 flex items-center text-xs text-muted-foreground ltr:left-3 rtl:right-3">
+          <span className="pointer-events-none absolute inset-y-0 flex items-center text-sm text-muted-foreground ltr:left-3 rtl:right-3 peer-focus:hidden">
             {placeholderText}
           </span>
         )}
