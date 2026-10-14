@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -40,11 +41,15 @@ export function LoginForm({
   return (
     <div className="max-w-md w-full bg-card border rounded-2xl p-8 shadow-sm">
       <div className="flex justify-center mb-4">
-        <img
-          src="/logo-icon-v2.png"
-          alt="Expiry Alert"
-          className={`h-16 w-16 object-contain ${loading ? "logo-thinking" : "logo-entrance"}`}
-        />
+        {loading ? (
+          <AnimatedLogo className="h-16 w-16" />
+        ) : (
+          <img
+            src="/logo-icon-v2.png"
+            alt="Expiry Alert"
+            className="h-16 w-16 object-contain logo-entrance"
+          />
+        )}
       </div>
       <h1 className="text-2xl font-bold mb-2">{t("auth.signInTitle")}</h1>
       <p className="text-muted-foreground mb-6">{t("auth.signInSubtitle")}</p>

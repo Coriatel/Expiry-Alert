@@ -137,17 +137,6 @@ html[dir="rtl"] body {
   }
 }
 
-@keyframes logoPulse {
-  0%, 100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
-  50% {
-    transform: scale(1.06);
-    filter: brightness(1.15);
-  }
-}
-
 @keyframes logoSpin {
   from {
     transform: rotate(0deg);
@@ -183,8 +172,33 @@ html[dir="rtl"] body {
   animation: logoEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.logo-thinking {
-  animation: logoPulse 1.2s ease-in-out infinite;
+/* Clock hands of AnimatedLogo: the long hand sweeps a full turn per beat, the short hand
+   one turn per twelve beats, both around the hub of the 512px logo. */
+.logo-hand-long,
+.logo-hand-short {
+  transform-box: view-box;
+  transform-origin: 246.5px 273.5px;
+}
+
+.logo-hand-long {
+  animation: logoHandTurn 1.6s ease-in-out infinite;
+}
+
+.logo-hand-short {
+  animation: logoHandTurn 19.2s linear infinite;
+}
+
+@keyframes logoHandTurn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-hand-long,
+  .logo-hand-short {
+    animation: none;
+  }
 }
 
 .logo-spin {
