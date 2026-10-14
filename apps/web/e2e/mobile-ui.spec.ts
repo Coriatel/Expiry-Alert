@@ -165,7 +165,7 @@ for (const width of [360, 390, 430]) {
     await assertNotClipped(search);
     await search.fill("qc-he");
     await expect(page.getByRole("article")).toHaveCount(1);
-    await expect(page.getByRole("article").filter({ hasText: "QC-HE-002" })).toBeVisible();
+    await expect(page.getByRole("article").filter({ hasText: "בקרת איכות המטולוגית רמה 2" })).toBeVisible();
     await expect(page.getByRole("article").filter({ hasText: itemName })).toHaveCount(0);
     const clearSearch = page.getByRole("button", { name: "ניקוי החיפוש" });
     await assertMinimumTouchTarget(clearSearch);
@@ -204,7 +204,8 @@ for (const width of [360, 390, 430]) {
     expect(longNameBounds!.x + longNameBounds!.width).toBeLessThanOrEqual(width);
     await assertNotClipped(longName);
 
-    const editButton = page.getByRole("button", { name: "ערוך" }).first();
+    await itemCard.getByRole("button", { name: "הצג פרטים" }).click();
+    const editButton = itemCard.getByRole("button", { name: "ערוך" });
     await expect(editButton).toHaveAccessibleName("ערוך");
     await assertMinimumTouchTarget(editButton);
     await editButton.click();

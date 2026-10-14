@@ -85,6 +85,10 @@
     "viewTable": "תצוגת טבלה",
     "viewCards": "תצוגת כרטיסים"
   },
+  "card": {
+    "showDetails": "הצג פרטים",
+    "hideDetails": "הסתר פרטים"
+  },
   "table": {
     "selectItem": "בחר פריט",
     "name": "שם",

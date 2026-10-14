@@ -140,6 +140,7 @@ test("saving an item cannot hang forever", async ({ browser }) => {
   await installFixtures(context, { hangWrites: true });
   const page = await context.newPage();
   await page.goto("/");
+  await page.getByRole("button", { name: "הצג פרטים" }).first().click();
   await page.getByRole("button", { name: "ערוך" }).first().click();
   await expect(page.getByRole("heading", { name: "עריכת פריט" })).toBeVisible();
   await page.getByLabel("כמות").fill("7");
