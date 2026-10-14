@@ -23,8 +23,19 @@ describe("PWA asset references", () => {
 
     expect(viteConfig).toContain("favicon-v2.ico");
     expect(viteConfig).toContain("apple-touch-icon-v2.png");
-    expect(viteConfig).toContain("/icon-192-v2.png");
-    expect(viteConfig).toContain("/icon-512-v2.png");
-    expect(viteConfig).toContain("/icon-maskable-512-v2.png");
+    expect(viteConfig).toContain("/icon-192-v3.png");
+    expect(viteConfig).toContain("/icon-512-v3.png");
+    expect(viteConfig).toContain("/icon-maskable-512-v3.png");
   });
+
+  // Android paints transparent icon areas black on the launch screen.
+  it.each(["icon-192-v3.png", "icon-512-v3.png", "icon-maskable-512-v3.png"])(
+    "%s has no transparency",
+    (file) => {
+      const png = readFileSync(path.join(webRoot, "public", file));
+      const COLOR_TYPE_OFFSET = 25; // in the IHDR chunk
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      expect(png[COLOR_TYPE_OFFSET], "2 = RGB without alpha").toBe(2);
+    },
+  );
 });

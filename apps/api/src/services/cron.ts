@@ -289,7 +289,7 @@ export function buildGroupedNotificationPayload(
   return {
     title,
     body,
-    icon: '/icon-192-v2.png',
+    icon: '/icon-192-v3.png',
     badge: '/icon-badge-72-v2.png',
     tag: `expiry-${teamId}-${alertType}`,
     data: {

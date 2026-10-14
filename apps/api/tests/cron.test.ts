@@ -147,7 +147,7 @@ test('buildGroupedNotificationPayload uses v2 assets and mixed Friday wording', 
     [todayAlert, saturdayAlert],
   );
 
-  assert.equal(payload.icon, '/icon-192-v2.png');
+  assert.equal(payload.icon, '/icon-192-v3.png');
   assert.equal(payload.badge, '/icon-badge-72-v2.png');
   assert.match(payload.title, /QA Lab/);
   assert.equal(
