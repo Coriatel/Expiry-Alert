@@ -214,8 +214,8 @@ export function Sidebar({
         onClick={onMobileClose}
       />
 
-      {/* Drawer panel - slides from end (right in RTL, left in LTR) */}
-      <aside className="absolute top-0 bottom-0 end-0 w-72 bg-card shadow-xl flex flex-col animate-in slide-in-from-right rtl:slide-in-from-left duration-200">
+      {/* Drawer panel - slides from start, the side of the menu button (right in RTL, left in LTR) */}
+      <aside className="absolute top-0 bottom-0 start-0 w-72 bg-card shadow-xl flex flex-col animate-in slide-in-from-left rtl:slide-in-from-right duration-200">
         {/* Team selector */}
         <div className="border-b">{renderTeamSelector(true)}</div>
 

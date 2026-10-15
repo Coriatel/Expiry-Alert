@@ -139,6 +139,11 @@ async function navigate(page: Page, label: string) {
   if ((page.viewportSize()?.width ?? 1024) < 768) {
     await expect(openNavigation).toBeVisible();
     await openNavigation.click();
+    // RTL: the drawer opens on the right, next to the menu button.
+    const drawer = page.locator(".fixed.inset-0 > aside");
+    const box = await drawer.boundingBox();
+    expect(box, "mobile drawer must render").not.toBeNull();
+    expect(Math.round(box!.x + box!.width)).toBe(page.viewportSize()!.width);
   }
   await page.getByRole("button", { name: label, exact: true }).click();
 }
