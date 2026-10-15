@@ -229,6 +229,15 @@ for (const width of [360, 390, 430]) {
     const addAnother = page.getByRole("button", { name: "הוסף פריט נוסף" });
     await assertMinimumTouchTarget(addAnother);
     await assertNotClipped(addAnother);
+    // Scan, cancel and save stay on one line, so save never drops to a row of its own.
+    const formActions = ["סרוק מדבקה", "ביטול", "שמור"].map((name) =>
+      page.getByRole("button", { name, exact: true }),
+    );
+    const actionTops = await Promise.all(
+      formActions.map(async (button) => (await button.boundingBox())!.y),
+    );
+    expect(Math.max(...actionTops) - Math.min(...actionTops)).toBeLessThanOrEqual(1);
+    for (const button of formActions) await assertNotClipped(button);
     // An empty date field shows only our placeholder, not the browser's dd/mm/yyyy under it.
     // (The hidden hint itself is checked in the screenshot; Chrome does not report
     // ::-webkit-datetime-edit styles through getComputedStyle.)

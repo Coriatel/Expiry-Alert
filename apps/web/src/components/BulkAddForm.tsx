@@ -165,7 +165,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
   const isValid = rows.some((r) => r.name && r.expiryDate);
 
   return (
-    <div className="space-y-4 p-6 bg-muted/30 border rounded-lg">
+    <div className="space-y-4 p-4 sm:p-6 bg-muted/30 border rounded-lg">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2 whitespace-nowrap">
           <Plus className="h-5 w-5" />
