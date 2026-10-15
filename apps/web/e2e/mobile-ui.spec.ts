@@ -208,6 +208,9 @@ for (const width of [360, 390, 430]) {
     const editButton = itemCard.getByRole("button", { name: "ערוך" });
     await expect(editButton).toHaveAccessibleName("ערוך");
     await assertMinimumTouchTarget(editButton);
+    // The fixture items are expired, so the server would remind again tomorrow.
+    await assertMinimumTouchTarget(itemCard.getByRole("button", { name: "סגור להיום" }));
+    await attachRenderedEvidence(page, testInfo, `card-open-${width}`);
     await editButton.click();
 
     await expect(page.getByRole("heading", { name: "עריכת פריט" })).toBeVisible();
