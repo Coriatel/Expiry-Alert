@@ -21,7 +21,7 @@ import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { DestructionDialog } from "@/components/DestructionDialog";
-import { ExpiryAlertSection } from "@/components/ExpiryAlertSection";
+import { ExpiryAlertSection, getAlertType } from "@/components/ExpiryAlertSection";
 import { TransferRequestsBanner } from "@/components/TransferRequestsBanner";
 import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { FilterSortToolbar } from "@/components/FilterSortToolbar";
@@ -505,6 +505,22 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
+  const alertReagentIds = useMemo(
+    () => new Set(expiringReagents.map((r) => r.id)),
+    [expiringReagents],
+  );
+
+  const handleDismissOne = (reagent: Reagent) => {
+    setConfirmState({
+      open: true,
+      title: t("notifications.dismissConfirmTitle"),
+      message: t("notifications.dismissItemConfirm", { item: reagent.name }),
+      variant: "warning",
+      onConfirm: () =>
+        handleDismiss(reagent.id, getAlertType(getDaysUntilExpiry(reagent.expiry_date))),
+    });
+  };
+
   // Bulk actions run on selectedReagentIds, so a selection must never hide behind a search.
   const updateSearch = (value: string) => {
     setSearchQuery(value);
@@ -793,6 +809,8 @@ export function Dashboard({ teamName }: DashboardProps) {
             onToggleInTreatment={(id, value) => {
               void handleToggleInTreatment(id, value);
             }}
+            alertReagentIds={alertReagentIds}
+            onDismissAlert={handleDismissOne}
             selectedIds={selectedReagentIds}
             onToggleSelect={toggleReagentSelection}
             onSelectAll={handleSelectAll}
