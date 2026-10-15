@@ -43,7 +43,29 @@ app.use(
     credentials: true,
   }),
 );
-app.use(helmet({ contentSecurityPolicy: false }));
+// Report-only for now: browsers report what this policy would block, nothing is blocked.
+// Enforce it (drop reportOnly) once the [csp-report] log lines stay empty.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      reportOnly: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        // The label scanner compiles a self-hosted WebAssembly module.
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'self'"],
+        formAction: ["'self'"],
+        reportUri: ["/api/csp-report"],
+      },
+    },
+  }),
+);
 // The container health check and the uptime monitor call /api/health* every few
 // seconds; logging each success buries the real requests. Failures are still logged.
 app.use(
@@ -108,6 +130,40 @@ app.get("/api/health/alerts", async (_req, res) => {
     res.status(503).json({ status: "unknown" });
   }
 });
+
+// Anyone can post here, so each report becomes one short line and at most 60 a minute are logged.
+// The page's query string is dropped: it can hold an OAuth code.
+let cspReportsThisMinute = 0;
+setInterval(() => {
+  cspReportsThisMinute = 0;
+}, 60_000).unref();
+
+function pathOnly(value: unknown): string {
+  try {
+    return new URL(String(value)).pathname;
+  } catch {
+    return "";
+  }
+}
+
+app.post(
+  "/api/csp-report",
+  express.json({ type: ["application/csp-report", "application/json"], limit: "16kb" }),
+  (req, res) => {
+    const report = req.body?.["csp-report"] ?? {};
+    if (cspReportsThisMinute++ < 60) {
+      console.log(
+        "[csp-report]",
+        JSON.stringify({
+          directive: String(report["violated-directive"] ?? "").slice(0, 80),
+          blocked: String(report["blocked-uri"] ?? "").slice(0, 200),
+          page: pathOnly(report["document-uri"]).slice(0, 200),
+        }),
+      );
+    }
+    res.status(204).end();
+  },
+);
 
 app.use("/api/auth", authRouter);
 app.use("/api/reagents", reagentsRouter);

@@ -97,3 +97,55 @@ test("successful health checks stay out of the request log; failing ones do not"
     child.kill();
   }
 });
+
+test("pages carry a report-only content security policy; nothing is enforced yet", async () => {
+  const port = await freePort();
+  const child = await startApi(port);
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/health`);
+    assert.equal(res.headers.get("content-security-policy"), null);
+    const policy = res.headers.get("content-security-policy-report-only") ?? "";
+    assert.match(policy, /default-src 'self'/);
+    // The label scanner compiles a self-hosted WebAssembly module.
+    assert.match(policy, /script-src 'self' 'wasm-unsafe-eval'/);
+    assert.match(policy, /object-src 'none'/);
+    assert.match(policy, /report-uri \/api\/csp-report/);
+  } finally {
+    child.kill();
+  }
+});
+
+test("a CSP violation report is logged as one short line without the page's query string", async () => {
+  const port = await freePort();
+  const child = await startApi(port);
+  let log = "";
+  child.stdout!.on("data", (chunk) => {
+    log += String(chunk);
+  });
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/csp-report`, {
+      method: "POST",
+      headers: { "content-type": "application/csp-report" },
+      body: JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://expiryalert.example/settings?code=secret-token",
+          "violated-directive": "script-src-elem",
+          "blocked-uri": "https://cdn.example/x.js",
+        },
+      }),
+    });
+    assert.equal(res.status, 204);
+
+    const deadline = Date.now() + 5000;
+    while (!log.includes("[csp-report]") && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const line = log.split("\n").find((l) => l.includes("[csp-report]")) ?? "";
+    assert.match(line, /script-src-elem/);
+    assert.match(line, /https:\/\/cdn\.example\/x\.js/);
+    assert.match(line, /\/settings/);
+    assert.doesNotMatch(log, /secret-token/);
+  } finally {
+    child.kill();
+  }
+});
