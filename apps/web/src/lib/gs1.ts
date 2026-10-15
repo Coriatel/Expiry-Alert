@@ -87,7 +87,10 @@ export function parseGs1Label(raw: string): Gs1Label | null {
 // Immucor vials carry a plain 18-digit Code 128, not GS1. Read from five vials:
 // lot digits 1-3, expiry day of year (3 digits), expiry year (2), lot digits 4-6,
 // then 7 digits that differ per vial. The "L" printed after some lots is not encoded.
+// Immucor bags and boxes carry another plain 18-digit code - REF (000xxxx), 5 digits, LOT -
+// with no expiry in it; "000234200243112062" would otherwise read as lot 000024, expiry 2020.
 export function parseImmucorVial(raw: string): Gs1Label | null {
+  if (raw.startsWith("000")) return null;
   const match = /^(\d{3})(\d{3})(\d{2})(\d{3})\d{7}$/.exec(raw);
   if (!match) return null;
   const [, lotStart, dayOfYear, year, lotEnd] = match;
@@ -98,4 +101,19 @@ export function parseImmucorVial(raw: string): Gs1Label | null {
     lot: lotStart + lotEnd,
     expiryDate: date.toISOString().slice(0, 10),
   };
+}
+
+// A frame can hold several codes; a GS1 one states lot and expiry outright, so it wins.
+// Immucor prints "(10)112062(17)261120" as plain Code 128 text, brackets included, so the
+// reader does not mark it GS1; the bracketed form is read as GS1 all the same.
+export function pickLabel(
+  results: { text: string; contentType: string }[],
+): Gs1Label | null {
+  const isGs1 = (r: { text: string; contentType: string }) =>
+    r.contentType === "GS1" || /^\(\d{2,4}\)/.test(r.text);
+  const parsed = [
+    ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
+    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),
+  ];
+  return parsed.find((label) => label !== null) ?? null;
 }
