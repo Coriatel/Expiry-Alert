@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  BellOff,
   CheckSquare,
   ChevronDown,
   Copy,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { NewInStockDot } from "@/components/NewInStockDot";
+import { getAlertType } from "@/components/ExpiryAlertSection";
 import type { Reagent } from "@/types";
 import {
   cn,
@@ -30,6 +32,7 @@ interface ReagentCardProps {
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
   onToggleInTreatment?: (id: number, value: boolean) => void;
+  onDismissAlert?: (reagent: Reagent) => void;
 }
 
 // A thin stripe on the leading edge carries the status; the card itself stays white.
@@ -80,6 +83,7 @@ export function ReagentCard({
   onDelete,
   onArchive,
   onToggleInTreatment,
+  onDismissAlert,
 }: ReagentCardProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -96,6 +100,11 @@ export function ReagentCard({
           ? t("status.expiresInOneDay")
           : t("status.expiresIn", { days });
   const iconButton = "h-11 w-11 shrink-0 p-0";
+  // The server drops only the 3-7 day reminder for good; closer ones come back the next day.
+  const dismissLabel =
+    getAlertType(days) === "7day"
+      ? t("notifications.dismiss")
+      : t("notifications.dismissForToday");
 
   return (
     <article
@@ -265,6 +274,18 @@ export function ReagentCard({
                 <Stethoscope
                   className={cn("h-4 w-4", inTreatment && "text-amber-600")}
                 />
+              </Button>
+            )}
+            {onDismissAlert && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onDismissAlert(reagent)}
+                className={iconButton}
+                aria-label={dismissLabel}
+                title={dismissLabel}
+              >
+                <BellOff className="h-4 w-4" />
               </Button>
             )}
             <Button

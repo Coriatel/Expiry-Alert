@@ -10,6 +10,8 @@ interface ReagentCardListProps {
   onDelete: (id: number) => void;
   onArchive: (id: number) => void;
   onToggleInTreatment?: (id: number, value: boolean) => void;
+  alertReagentIds?: ReadonlySet<number>;
+  onDismissAlert?: (reagent: Reagent) => void;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onSelectAll: () => void;
@@ -22,6 +24,8 @@ export function ReagentCardList({
   onDelete,
   onArchive,
   onToggleInTreatment,
+  alertReagentIds,
+  onDismissAlert,
   selectedIds,
   onToggleSelect,
   onSelectAll,
@@ -64,6 +68,9 @@ export function ReagentCardList({
           onDelete={onDelete}
           onArchive={onArchive}
           onToggleInTreatment={onToggleInTreatment}
+          onDismissAlert={
+            alertReagentIds?.has(reagent.id) ? onDismissAlert : undefined
+          }
         />
       ))}
     </div>

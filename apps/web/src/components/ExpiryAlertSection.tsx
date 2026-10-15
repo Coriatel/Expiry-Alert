@@ -14,7 +14,7 @@ interface ExpiryAlertSectionProps {
   teamName?: string;
 }
 
-function getAlertType(days: number): string {
+export function getAlertType(days: number): string {
   // 3-6 days used to fall through to "expired", which the server treats as a
   // recurring alert — dismissing such an item brought the alert back the next day.
   if (days < 0) return "expired";
