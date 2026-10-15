@@ -82,6 +82,8 @@ const labels = [
   { file: "label-biorad-gs1.mjpeg", lot: "137061321", expiry: "2026-10-12" },
   { file: "label-diagast-gs1.mjpeg", lot: "872000", expiry: "2027-03-31" },
   { file: "label-immucor-vial.mjpeg", lot: "954285", expiry: "2027-05-12" },
+  // Immucor bag: the (10)(17) part of the UDI printed as plain text, brackets included.
+  { file: "label-immucor-bag-udi.mjpeg", lot: "345138", expiry: "2027-01-08" },
 ];
 
 for (const label of labels) {

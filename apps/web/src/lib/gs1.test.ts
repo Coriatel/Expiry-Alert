@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGs1Label, parseImmucorVial } from "./gs1";
+import { parseGs1Label, parseImmucorVial, pickLabel } from "./gs1";
 
 // Raw contents decoded from photos of labels in the blood bank (2026-10-11).
 describe("parseGs1Label", () => {
@@ -78,3 +78,69 @@ describe("parseImmucorVial", () => {
     expect(parseImmucorVial(raw)).toBeNull();
   });
 });
+
+// Immucor bags and boxes (photos 2026-10-15): a plain Code 128 of REF + 5 digits + LOT with no
+// expiry, next to a GS1 UDI whose (10)(17) part is sometimes a barcode of its own. The reader
+// returned that one as plain text with the brackets: "(10)112062(17)261120".
+describe("Immucor outer labels", () => {
+  it("reads lot and expiry from the separate (10)(17) barcode", () => {
+    expect(parseGs1Label("10345138\u001d17270108")).toEqual({
+      lot: "345138",
+      expiryDate: "2027-01-08",
+    });
+    expect(parseGs1Label("(10)112062(17)261120")).toEqual({
+      lot: "112062",
+      expiryDate: "2026-11-20",
+    });
+  });
+
+  it("reads the single UDI barcode on the corQC box", () => {
+    expect(parseGs1Label("0110888234002123\u001d1036595RL\u001d17261113")).toEqual({
+      gtin: "10888234002123",
+      lot: "36595RL",
+      expiryDate: "2026-11-13",
+    });
+  });
+
+  it.each(["000234200243112062", "000705600121345138"])(
+    "does not read the REF + LOT code %s as a vial",
+    (raw) => {
+      expect(parseImmucorVial(raw)).toBeNull();
+    },
+  );
+
+  it("prefers the GS1 barcode when one frame holds both", () => {
+    expect(
+      pickLabel([
+        { text: "000234200243112062", contentType: "Text" },
+        { text: "0110888234000266", contentType: "GS1" },
+        { text: "10112062\u001d17261120", contentType: "GS1" },
+      ]),
+    ).toEqual({ lot: "112062", expiryDate: "2026-11-20" });
+  });
+
+  it("reads the bracketed (10)(17) text the reader returns for these labels", () => {
+    expect(
+      pickLabel([
+        { text: "000234200243112062", contentType: "Text" },
+        { text: "(10)112062(17)261120", contentType: "Text" },
+      ]),
+    ).toEqual({ lot: "112062", expiryDate: "2026-11-20" });
+    expect(pickLabel([{ text: "(10)345138(17)270108", contentType: "Text" }])).toEqual({
+      lot: "345138",
+      expiryDate: "2027-01-08",
+    });
+  });
+
+  it("finds nothing in the REF + LOT code alone", () => {
+    expect(pickLabel([{ text: "00024100012836595RL", contentType: "Text" }])).toBeNull();
+  });
+
+  it("still reads a vial when it is the only barcode", () => {
+    expect(pickLabel([{ text: "954132272850142314", contentType: "Text" }])).toEqual({
+      lot: "954285",
+      expiryDate: "2027-05-12",
+    });
+  });
+});
+
