@@ -474,7 +474,7 @@
     "iosGuidance": "Install app to home screen first",
     "unsupported": "Push notifications are not supported on this device or in this browser mode.",
     "denied": "Notifications blocked",
-    "deniedHelp": "Tap the lock icon next to the address bar → Permissions → Notifications → Allow. Then refresh the page.",
+    "deniedHelp": "In the installed app: long-press its icon → App info → Notifications → On. In Chrome: menu ⋮ → Settings → Site settings → Notifications → allow this site. Then reopen the app and try again.",
     "testAction": "Send Test",
     "testSent": "Test notification sent",
     "testFailed": "Failed to send a test notification",
