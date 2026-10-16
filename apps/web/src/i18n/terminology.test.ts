@@ -18,4 +18,11 @@ describe("managed item terminology", () => {
     expect(he.batchHistory.reagentName).toBe("שם פריט");
     expect(he.duplicationHistory.reagentName).toBe("שם פריט");
   });
+
+  it("explains how to unblock notifications in an installed app, which has no address bar", () => {
+    expect(he.push.deniedHelp).toContain("פרטי אפליקציה");
+    expect(he.push.deniedHelp).toContain("הגדרות אתר");
+    expect(en.push.deniedHelp).toContain("App info");
+    expect(en.push.deniedHelp).toContain("Site settings");
+  });
 });
