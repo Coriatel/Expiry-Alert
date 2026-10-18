@@ -6,6 +6,7 @@ import {
   createItems,
   updateItem,
   deleteItem,
+  deleteItems,
   updateItems,
 } from "@directus/sdk";
 import { config } from "../config.js";
@@ -95,6 +96,10 @@ export async function deleteRecord(
   id: string | number,
 ) {
   return directus.request(deleteItem(collection, id));
+}
+
+export async function deleteRecordsByQuery(collection: keyof Schema, query: any) {
+  return directus.request(deleteItems(collection, query));
 }
 
 export async function findOne<T>(
