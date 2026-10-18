@@ -1,3 +1,4 @@
+import { reagentToForm } from "@/lib/batchScope";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "@/components/ui/Dialog";
@@ -16,7 +17,8 @@ interface EditReagentDialogProps {
   reagent: Reagent | null;
   open: boolean;
   onClose: () => void;
-  onSave: (id: number, data: ReagentFormData) => Promise<void>;
+  // Resolving to false keeps the dialog open without an error (the user stepped back).
+  onSave: (id: number, data: ReagentFormData) => Promise<void | false>;
 }
 
 function getPrivateError(error: unknown, t: (key: string) => string): string {
@@ -65,19 +67,7 @@ export function EditReagentDialog({
 
   useEffect(() => {
     if (!reagent) return;
-    setFormData({
-      name: reagent.name,
-      category: reagent.category ?? "reagents",
-      expiryDate: reagent.expiry_date,
-      receivedDate: reagent.received_date ?? "",
-      lotNumber: reagent.lot_number ?? "",
-      notes: reagent.notes ?? "",
-      supplier_id: reagent.supplier_id ?? undefined,
-      supplier_name: reagent.supplier_name ?? undefined,
-      quantity: reagent.quantity ?? null,
-      manufacturer: reagent.manufacturer ?? "",
-      description: reagent.description ?? "",
-    });
+    setFormData(reagentToForm(reagent));
     setQuantityInput(
       reagent.quantity == null ? "" : String(reagent.quantity),
     );
@@ -130,8 +120,8 @@ export function EditReagentDialog({
     setIsSubmitting(true);
     setError(null);
     try {
-      await onSave(reagent.id, { ...formData, quantity });
-      onClose();
+      const saved = await onSave(reagent.id, { ...formData, quantity });
+      if (saved !== false) onClose();
     } catch (saveError) {
       setError(getPrivateError(saveError, t));
     } finally {

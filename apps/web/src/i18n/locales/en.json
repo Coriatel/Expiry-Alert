@@ -646,5 +646,13 @@
     "hint": "Point the camera at the barcode or the dotted square on the label",
     "noLotOrExpiry": "The barcode was read, but it holds no lot number or expiry. Try the other code on the label or type the details.",
     "cameraUnavailable": "The camera could not be opened. Allow camera access in the browser and try again."
+  },
+  "batchScope": {
+    "title": "Change the other batches too?",
+    "all": "All {{count}} batches",
+    "one": "Only this batch",
+    "back": "Back to editing",
+    "message_one": "{{name}} has one more active batch. A change to name, description, manufacturer, supplier, category or quantity can apply to both.",
+    "message_other": "{{name}} has {{count}} more active batches. A change to name, description, manufacturer, supplier, category or quantity can apply to all of them."
   }
 }
