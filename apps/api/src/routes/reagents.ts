@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { getTeamId } from "../utils/team.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   bulkUpdate,
   createReagent,
@@ -57,7 +58,7 @@ export function buildReagentData(input: ReagentInput) {
     category: input.category,
     expiry_date: input.expiryDate,
     lot_number: input.lotNumber ?? null,
-    received_date: input.receivedDate ?? null,
+    received_date: input.receivedDate || null,
     notes: input.notes ?? null,
     supplier_id: input.supplier_id ?? null,
     supplier_name: input.supplier_name ?? null,
@@ -143,7 +144,7 @@ export function buildReagentUpdateFilter(
 
 reagentsRouter.use(requireAuth);
 
-reagentsRouter.get("/", async (req, res) => {
+reagentsRouter.get("/", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -176,9 +177,9 @@ reagentsRouter.get("/", async (req, res) => {
   }
 
   return res.json(reagents.filter((r) => !r.is_archived));
-});
+}));
 
-reagentsRouter.post("/", async (req, res) => {
+reagentsRouter.post("/", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -192,9 +193,9 @@ reagentsRouter.post("/", async (req, res) => {
   });
 
   res.status(201).json({ status: "created" });
-});
+}));
 
-reagentsRouter.post("/bulk", async (req, res) => {
+reagentsRouter.post("/bulk", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -210,9 +211,9 @@ reagentsRouter.post("/bulk", async (req, res) => {
   }
 
   res.status(201).json({ status: "ok" });
-});
+}));
 
-reagentsRouter.put("/:id", async (req, res) => {
+reagentsRouter.put("/:id", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -262,20 +263,21 @@ reagentsRouter.put("/:id", async (req, res) => {
   }
 
   res.status(200).json({ restored: shouldRestore });
-});
+}));
 
-reagentsRouter.delete("/:id", async (req, res) => {
+reagentsRouter.delete("/:id", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id))
     return res.status(400).json({ error: "Invalid id" });
-  await removeReagent(id);
+  if (!(await removeReagent(id, teamId)))
+    return res.status(404).json({ error: "Item not found" });
   res.status(204).send();
-});
+}));
 
-reagentsRouter.post("/delete", async (req, res) => {
+reagentsRouter.post("/delete", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -284,13 +286,13 @@ reagentsRouter.post("/delete", async (req, res) => {
     return res.status(400).json({ error: parsed.error.message });
 
   for (const id of parsed.data.ids) {
-    await removeReagent(id);
+    await removeReagent(id, teamId);
   }
 
   res.status(204).send();
-});
+}));
 
-reagentsRouter.post("/archive", async (req, res) => {
+reagentsRouter.post("/archive", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -303,9 +305,9 @@ reagentsRouter.post("/archive", async (req, res) => {
   });
 
   res.status(204).send();
-});
+}));
 
-reagentsRouter.post("/:id/duplicate", async (req, res) => {
+reagentsRouter.post("/:id/duplicate", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -339,9 +341,9 @@ reagentsRouter.post("/:id/duplicate", async (req, res) => {
   });
 
   res.status(201).json({ status: "created", id: created.id });
-});
+}));
 
-reagentsRouter.post("/:id/archive", async (req, res) => {
+reagentsRouter.post("/:id/archive", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -353,9 +355,9 @@ reagentsRouter.post("/:id/archive", async (req, res) => {
   });
 
   res.status(204).send();
-});
+}));
 
-reagentsRouter.post("/:id/restore", async (req, res) => {
+reagentsRouter.post("/:id/restore", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -367,8 +369,8 @@ reagentsRouter.post("/:id/restore", async (req, res) => {
   });
 
   res.status(204).send();
-});
-reagentsRouter.patch("/:id/in-treatment", async (req, res) => {
+}));
+reagentsRouter.patch("/:id/in-treatment", asyncHandler(async (req, res) => {
   const teamId = getTeamId(req);
   if (!teamId) return res.status(400).json({ error: "Missing team" });
 
@@ -385,4 +387,4 @@ reagentsRouter.patch("/:id/in-treatment", async (req, res) => {
   });
 
   res.status(204).send();
-});
+}));

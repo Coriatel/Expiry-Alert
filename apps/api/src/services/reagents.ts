@@ -2,6 +2,7 @@ import { config } from "../config.js";
 import {
   createRecord,
   deleteRecord,
+  deleteRecordsByQuery,
   findOne,
   listRecords,
   updateSingleRecord,
@@ -139,8 +140,18 @@ export async function updateReagentIfCurrent(
   return updateRecordsByQuery<ReagentRecord>(collection, { filter }, data);
 }
 
-export async function removeReagent(id: number) {
+// Sent-alert history references the item without ON DELETE, so it goes first.
+export async function removeReagent(id: number, teamId: number) {
+  const owned = await findOne<{ id: number }>(collection, {
+    id: { _eq: id },
+    team: { _eq: teamId },
+  });
+  if (!owned) return false;
+  await deleteRecordsByQuery(config.directus.collections.notificationLog as any, {
+    filter: { reagent: { _eq: id } },
+  });
   await deleteRecord(collection, id);
+  return true;
 }
 
 export async function bulkUpdate(ids: number[], data: Partial<ReagentRecord>) {
