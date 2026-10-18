@@ -19,6 +19,8 @@ import { ReagentTable } from "@/components/ReagentTable";
 import { ReagentCardList } from "@/components/ReagentCardList";
 import { BulkAddForm } from "@/components/BulkAddForm";
 import { EditReagentDialog } from "@/components/EditReagentDialog";
+import { BatchScopeDialog, type BatchScope } from "@/components/BatchScopeDialog";
+import { otherBatches, reagentToForm, sharedChanges } from "@/lib/batchScope";
 import { DuplicateReagentDialog } from "@/components/DuplicateReagentDialog";
 import { DestructionDialog } from "@/components/DestructionDialog";
 import { ExpiryAlertSection, getAlertType } from "@/components/ExpiryAlertSection";
@@ -75,6 +77,11 @@ export function Dashboard({ teamName }: DashboardProps) {
   );
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [editingReagent, setEditingReagent] = useState<Reagent | null>(null);
+  const [batchScopeAsk, setBatchScopeAsk] = useState<{
+    name: string;
+    otherCount: number;
+    resolve: (scope: BatchScope | null) => void;
+  } | null>(null);
   const [duplicatingReagent, setDuplicatingReagent] = useState<Reagent | null>(
     null,
   );
@@ -293,7 +300,23 @@ export function Dashboard({ teamName }: DashboardProps) {
 
   const handleEditSave = async (id: number, data: ReagentFormData) => {
     const current = reagents.find((reagent) => reagent.id === id);
+    const others = current ? otherBatches(reagents, current) : [];
+    const changes = current ? sharedChanges(current, data) : {};
+    let scope: BatchScope = "one";
+    if (others.length > 0 && Object.keys(changes).length > 0) {
+      const chosen = await new Promise<BatchScope | null>((resolve) =>
+        setBatchScopeAsk({ name: current!.name, otherCount: others.length, resolve }),
+      );
+      setBatchScopeAsk(null);
+      if (chosen === null) return false;
+      scope = chosen;
+    }
     await updateReagent(id, data, current);
+    if (scope === "all") {
+      for (const other of others) {
+        await updateReagent(other.id, { ...reagentToForm(other), ...changes }, other);
+      }
+    }
     await loadData();
     showToast(t("success.reagentUpdated"), "success");
   };
@@ -863,6 +886,13 @@ export function Dashboard({ teamName }: DashboardProps) {
         open={editingReagent !== null}
         onClose={() => setEditingReagent(null)}
         onSave={handleEditSave}
+      />
+
+      <BatchScopeDialog
+        open={batchScopeAsk !== null}
+        name={batchScopeAsk?.name ?? ""}
+        otherCount={batchScopeAsk?.otherCount ?? 0}
+        onChoose={(scope) => batchScopeAsk?.resolve(scope)}
       />
 
       {/* Duplicate Dialog */}
