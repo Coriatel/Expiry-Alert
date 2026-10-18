@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, ChevronDown, ChevronUp, Clock, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useStore } from "@/store/store";
@@ -28,24 +28,24 @@ function getBorderColor(reagents: Reagent[]): string {
   const hasExpired = reagents.some(
     (r) => getDaysUntilExpiry(r.expiry_date) < 0,
   );
-  if (hasExpired) return "border-l-red-500";
+  if (hasExpired) return "border-s-red-500";
   const hasUrgent = reagents.some(
     (r) => getDaysUntilExpiry(r.expiry_date) <= 2,
   );
-  if (hasUrgent) return "border-l-orange-500";
-  return "border-l-yellow-500";
+  if (hasUrgent) return "border-s-orange-500";
+  return "border-s-yellow-500";
 }
 
 function getBgColor(reagents: Reagent[]): string {
   const hasExpired = reagents.some(
     (r) => getDaysUntilExpiry(r.expiry_date) < 0,
   );
-  if (hasExpired) return "bg-red-50";
+  if (hasExpired) return "bg-red-50/50";
   const hasUrgent = reagents.some(
     (r) => getDaysUntilExpiry(r.expiry_date) <= 2,
   );
-  if (hasUrgent) return "bg-orange-50";
-  return "bg-yellow-50";
+  if (hasUrgent) return "bg-orange-50/50";
+  return "bg-yellow-50/50";
 }
 
 export function ExpiryAlertSection({
@@ -66,7 +66,7 @@ export function ExpiryAlertSection({
 
   return (
     <div
-      className={`print:hidden rounded-lg border border-l-4 ${getBorderColor(reagents)} ${getBgColor(reagents)} shadow-sm`}
+      className={`print:hidden rounded-lg border border-s-4 ${getBorderColor(reagents)} ${getBgColor(reagents)}`}
     >
       {/* Collapsed header — always visible */}
       <button
@@ -103,29 +103,30 @@ export function ExpiryAlertSection({
           </p>
 
           {/* Action buttons */}
-          <div className="grid grid-cols-3 gap-1.5 border-t pt-2">
+          <div className="flex flex-wrap items-center gap-x-1 border-t pt-1">
+            <span className="text-xs text-muted-foreground">
+              {t("notifications.remindMe")}
+            </span>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => onSnoozeAll(reagents.map((r) => r.id), 1)}
-              className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
+              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
               aria-label={t("notifications.remindTomorrow")}
             >
-              <Clock className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
-              {t("notifications.remindTomorrow")}
+              {t("notifications.tomorrowShort")}
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => onSnoozeAll(reagents.map((r) => r.id), 3)}
-              className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
+              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
               aria-label={t("notifications.remindIn3Days")}
             >
-              <Clock className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
-              {t("notifications.remindIn3Days")}
+              {t("notifications.in3DaysShort")}
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setConfirmDismissAll(true)}
-              className="min-h-11 h-auto px-1.5 py-1 text-xs leading-4"
+              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
               aria-label={t("notifications.dismissAll")}
             >
               <X className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />

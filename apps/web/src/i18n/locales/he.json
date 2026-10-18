@@ -171,6 +171,9 @@
   "notifications": {
     "title": "פג תוקף בקרוב!",
     "message": "{{count}} פריטים פגי תוקף בקרוב",
+    "remindMe": "הזכר לי:",
+    "tomorrowShort": "מחר",
+    "in3DaysShort": "בעוד 3 ימים",
     "remindTomorrow": "הזכר לי מחר",
     "remindIn3Days": "הזכר לי בעוד 3 ימים",
     "dismiss": "אל תזכיר לי יותר",

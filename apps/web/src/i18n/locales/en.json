@@ -171,6 +171,9 @@
   "notifications": {
     "title": "Expiring Soon!",
     "message": "{{count}} item(s) are expiring soon",
+    "remindMe": "Remind me:",
+    "tomorrowShort": "Tomorrow",
+    "in3DaysShort": "In 3 days",
     "remindTomorrow": "Remind Tomorrow",
     "remindIn3Days": "Remind in 3 Days",
     "dismiss": "Don't Remind Again",

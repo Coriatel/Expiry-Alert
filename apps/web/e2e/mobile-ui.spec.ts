@@ -178,6 +178,8 @@ for (const width of [360, 390, 430]) {
     await expect(page.getByRole("article")).toHaveCount(0);
     await clearSearch.click();
     await expect(search).toHaveValue("");
+    // Empty search follows the page direction, so the Hebrew placeholder sits on the right.
+    expect(await search.evaluate((el) => getComputedStyle(el).direction)).toBe("rtl");
     await expect(page.getByRole("article")).toHaveCount(2);
     await expect(clearSearch).toHaveCount(0);
     // The alert bar is one line until opened and must not repeat the items below it.
@@ -194,6 +196,18 @@ for (const width of [360, 390, 430]) {
       "הזכר לי בעוד 3 ימים",
       "סגור הכל",
     ]);
+    // Light alert: the colour stripe is on the reading side and the three actions share one compact row.
+    expect(await alertBar.locator("..").evaluate((el) => getComputedStyle(el).borderRightWidth)).toBe("4px");
+    const actionBoxes = await Promise.all(
+      ["הזכר לי מחר", "הזכר לי בעוד 3 ימים", "סגור הכל"].map((name) =>
+        page.getByRole("button", { name, exact: true }).boundingBox(),
+      ),
+    );
+    for (const box of actionBoxes) {
+      expect(box).not.toBeNull();
+      expect(Math.abs(box!.y - actionBoxes[0]!.y)).toBeLessThanOrEqual(1);
+      expect(box!.height).toBeLessThanOrEqual(48);
+    }
 
     await page.keyboard.press("Tab");
     const firstKeyboardTarget = page.locator(":focus");

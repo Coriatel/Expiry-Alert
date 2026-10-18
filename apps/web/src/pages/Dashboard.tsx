@@ -750,7 +750,7 @@ export function Dashboard({ teamName }: DashboardProps) {
       <div className="relative print:hidden">
         <Input
           type="search"
-          dir="auto"
+          dir={searchQuery ? "auto" : undefined}
           value={searchQuery}
           onChange={(e) => updateSearch(e.target.value)}
           placeholder={t("filters.searchPlaceholder")}
