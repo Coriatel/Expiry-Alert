@@ -94,7 +94,7 @@
     "name": "שם",
     "category": "קטגוריה",
     "expiryDate": "תאריך תפוגה",
-    "expiryDatePlaceholder": "תאריך / Date",
+    "expiryDatePlaceholder": "dd.mm.yyyy",
     "daysUntilExpiry": "ימים עד תפוגה",
     "lotNumber": "מספר אצווה",
     "receivedDate": "תאריך קבלה",
@@ -140,11 +140,13 @@
     "showMore": "הצג עוד"
   },
   "form": {
+    "invalidDate": "תאריך לא תקין",
+    "openCalendar": "פתח לוח שנה",
     "name": "שם",
     "namePlaceholder": "הכנס שם פריט",
     "category": "קטגוריה",
     "expiryDate": "תאריך תפוגה",
-    "expiryDatePlaceholder": "תאריך / Date",
+    "expiryDatePlaceholder": "dd.mm.yyyy",
     "lotNumber": "מספר אצווה",
     "lotNumberPlaceholder": "הכנס מספר אצווה",
     "receivedDate": "תאריך קבלה",

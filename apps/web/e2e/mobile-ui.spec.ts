@@ -196,8 +196,12 @@ for (const width of [360, 390, 430]) {
       "הזכר לי בעוד 3 ימים",
       "סגור הכל",
     ]);
-    // Light alert: the colour stripe is on the reading side and the three actions share one compact row.
-    expect(await alertBar.locator("..").evaluate((el) => getComputedStyle(el).borderRightWidth)).toBe("4px");
+    // Light alert: a plain surface in a coloured frame (no fill), and the three actions share one compact row.
+    const alertFrame = await alertBar.locator("..").evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { right: style.borderRightWidth, left: style.borderLeftWidth, bg: style.backgroundColor };
+    });
+    expect(alertFrame).toEqual({ right: "2px", left: "2px", bg: "rgb(255, 255, 255)" });
     const actionBoxes = await Promise.all(
       ["הזכר לי מחר", "הזכר לי בעוד 3 ימים", "סגור הכל"].map((name) =>
         page.getByRole("button", { name, exact: true }).boundingBox(),
@@ -235,7 +239,7 @@ for (const width of [360, 390, 430]) {
     await expect(page.getByRole("heading", { name: "עריכת פריט" })).toBeVisible();
     await expect(page.getByLabel("כמות")).toHaveValue("0");
     await expect(page.getByLabel("ספק")).toHaveValue("44");
-    await expect(page.getByLabel("תאריך קבלה")).toHaveValue("2026-06-01");
+    await expect(page.getByLabel("תאריך קבלה")).toHaveValue("01.06.2026");
     await assertNoPageOverflow(page);
     await attachRenderedEvidence(page, testInfo, `edit-item-${width}`);
     await assertNamedButtons(page, ["ביטול", "שמור"]);
@@ -257,14 +261,15 @@ for (const width of [360, 390, 430]) {
     );
     expect(Math.max(...actionTops) - Math.min(...actionTops)).toBeLessThanOrEqual(1);
     for (const button of formActions) await assertNotClipped(button);
-    // An empty date field shows only our placeholder, not the browser's dd/mm/yyyy under it.
-    // (The hidden hint itself is checked in the screenshot; Chrome does not report
-    // ::-webkit-datetime-edit styles through getComputedStyle.)
-    const expiryInput = page.locator('input[type="date"]').first();
-    await expect(page.getByText("תאריך / Date", { exact: true })).toBeVisible();
-    await expiryInput.focus();
-    await expect(page.getByText("תאריך / Date", { exact: true })).toBeHidden();
-    await expiryInput.blur();
+    // The date is typed on the numeric keyboard (dots added automatically) and the calendar has its own button.
+    const expiryInput = page.getByPlaceholder("dd.mm.yyyy").first();
+    await expect(expiryInput).toHaveAttribute("inputmode", "numeric");
+    await expiryInput.fill("");
+    await expiryInput.pressSequentially("31122026");
+    await expect(expiryInput).toHaveValue("31.12.2026");
+    await expect(page.locator('input[type="date"]').first()).toHaveValue("2026-12-31");
+    await assertMinimumTouchTarget(page.getByRole("button", { name: "פתח לוח שנה" }).first());
+    await expiryInput.fill("");
     await assertNoPageOverflow(page);
     await attachRenderedEvidence(page, testInfo, `add-form-${width}`);
     await addAnother.click();

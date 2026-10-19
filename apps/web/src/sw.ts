@@ -7,6 +7,11 @@ import { ExpirationPlugin } from "workbox-expiration";
 
 declare let self: ServiceWorkerGlobalScope;
 
+// The page asks for this once a new version is waiting (see main.tsx).
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
