@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, ChevronDown, ChevronUp, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useStore } from "@/store/store";
 import type { Reagent } from "@/types";
@@ -24,28 +23,12 @@ export function getAlertType(days: number): string {
   return "7day";
 }
 
-function getBorderColor(reagents: Reagent[]): string {
-  const hasExpired = reagents.some(
-    (r) => getDaysUntilExpiry(r.expiry_date) < 0,
-  );
-  if (hasExpired) return "border-s-red-500";
-  const hasUrgent = reagents.some(
-    (r) => getDaysUntilExpiry(r.expiry_date) <= 2,
-  );
-  if (hasUrgent) return "border-s-orange-500";
-  return "border-s-yellow-500";
-}
-
-function getBgColor(reagents: Reagent[]): string {
-  const hasExpired = reagents.some(
-    (r) => getDaysUntilExpiry(r.expiry_date) < 0,
-  );
-  if (hasExpired) return "bg-red-50/50";
-  const hasUrgent = reagents.some(
-    (r) => getDaysUntilExpiry(r.expiry_date) <= 2,
-  );
-  if (hasUrgent) return "bg-orange-50/50";
-  return "bg-yellow-50/50";
+// Severity shows in the frame and the icon only; the surface stays plain like the rest of the app.
+function getSeverity(reagents: Reagent[]): { frame: string; icon: string } {
+  const days = reagents.map((r) => getDaysUntilExpiry(r.expiry_date));
+  if (days.some((d) => d < 0)) return { frame: "border-red-400", icon: "text-red-600" };
+  if (days.some((d) => d <= 2)) return { frame: "border-orange-400", icon: "text-orange-600" };
+  return { frame: "border-yellow-400", icon: "text-yellow-600" };
 }
 
 export function ExpiryAlertSection({
@@ -63,10 +46,14 @@ export function ExpiryAlertSection({
   // The items themselves are in the list below. This bar only
   // counts them and offers the reminder actions, so it stays one line until opened.
   const expanded = alertExpanded ?? false;
+  const severity = getSeverity(reagents);
+  // The tap area stays 44px; only the small chip inside it is drawn.
+  const actionClass = "group inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const chipClass = "rounded-md border border-input bg-background px-3 py-1 text-xs group-hover:bg-muted";
 
   return (
     <div
-      className={`print:hidden rounded-lg border border-s-4 ${getBorderColor(reagents)} ${getBgColor(reagents)}`}
+      className={`print:hidden rounded-lg border-2 bg-card ${severity.frame}`}
     >
       {/* Collapsed header — always visible */}
       <button
@@ -76,7 +63,7 @@ export function ExpiryAlertSection({
         aria-expanded={expanded}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0" />
+          <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${severity.icon}`} />
           <span className="min-w-0 truncate text-sm font-semibold">
             {t("notifications.alertSummary", { count: reagents.length })}
             {teamName ? (
@@ -107,31 +94,31 @@ export function ExpiryAlertSection({
             <span className="text-xs text-muted-foreground">
               {t("notifications.remindMe")}
             </span>
-            <Button
-              variant="ghost"
+            <button
+              type="button"
               onClick={() => onSnoozeAll(reagents.map((r) => r.id), 1)}
-              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
+              className={actionClass}
               aria-label={t("notifications.remindTomorrow")}
             >
-              {t("notifications.tomorrowShort")}
-            </Button>
-            <Button
-              variant="ghost"
+              <span className={chipClass}>{t("notifications.tomorrowShort")}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => onSnoozeAll(reagents.map((r) => r.id), 3)}
-              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
+              className={actionClass}
               aria-label={t("notifications.remindIn3Days")}
             >
-              {t("notifications.in3DaysShort")}
-            </Button>
-            <Button
-              variant="ghost"
+              <span className={chipClass}>{t("notifications.in3DaysShort")}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setConfirmDismissAll(true)}
-              className="min-h-11 h-auto px-2 py-1 text-xs font-normal text-muted-foreground hover:text-foreground"
+              className={`${actionClass} ms-auto px-1 text-muted-foreground hover:text-foreground`}
               aria-label={t("notifications.dismissAll")}
             >
               <X className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
               {t("notifications.dismissAll")}
-            </Button>
+            </button>
           </div>
         </div>
       )}

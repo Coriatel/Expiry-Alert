@@ -103,7 +103,7 @@ describe("EditReagentDialog — manufacturer & description", () => {
 
     expect(screen.getByRole("dialog", { name: "dialog.editItem" })).toBeInTheDocument();
     expect(screen.getByLabelText("newShipment.quantity")).toHaveValue(0);
-    expect(screen.getByLabelText("form.receivedDate")).toHaveValue("2026-01-15");
+    expect(screen.getByLabelText("form.receivedDate")).toHaveValue("15.01.2026");
     expect(screen.getByLabelText("form.supplier")).toHaveValue("44");
   });
 

@@ -94,7 +94,7 @@
     "name": "Name",
     "category": "Category",
     "expiryDate": "Expiration Date",
-    "expiryDatePlaceholder": "Date / תאריך",
+    "expiryDatePlaceholder": "dd.mm.yyyy",
     "daysUntilExpiry": "Days Until Expiry",
     "lotNumber": "LOT Number",
     "receivedDate": "Received Date",
@@ -142,11 +142,13 @@
     "showMore": "Show more"
   },
   "form": {
+    "invalidDate": "Invalid date",
+    "openCalendar": "Open calendar",
     "name": "Name",
     "namePlaceholder": "Enter item name",
     "category": "Category",
     "expiryDate": "Expiration Date",
-    "expiryDatePlaceholder": "Date / תאריך",
+    "expiryDatePlaceholder": "dd.mm.yyyy",
     "lotNumber": "LOT Number",
     "lotNumberPlaceholder": "Enter LOT number",
     "receivedDate": "Received Date",
