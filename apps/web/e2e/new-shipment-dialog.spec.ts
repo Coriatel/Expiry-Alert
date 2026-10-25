@@ -125,7 +125,7 @@ async function expectNoOverflow(page: Page) {
 
 // Owner, 2026-10-25: the new-shipment dialog was lopsided on a phone (a one-column grid with
 // col-span-2 children grew an auto column), and a barcode could only be read by the camera.
-for (const width of [360, 412]) {
+for (const width of [360, 390, 430]) {
   test(`new-shipment dialog has two equal columns and reads a typed barcode at ${width}px`, async ({ browser }) => {
     const { context, page } = await openDashboard(browser, width);
     await page.getByRole("article").filter({ hasText: "PANOCELL" }).first()
