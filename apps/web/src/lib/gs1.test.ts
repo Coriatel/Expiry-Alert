@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseGs1Label, parseImmucorVial, pickLabel } from "./gs1";
+import {
+  parseGs1Label,
+  parseImmucorVial,
+  parseTypedBarcode,
+  pickLabel,
+} from "./gs1";
 
 // Raw contents decoded from photos of labels in the blood bank (2026-10-11).
 describe("parseGs1Label", () => {
@@ -144,3 +149,35 @@ describe("Immucor outer labels", () => {
   });
 });
 
+
+describe("parseTypedBarcode", () => {
+  it("reads a typed Immucor vial code", () => {
+    expect(parseTypedBarcode(" 112306260621234567 ")).toEqual(
+      parseImmucorVial("112306260621234567"),
+    );
+  });
+
+  it("reads typed GS1 digits with spaces between the fields", () => {
+    expect(parseTypedBarcode("01 07611969000838 17 261012 10 137061321")).toEqual({
+      gtin: "07611969000838",
+      expiryDate: "2026-10-12",
+      lot: "137061321",
+    });
+  });
+
+  it("reads the bracketed form", () => {
+    expect(parseTypedBarcode("(10)112062(17)261120")).toEqual({
+      lot: "112062",
+      expiryDate: "2026-11-20",
+    });
+  });
+
+  it("never reads an Immucor REF code as a vial", () => {
+    expect(parseTypedBarcode("000234200243112062")).toBeNull();
+  });
+
+  it("returns null for text with no lot or expiry", () => {
+    expect(parseTypedBarcode("hello")).toBeNull();
+    expect(parseTypedBarcode("")).toBeNull();
+  });
+});

@@ -117,3 +117,11 @@ export function pickLabel(
   ];
   return parsed.find((label) => label !== null) ?? null;
 }
+
+// Typed by hand or by a keyboard scanner: spaces between fields are dropped and there is no
+// reader to say which symbology it was, so a plain 18-digit Immucor code is tried first.
+export function parseTypedBarcode(typed: string): Gs1Label | null {
+  const text = typed.replace(/\s+/g, "");
+  if (!text) return null;
+  return parseImmucorVial(text) ?? parseGs1Label(text);
+}
