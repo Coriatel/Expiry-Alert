@@ -98,7 +98,8 @@ export function DateInput({ id, value = '', onChange, placeholderText, required,
         onChange={(e) => handleType(e.target.value)}
         className={cn(
           'flex h-10 w-full rounded-md border border-input bg-background py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-          'ps-3 pe-11 rtl:text-right',
+          // Physical sides: the field is dir=ltr but the calendar button follows the page direction.
+          'pl-3 pr-11 rtl:pl-11 rtl:pr-3 rtl:text-right',
           invalid && 'border-destructive',
         )}
       />

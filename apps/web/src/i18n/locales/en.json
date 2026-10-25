@@ -647,7 +647,10 @@
     "title": "Scan label",
     "hint": "Point the camera at the barcode or the dotted square on the label",
     "noLotOrExpiry": "The barcode was read, but it holds no lot number or expiry. Try the other code on the label or type the details.",
-    "cameraUnavailable": "The camera could not be opened. Allow camera access in the browser and try again."
+    "cameraUnavailable": "The camera could not be opened. Allow camera access in the browser and try again.",
+    "typedLabel": "Or type the barcode digits",
+    "typedSubmit": "Read",
+    "typedUnreadable": "No lot number or expiry found in this code. Check the digits or fill in by hand."
   },
   "batchScope": {
     "title": "Change the other batches too?",

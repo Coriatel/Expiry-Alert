@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, ScanLine } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { DateInput } from "@/components/ui/DateInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
+import { BarcodeScanDialog } from "./BarcodeScanDialog";
+import type { Gs1Label } from "@/lib/gs1";
 import { getSuppliers, type Supplier } from "@/lib/tauri";
 import { normalizeReagentCategory } from "@/lib/reagentCategory";
 import type { Reagent, ReagentFormData } from "@/types";
@@ -28,6 +30,7 @@ export function DuplicateReagentDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const [formData, setFormData] = useState<ReagentFormData>({
     name: "",
@@ -88,6 +91,16 @@ export function DuplicateReagentDialog({
 
   const handleChange = (field: keyof ReagentFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  const handleScanned = (label: Gs1Label) => {
+    setScanOpen(false);
+    setFormData((prev) => ({
+      ...prev,
+      expiryDate: label.expiryDate ?? prev.expiryDate,
+      lotNumber: label.lot ?? prev.lotNumber,
+    }));
     setError(null);
   };
 
@@ -153,14 +166,15 @@ export function DuplicateReagentDialog({
       title={t("newShipment.title")}
       className="max-w-lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {error && (
           <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Two columns at every width: col-span-2 in a one-column grid adds an auto-width column. */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
           {/* Reagent name — read-only */}
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">
@@ -169,6 +183,18 @@ export function DuplicateReagentDialog({
             <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm">
               {reagent?.name ?? ""}
             </div>
+          </div>
+
+          <div className="col-span-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setScanOpen(true)}
+            >
+              <ScanLine className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+              {t("scan.button")}
+            </Button>
           </div>
 
           <div className="col-span-2">
@@ -236,8 +262,8 @@ export function DuplicateReagentDialog({
                 setError(null);
               }}
             />
-            <p className="text-sm mt-1 flex items-center gap-1" style={{ color: "#2d6a4f" }}>
-              <HelpCircle className="h-4 w-4" />
+            <p className="text-xs mt-1 flex items-center gap-1 whitespace-nowrap" style={{ color: "#2d6a4f" }}>
+              <HelpCircle className="h-3.5 w-3.5 shrink-0" />
               {t("newShipment.sameQuantity")}
             </p>
           </div>
@@ -274,12 +300,12 @@ export function DuplicateReagentDialog({
               value={formData.notes}
               onChange={(e) => handleChange("notes", e.target.value)}
               placeholder={t("form.notesPlaceholder")}
-              rows={3}
+              rows={2}
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-3 border-t">
           <Button
             type="button"
             variant="outline"
@@ -293,6 +319,11 @@ export function DuplicateReagentDialog({
           </Button>
         </div>
       </form>
+      <BarcodeScanDialog
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onScanned={handleScanned}
+      />
     </Dialog>
   );
 }

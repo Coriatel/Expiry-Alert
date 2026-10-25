@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "@/components/ui/Dialog";
-import { pickLabel, type Gs1Label } from "@/lib/gs1";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { parseTypedBarcode, pickLabel, type Gs1Label } from "@/lib/gs1";
 
 interface BarcodeScanDialogProps {
   open: boolean;
@@ -21,6 +23,16 @@ export function BarcodeScanDialog({
   const onScannedRef = useRef(onScanned);
   onScannedRef.current = onScanned;
   const [problem, setProblem] = useState<"camera" | "unreadable" | null>(null);
+  const [typed, setTyped] = useState("");
+  const [typedUnreadable, setTypedUnreadable] = useState(false);
+
+  // A keyboard scanner types into the focused field and presses Enter, so this form serves it too.
+  const handleTyped = (e: React.FormEvent) => {
+    e.preventDefault();
+    const label = parseTypedBarcode(typed);
+    if (label) onScanned(label);
+    else setTypedUnreadable(true);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -28,6 +40,8 @@ export function BarcodeScanDialog({
     let stream: MediaStream | undefined;
     let timer: number | undefined;
     setProblem(null);
+    setTyped("");
+    setTypedUnreadable(false);
 
     (async () => {
       try {
@@ -112,6 +126,33 @@ export function BarcodeScanDialog({
             ? t("scan.noLotOrExpiry")
             : t("scan.hint")}
       </p>
+      <form onSubmit={handleTyped} className="mt-4 border-t pt-4">
+        <label htmlFor="typed-barcode" className="block text-sm font-medium mb-1">
+          {t("scan.typedLabel")}
+        </label>
+        <div className="flex gap-2">
+          <Input
+            id="typed-barcode"
+            dir="ltr"
+            autoComplete="off"
+            value={typed}
+            onChange={(e) => {
+              setTyped(e.target.value);
+              setTypedUnreadable(false);
+            }}
+            placeholder="(17)261120(10)112062"
+            className="flex-1 min-w-0"
+          />
+          <Button type="submit" disabled={!typed.trim()} className="shrink-0">
+            {t("scan.typedSubmit")}
+          </Button>
+        </div>
+        {typedUnreadable && (
+          <p className="mt-2 text-sm text-red-700" role="alert">
+            {t("scan.typedUnreadable")}
+          </p>
+        )}
+      </form>
     </Dialog>
   );
 }
