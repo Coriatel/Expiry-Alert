@@ -9,6 +9,7 @@ import {
   pickLabel,
   type Gs1Label,
 } from "@/lib/gs1";
+import { confirmLabel, type PendingLabel } from "@/lib/scanConfirm";
 
 interface BarcodeScanDialogProps {
   open: boolean;
@@ -17,10 +18,6 @@ interface BarcodeScanDialogProps {
 }
 
 const SCAN_INTERVAL_MS = 250;
-// A code with only a lot (Immucor REF/LOT) is used if no code with an expiry turns up by then,
-// and only once the same lot was read in two frames with no more than a few misses in between.
-const PARTIAL_MAX_MISSES = 4;
-const PARTIAL_WAIT_MS = 2500;
 // Codes the whole-frame pass misses are often found in a crop: a Bio-Rad GS1-128 on a box front
 // and an Immucor vial held at arm's length were both read only this way. One crop per frame,
 // in turn, so a frame costs at most two passes. Fractions of the frame: x, y, width, height.
@@ -115,10 +112,7 @@ export function BarcodeScanDialog({
           maxNumberOfSymbols: 4,
         };
         let frame = 0;
-        let partial: Gs1Label | null = null;
-        let partialSince = 0;
-        let partialSeen = 0;
-        let partialMisses = 0;
+        let pending: PendingLabel | null = null;
         const scanFrame = async () => {
           if (stopped) return;
           if (video.videoWidth > 0) {
@@ -149,32 +143,15 @@ export function BarcodeScanDialog({
             ];
             if (stopped) return;
             const label = pickLabel(results);
-            if (label?.lot && label.expiryDate) {
-              onScannedRef.current(label);
-              return;
-            }
-            if (label?.lot) {
-              if (label.lot !== partial?.lot) {
-                partial = label;
-                partialSince = Date.now();
-                partialSeen = 0;
-              }
-              partialSeen += 1;
-              partialMisses = 0;
-            } else if (partial && ++partialMisses > PARTIAL_MAX_MISSES) {
-              partial = null;
-              partialSeen = 0;
-            }
-            if (
-              partial &&
-              partialSeen >= 2 &&
-              Date.now() - partialSince >= PARTIAL_WAIT_MS
-            ) {
-              onScannedRef.current(partial);
+            const conflict = !label && hasConflictingLabels(results);
+            const step = confirmLabel(pending, label, conflict, Date.now());
+            pending = step.pending;
+            if (step.accepted) {
+              onScannedRef.current(step.accepted);
               return;
             }
             if (results.length > 0 && !label)
-              setProblem(hasConflictingLabels(results) ? "several" : "unreadable");
+              setProblem(conflict ? "several" : "unreadable");
           }
           timer = window.setTimeout(scanFrame, SCAN_INTERVAL_MS);
         };

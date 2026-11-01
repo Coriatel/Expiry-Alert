@@ -142,49 +142,53 @@ const isUnmarkedGs1 = (text: string) =>
 // A frame can hold several codes; a GS1 one states lot and expiry outright, so it wins.
 // Immucor prints "(10)112062(17)261120" as plain Code 128 text, brackets included, so the
 // reader does not mark it GS1; the bracketed form is read as GS1 all the same.
-// A label with both lot and expiry beats one with only a lot. Two complete labels that disagree
-// (two products in the frame) give nothing: guessing between them could fill the wrong one.
-export function pickLabel(
-  results: { text: string; contentType: string }[],
-): Gs1Label | null {
-  const isGs1 = (r: { text: string; contentType: string }) =>
-    r.contentType === "GS1" ||
-    /^\(\d{2,4}\)/.test(r.text) ||
-    isUnmarkedGs1(r.text);
-  const parsed = [
+// A label with both lot and expiry beats one with only a lot. Labels that disagree on any field
+// both state (two products in the frame) give nothing: guessing between them could fill the wrong one.
+const isGs1 = (r: { text: string; contentType: string }) =>
+  r.contentType === "GS1" || /^\(\d{2,4}\)/.test(r.text) || isUnmarkedGs1(r.text);
+
+function parseAll(results: { text: string; contentType: string }[]): Gs1Label[] {
+  return [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorRefLot(r.text)),
   ].filter((label) => label !== null);
-  const complete = parsed.filter((label) => label.lot && label.expiryDate);
-  if (hasConflict(complete)) return null;
-  const lots = new Set(parsed.filter((l) => l.lot).map((l) => l.lot));
-  if (complete.length === 0 && lots.size > 1) return null;
-  return complete[0] ?? parsed.find((label) => label.lot) ?? parsed[0] ?? null;
 }
 
 function hasConflict(labels: Gs1Label[]): boolean {
-  return new Set(labels.map((l) => `${l.lot}|${l.expiryDate}`)).size > 1;
+  return (["gtin", "lot", "expiryDate"] as const).some(
+    (field) => new Set(labels.map((l) => l[field]).filter(Boolean)).size > 1,
+  );
+}
+
+export function pickLabel(
+  results: { text: string; contentType: string }[],
+): Gs1Label | null {
+  const parsed = parseAll(results);
+  if (hasConflict(parsed)) return null;
+  return (
+    parsed.find((label) => label.lot && label.expiryDate) ??
+    parsed.find((label) => label.lot) ??
+    parsed[0] ??
+    null
+  );
 }
 
 export function hasConflictingLabels(
   results: { text: string; contentType: string }[],
 ): boolean {
-  return (
-    pickLabel(results) === null &&
-    hasConflict(
-      results
-        .map((r) => pickLabel([r]))
-        .filter((l): l is Gs1Label => !!l?.lot && !!l.expiryDate),
-    )
-  );
+  return hasConflict(parseAll(results));
 }
 
 // Typed by hand or by a keyboard scanner: spaces between fields are dropped and there is no
 // reader to say which symbology it was, so a plain 18-digit Immucor code is tried first.
+// 18 bare digits are taken as Immucor only: a rejected vial read as GS1 would give a wrong lot
+// ("102132222850535334" -> lot 2132222850535334).
 export function parseTypedBarcode(typed: string): Gs1Label | null {
   const text = typed.replace(/\s+/g, "");
   if (!text) return null;
+  if (/^\d{18}$/.test(text))
+    return parseImmucorVial(text) ?? parseImmucorRefLot(text);
   return (
     parseImmucorVial(text) ?? parseGs1Label(text) ?? parseImmucorRefLot(text)
   );
