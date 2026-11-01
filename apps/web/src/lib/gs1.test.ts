@@ -7,6 +7,7 @@ import {
   parseTypedBarcode,
   pickLabel,
 } from "./gs1";
+import { confirmLabel, type PendingLabel } from "./scanConfirm";
 
 // Raw contents decoded from photos of labels in the blood bank (2026-10-11).
 describe("parseGs1Label", () => {
@@ -309,5 +310,95 @@ describe("review round 3", () => {
     expect(
       pickLabel([plain("041021000398104036-2"), plain("041321000922205044-1")]),
     ).toBeNull();
+  });
+});
+
+// Codex review of 964373a.
+describe("review round 4", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+  const gs1 = (text: string) => ({ text, contentType: "GS1" });
+
+  it("gives nothing when a complete label and a lot-only code disagree on the lot", () => {
+    const frame = [gs1("(01)10758750003846(17)261130(10)8SS7238"), plain("041021000398104036-2")];
+    expect(pickLabel(frame)).toBeNull();
+    expect(hasConflictingLabels(frame)).toBe(true);
+  });
+
+  it("gives nothing when two labels with the same lot disagree on the GTIN", () => {
+    const frame = [
+      gs1("(01)10758750003846(17)261130(10)8SS7238"),
+      gs1("(01)10758750030743(10)8SS7238"),
+    ];
+    expect(pickLabel(frame)).toBeNull();
+    expect(hasConflictingLabels(frame)).toBe(true);
+  });
+
+  it("reports two different lot-only codes as several labels", () => {
+    expect(
+      hasConflictingLabels([plain("041021000398104036-2"), plain("041321000922205044-1")]),
+    ).toBe(true);
+  });
+
+  it("does not report an unreadable code as several labels", () => {
+    expect(hasConflictingLabels([plain("hello")])).toBe(false);
+  });
+
+  it("does not read typed 18 digits that fail as a vial as GS1", () => {
+    expect(parseTypedBarcode("102132222850535334")).toBeNull();
+    expect(parseTypedBarcode("(10)112062(17)261120")).toEqual({
+      lot: "112062",
+      expiryDate: "2026-11-20",
+    });
+  });
+});
+
+describe("confirmLabel", () => {
+  const complete = { lot: "8SS7238", expiryDate: "2026-11-30" };
+  const lotOnly = { lot: "104036-2" };
+  const expiryOnly = { expiryDate: "2027-05-07" };
+  // Feeds frames in order, 250 ms apart; returns what each frame accepted.
+  const run = (frames: ({ lot?: string; expiryDate?: string } | null | "conflict")[]) => {
+    let pending: PendingLabel | null = null;
+    return frames.map((f, i) => {
+      const step = confirmLabel(pending, f === "conflict" ? null : f, f === "conflict", i * 250);
+      pending = step.pending;
+      return step.accepted;
+    });
+  };
+
+  it("needs a complete label in two frames", () => {
+    expect(run([complete])).toEqual([null]);
+    expect(run([complete, complete])).toEqual([null, complete]);
+    expect(run([complete, null, null, complete])).toEqual([null, null, null, complete]);
+  });
+
+  it("forgets a label after too many misses", () => {
+    expect(run([complete, null, null, null, null, null, complete])).toEqual(Array(7).fill(null));
+  });
+
+  it("does not confirm a complete label with a different one", () => {
+    const other = { lot: "8SS9223", expiryDate: "2026-11-30" };
+    expect(run([complete, other])).toEqual([null, null]);
+  });
+
+  it("fills a lot-only code after two sightings and the wait", () => {
+    const frames = Array(11).fill(lotOnly);
+    expect(run(frames).at(-1)).toEqual(lotOnly);
+    expect(run(frames.slice(0, 10)).every((a) => a === null)).toBe(true);
+  });
+
+  it("fills an expiry-only code the same way", () => {
+    expect(run(Array(11).fill(expiryOnly)).at(-1)).toEqual(expiryOnly);
+  });
+
+  it("never accepts a cached lot on a frame with no label", () => {
+    expect(run([lotOnly, lotOnly, null, null, null, null, null, null, null, null, null])).toEqual(
+      Array(11).fill(null),
+    );
+  });
+
+  it("drops a pending lot when a frame has conflicting labels", () => {
+    const frames = [lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, "conflict" as const, lotOnly];
+    expect(run(frames).every((a) => a === null)).toBe(true);
   });
 });
