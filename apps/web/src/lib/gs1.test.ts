@@ -227,7 +227,7 @@ describe("labels photographed 2026-11-01", () => {
 
   it("never reads an Immucor REF/LOT code as a vial with an old expiry", () => {
     expect(parseImmucorVial("535002200516517309")).toBeNull();
-    expect(pickLabel([plain("535002200516517309")])).toBeNull();
+    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
   });
 
   it("prefers a code with an expiry over a lot-only code in the same frame", () => {
@@ -253,7 +253,7 @@ describe("no wrong lot from look-alike codes", () => {
 
   it("does not take the last six digits of a rejected vial as its lot", () => {
     expect(pickLabel([plain("954132222850535334")])).toBeNull(); // vial expired 2022
-    expect(pickLabel([plain("535002200516517309")])).toBeNull(); // REF/LOT, no "-" or "000"
+    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" }); // known REF 5350022
   });
 
   it("does not read an Immucor REF/LOT code with a REF ending in 3 as a 2030 vial", () => {
@@ -348,6 +348,61 @@ describe("review round 4", () => {
     expect(parseTypedBarcode("(10)112062(17)261120")).toEqual({
       lot: "112062",
       expiryDate: "2026-11-20",
+    });
+  });
+});
+
+// Owner's rule (2026-11-01): the two plain 18-digit Immucor layouts are told apart by known
+// product evidence, never by the year alone; with no evidence and two readings, give nothing.
+describe("Immucor layout by known REF or reagent ID", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+  afterEach(() => vi.useRealTimers());
+
+  it("reads a known REF code as REF/LOT only: lot from the box, never a vial", () => {
+    // Box photo 2026-11-01: REF 5350022, LOT 517309.
+    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
+    expect(parseTypedBarcode("535002200516517309")).toEqual({ lot: "517309" });
+  });
+
+  it("never reads a known REF code as a vial, even when the clock makes the year plausible", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2019-06-01T00:00:00Z"));
+    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(pickLabel([plain("041021000398104036-2")])).toEqual({ lot: "104036-2" });
+  });
+
+  it("gives nothing when a known REF code does not fit the REF/LOT layout", () => {
+    // A vial-shaped code that happens to start with REF 5350022: middle does not start "0".
+    expect(pickLabel([plain("535002270516517309")])).toBeNull();
+  });
+
+  it("reads a known reagent ID as a vial, 2030 included", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(pickLabel([plain("954001302850535334")])).toEqual({
+      lot: "954285",
+      expiryDate: "2030-01-01",
+    });
+  });
+
+  it("gives nothing for a known reagent ID that fails as a vial", () => {
+    expect(pickLabel([plain("954132222850535334")])).toBeNull();
+  });
+
+  it("gives nothing for an unknown prefix that reads both ways (Codex 2029 case)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(pickLabel([plain("535002300516517309")])).toBeNull();
+    expect(parseTypedBarcode("535002300516517309")).toBeNull();
+  });
+
+  it("still reads an unknown-prefix vial that cannot be a REF/LOT code", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T00:00:00Z"));
+    expect(pickLabel([plain("112306260621234567")])).toEqual({
+      lot: "112062",
+      expiryDate: "2026-11-02",
     });
   });
 });

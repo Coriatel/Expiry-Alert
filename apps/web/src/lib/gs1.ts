@@ -131,6 +131,33 @@ export function parseImmucorRefLot(raw: string): Gs1Label | null {
   return match ? { lot: match[1] } : null;
 }
 
+// The two layouts cannot be told apart from the digits, so the layout comes from product evidence
+// (owner's rule, 2026-11-01). Immucor REFs seen on real labels, plus the blood bank reagent REFs
+// in FDA GUDID (accessgudid.nlm.nih.gov, Immucor GTIN prefix 10888234). 5350022 is from a box.
+const KNOWN_IMMUCOR_REFS = new Set([
+  "0002342", "0007056", "5350022",
+  "0410203", "0410210", "0413203", "0413210", "0414210", "0420503", "0420403", "0420410",
+  "0409203", "0409210", "0401510", "0409703", "0409710", "0401010",
+]);
+// Reagent IDs (first 3 digits) read from real Immucor vials.
+const KNOWN_VIAL_REAGENT_IDS = new Set(["954", "936", "964", "619", "344"]);
+
+// A bare 18-digit REF/LOT reading: on every real REF/LOT code the 5-digit middle starts "0".
+const bareRefLot = (raw: string) => /^\d{7}0\d{4}(\d{6})$/.exec(raw)?.[1] ?? null;
+
+// A known REF allows only the REF/LOT reading; a known reagent ID only the vial reading; if the
+// allowed reading fails, nothing. With no evidence, a code that reads both ways gives nothing.
+export function parseImmucorPlain(raw: string): Gs1Label | null {
+  if (KNOWN_IMMUCOR_REFS.has(raw.slice(0, 7))) {
+    const lot = bareRefLot(raw);
+    return parseImmucorRefLot(raw) ?? (lot ? { lot } : null);
+  }
+  if (KNOWN_VIAL_REAGENT_IDS.has(raw.slice(0, 3))) return parseImmucorVial(raw);
+  const vial = parseImmucorVial(raw);
+  if (vial && bareRefLot(raw)) return null;
+  return vial ?? parseImmucorRefLot(raw);
+}
+
 // Immucor also prints the UDI as plain Code 128 without the GS1 start marker:
 // "011088823400166910704078-1<GS>17270722". It is GS1 in all but name.
 // Only with a group separator or an expiry straight after the GTIN, so a 20-character REF/LOT
@@ -150,8 +177,7 @@ const isGs1 = (r: { text: string; contentType: string }) =>
 function parseAll(results: { text: string; contentType: string }[]): Gs1Label[] {
   return [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
-    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),
-    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorRefLot(r.text)),
+    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorPlain(r.text)),
   ].filter((label) => label !== null);
 }
 
@@ -188,7 +214,7 @@ export function parseTypedBarcode(typed: string): Gs1Label | null {
   const text = typed.replace(/\s+/g, "");
   if (!text) return null;
   if (/^\d{18}$/.test(text))
-    return parseImmucorVial(text) ?? parseImmucorRefLot(text);
+    return parseImmucorPlain(text);
   return (
     parseImmucorVial(text) ?? parseGs1Label(text) ?? parseImmucorRefLot(text)
   );
