@@ -367,7 +367,8 @@ describe("Immucor layout by known REF or reagent ID", () => {
   it("never reads a known REF code as a vial, even when the clock makes the year plausible", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2019-06-01T00:00:00Z"));
-    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
+    // Not vial 535051 / 2020-01-02; while such a vial could be live, not the REF lot either.
+    expect(pickLabel([plain("535002200516517309")])).toBeNull();
     vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
     expect(pickLabel([plain("041021000398104036-2")])).toEqual({ lot: "104036-2" });
   });
@@ -377,7 +378,15 @@ describe("Immucor layout by known REF or reagent ID", () => {
     expect(pickLabel([plain("535002270516517309")])).toBeNull();
   });
 
-  it("reads a known reagent ID as a vial, 2030 included", () => {
+  it("gives nothing when a known REF code could also be a vial that has not expired", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-06-01T00:00:00Z"));
+    expect(pickLabel([plain("042050301234567890")])).toBeNull(); // REF 0420503 or a 2030 vial
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(pickLabel([plain("042050301234567890")])).toBeNull();
+  });
+
+  it("reads a known reagent ID as a vial, a 2030 expiry once the year guard allows it", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
     expect(pickLabel([plain("954001302850535334")])).toEqual({

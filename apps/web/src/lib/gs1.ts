@@ -145,12 +145,22 @@ const KNOWN_VIAL_REAGENT_IDS = new Set(["954", "936", "964", "619", "344"]);
 // A bare 18-digit REF/LOT reading: on every real REF/LOT code the 5-digit middle starts "0".
 const bareRefLot = (raw: string) => /^\d{7}0\d{4}(\d{6})$/.exec(raw)?.[1] ?? null;
 
+// A vial with these digits that has not expired yet: a known REF code that reads as one is not
+// a sure REF ("042050301234567890" is REF 0420503 or a 2030 vial). An expired one cannot be on the
+// shelf, so the REF 5350022 box ("5350022005...", as a vial 2020) still gives its lot.
+function couldBeLiveVial(raw: string): boolean {
+  const day = Number(raw.slice(3, 6));
+  const year = 2000 + Number(raw.slice(6, 8));
+  if (day < 1 || new Date(Date.UTC(year, 0, day)).getUTCFullYear() !== year) return false;
+  return year >= new Date().getUTCFullYear() - 1;
+}
+
 // A known REF allows only the REF/LOT reading; a known reagent ID only the vial reading; if the
 // allowed reading fails, nothing. With no evidence, a code that reads both ways gives nothing.
 export function parseImmucorPlain(raw: string): Gs1Label | null {
   if (KNOWN_IMMUCOR_REFS.has(raw.slice(0, 7))) {
     const lot = bareRefLot(raw);
-    return parseImmucorRefLot(raw) ?? (lot ? { lot } : null);
+    return parseImmucorRefLot(raw) ?? (lot && !couldBeLiveVial(raw) ? { lot } : null);
   }
   if (KNOWN_VIAL_REAGENT_IDS.has(raw.slice(0, 3))) return parseImmucorVial(raw);
   const vial = parseImmucorVial(raw);
