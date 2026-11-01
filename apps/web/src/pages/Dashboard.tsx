@@ -223,11 +223,16 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
-  // Lots the team already has decide an Immucor code that reads two ways (see parseImmucorPlain).
-  const knownLots = useMemo(
-    () => new Set(reagents.map((r) => r.lot_number?.trim()).filter((lot) => !!lot) as string[]),
-    [reagents],
-  );
+  // The team's Immucor lots decide an Immucor code that reads two ways (see parseImmucorPlain).
+  const knownLots = useMemo(() => {
+    const lots = new Map<string, string[]>();
+    for (const r of reagents) {
+      const lot = r.lot_number?.trim();
+      if (!lot || r.manufacturer?.trim().toLowerCase() !== "immucor") continue;
+      lots.set(lot, [...(lots.get(lot) ?? []), r.expiry_date.slice(0, 10)]);
+    }
+    return lots;
+  }, [reagents]);
 
   // Filter & sort reagents
   const filteredReagents = useMemo(() => {

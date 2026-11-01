@@ -158,10 +158,13 @@ function couldBeLiveVial(raw: string): boolean {
 // A known REF allows only the REF/LOT reading; a known reagent ID only the vial reading; if the
 // allowed reading fails, nothing. With neither, a code that reads both ways is decided by the
 // team's own lots ("products repeat, lots repeat", owner 2026-11-01): if exactly one of the two
-// lots is already on the team's list, that reading; otherwise nothing.
+// lots is already on the team's list (a vial lot with the same expiry), that reading; else nothing.
+// The team's Immucor lots, each with the expiry dates it was saved with.
+export type KnownLots = ReadonlyMap<string, readonly string[]>;
+
 export function parseImmucorPlain(
   raw: string,
-  knownLots?: ReadonlySet<string>,
+  knownLots?: KnownLots,
 ): Gs1Label | null {
   if (KNOWN_IMMUCOR_REFS.has(raw.slice(0, 7))) {
     const lot = bareRefLot(raw);
@@ -171,10 +174,12 @@ export function parseImmucorPlain(
   const vial = parseImmucorVial(raw);
   const refLot = bareRefLot(raw);
   if (vial && refLot) {
-    const vialKnown = !!knownLots?.has(vial.lot ?? "");
-    const refKnown = !!knownLots?.has(refLot);
-    if (vialKnown === refKnown) return null;
-    return vialKnown ? vial : { lot: refLot };
+    // The vial reading also fills an expiry, so its lot must be known with that same expiry.
+    const vialSeen = knownLots?.get(vial.lot ?? "");
+    const refSeen = !!knownLots?.has(refLot);
+    if (refSeen && !vialSeen) return { lot: refLot };
+    if (!refSeen && vialSeen?.includes(vial.expiryDate ?? "")) return vial;
+    return null;
   }
   return vial ?? parseImmucorRefLot(raw);
 }
@@ -197,7 +202,7 @@ const isGs1 = (r: { text: string; contentType: string }) =>
 
 function parseAll(
   results: { text: string; contentType: string }[],
-  knownLots?: ReadonlySet<string>,
+  knownLots?: KnownLots,
 ): Gs1Label[] {
   return [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
@@ -213,7 +218,7 @@ function hasConflict(labels: Gs1Label[]): boolean {
 
 export function pickLabel(
   results: { text: string; contentType: string }[],
-  knownLots?: ReadonlySet<string>,
+  knownLots?: KnownLots,
 ): Gs1Label | null {
   const parsed = parseAll(results, knownLots);
   if (hasConflict(parsed)) return null;
@@ -227,7 +232,7 @@ export function pickLabel(
 
 export function hasConflictingLabels(
   results: { text: string; contentType: string }[],
-  knownLots?: ReadonlySet<string>,
+  knownLots?: KnownLots,
 ): boolean {
   return hasConflict(parseAll(results, knownLots));
 }
@@ -238,7 +243,7 @@ export function hasConflictingLabels(
 // ("102132222850535334" -> lot 2132222850535334).
 export function parseTypedBarcode(
   typed: string,
-  knownLots?: ReadonlySet<string>,
+  knownLots?: KnownLots,
 ): Gs1Label | null {
   const text = typed.replace(/\s+/g, "");
   if (!text) return null;

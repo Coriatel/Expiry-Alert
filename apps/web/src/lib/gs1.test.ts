@@ -421,6 +421,9 @@ describe("Immucor tie-break by the team's known lots", () => {
   // Reads both ways at this date: vial lot 535051 (2030-01-02) or REF 5350023, LOT 517309.
   const both = "535002300516517309";
   const vial = { lot: "535051", expiryDate: "2030-01-02" };
+  // The team's Immucor lots, each with the expiry it was saved with.
+  const lots = (...known: [string, string][]) =>
+    new Map(known.map(([lot, expiry]) => [lot, [expiry]]));
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
@@ -428,43 +431,49 @@ describe("Immucor tie-break by the team's known lots", () => {
   afterEach(() => vi.useRealTimers());
 
   it("takes the vial reading when only the vial lot is already on the team's list", () => {
-    expect(pickLabel([plain(both)], new Set(["535051", "112062"]))).toEqual(vial);
-    expect(parseTypedBarcode(both, new Set(["535051"]))).toEqual(vial);
+    expect(pickLabel([plain(both)], lots(["535051", "2030-01-02"], ["112062", "2027-01-01"]))).toEqual(vial);
+    expect(parseTypedBarcode(both, lots(["535051", "2030-01-02"]))).toEqual(vial);
+  });
+
+  it("does not take the vial reading when the known lot has another expiry", () => {
+    expect(pickLabel([plain(both)], lots(["535051", "2027-03-01"]))).toBeNull();
+    expect(hasConflictingLabels([plain(both)], lots(["535051", "2027-03-01"]))).toBe(false);
   });
 
   it("takes the REF/LOT reading when only that lot is already on the team's list", () => {
-    expect(pickLabel([plain(both)], new Set(["517309"]))).toEqual({ lot: "517309" });
-    expect(parseTypedBarcode(both, new Set(["517309"]))).toEqual({ lot: "517309" });
+    expect(pickLabel([plain(both)], lots(["517309", "2027-01-01"]))).toEqual({ lot: "517309" });
+    expect(parseTypedBarcode(both, lots(["517309", "2027-01-01"]))).toEqual({ lot: "517309" });
   });
 
   it("still gives nothing when both lots or neither lot are known", () => {
-    expect(pickLabel([plain(both)], new Set(["535051", "517309"]))).toBeNull();
-    expect(pickLabel([plain(both)], new Set(["999999"]))).toBeNull();
-    expect(pickLabel([plain(both)], new Set())).toBeNull();
-    expect(parseTypedBarcode(both, new Set(["535051", "517309"]))).toBeNull();
+    expect(pickLabel([plain(both)], lots(["535051", "2030-01-02"], ["517309", "2027-01-01"]))).toBeNull();
+    expect(pickLabel([plain(both)], lots(["535051", "2027-03-01"], ["517309", "2027-01-01"]))).toBeNull();
+    expect(pickLabel([plain(both)], lots(["999999", "2027-01-01"]))).toBeNull();
+    expect(pickLabel([plain(both)], lots())).toBeNull();
+    expect(parseTypedBarcode(both, lots(["535051", "2030-01-02"], ["517309", "2027-01-01"]))).toBeNull();
   });
 
   it("never lets a known lot override a known REF or reagent ID", () => {
     // Known REF 5350022: vial lot 535051 being known does not make it a vial.
-    expect(pickLabel([plain("535002200516517309")], new Set(["535051"]))).toEqual({
+    expect(pickLabel([plain("535002200516517309")], lots(["535051", "2030-01-02"]))).toEqual({
       lot: "517309",
     });
     vi.setSystemTime(new Date("2019-06-01T00:00:00Z")); // could be a live 2020 vial: nothing
-    expect(pickLabel([plain("535002200516517309")], new Set(["535051"]))).toBeNull();
+    expect(pickLabel([plain("535002200516517309")], lots(["535051", "2030-01-02"]))).toBeNull();
     vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
     // Known reagent ID 954: REF/LOT lot 535334 being known does not make it REF/LOT.
-    expect(pickLabel([plain("954001302850535334")], new Set(["535334"]))).toEqual({
+    expect(pickLabel([plain("954001302850535334")], lots(["535334", "2027-01-01"]))).toEqual({
       lot: "954285",
       expiryDate: "2030-01-01",
     });
     // Known REF that could be a live vial stays nothing, even with the vial lot known.
-    expect(pickLabel([plain("042050301234567890")], new Set(["042123"]))).toBeNull();
+    expect(pickLabel([plain("042050301234567890")], lots(["042123", "2027-01-01"]))).toBeNull();
   });
 
   it("leaves GS1 readings alone", () => {
     const gs1 = { text: "(10)112062(17)261120", contentType: "Text" };
-    expect(pickLabel([gs1], new Set(["999999"]))).toEqual(pickLabel([gs1]));
-    expect(pickLabel([gs1, plain(both)], new Set(["517309"]))).toBeNull(); // two lots disagree
+    expect(pickLabel([gs1], lots(["999999", "2027-01-01"]))).toEqual(pickLabel([gs1]));
+    expect(pickLabel([gs1, plain(both)], lots(["517309", "2027-01-01"]))).toBeNull(); // two lots disagree
   });
 });
 

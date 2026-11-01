@@ -8,6 +8,7 @@ import {
   parseTypedBarcode,
   pickLabel,
   type Gs1Label,
+  type KnownLots,
 } from "@/lib/gs1";
 import { confirmLabel, type PendingLabel } from "@/lib/scanConfirm";
 
@@ -16,7 +17,7 @@ interface BarcodeScanDialogProps {
   onClose: () => void;
   onScanned: (label: Gs1Label) => void;
   // Lots already on the team's list: they decide an Immucor code that reads two ways.
-  knownLots?: ReadonlySet<string>;
+  knownLots?: KnownLots;
 }
 
 const SCAN_INTERVAL_MS = 250;

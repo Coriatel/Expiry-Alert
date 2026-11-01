@@ -15,12 +15,12 @@ import {
 } from '@/lib/tauri';
 import { CreateCatalogItemDialog } from './CreateCatalogItemDialog';
 import { BarcodeScanDialog } from './BarcodeScanDialog';
-import type { Gs1Label } from '@/lib/gs1';
+import type { Gs1Label, KnownLots } from '@/lib/gs1';
 
 interface BulkAddFormProps {
   onSave: (reagents: ReagentFormData[]) => void;
   onCancel: () => void;
-  knownLots?: ReadonlySet<string>;
+  knownLots?: KnownLots;
 }
 
 interface BulkRow extends ReagentFormData {
