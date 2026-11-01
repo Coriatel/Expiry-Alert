@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseGs1Label,
+  hasConflictingLabels,
   parseImmucorRefLot,
   parseImmucorVial,
   parseTypedBarcode,
@@ -260,5 +261,34 @@ describe("no wrong lot from look-alike codes", () => {
 
   it("does not take a REF/LOT code that starts 01 for unmarked GS1", () => {
     expect(pickLabel([plain("01021001001610104-2")])).toBeNull();
+  });
+});
+
+// Review round 2 of #73.
+describe("review round 2", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+  const gs1 = (text: string) => ({ text, contentType: "GS1" });
+
+  it("does not read a REF/LOT code with REF ending in 3 as a 2030 vial", () => {
+    expect(pickLabel([plain("535002300516517309")])).toBeNull();
+  });
+
+  it("does not take a vial whose lot starts 000 for a bag REF/LOT code", () => {
+    expect(parseImmucorRefLot("000104527001234567")).toBeNull();
+  });
+
+  it("gives nothing when two different products are in the frame", () => {
+    const frame = [
+      gs1("(01)10758750003846(17)261130(10)8SS7238"),
+      gs1("(01)10758750003846(17)261005(10)8SS9223"),
+    ];
+    expect(pickLabel(frame)).toBeNull();
+    expect(hasConflictingLabels(frame)).toBe(true);
+  });
+
+  it("treats the same label read twice (full frame and crop) as one", () => {
+    const code = gs1("(01)10758750003846(17)261130(10)8SS7238");
+    expect(pickLabel([code, code])?.lot).toBe("8SS7238");
+    expect(hasConflictingLabels([code, code])).toBe(false);
   });
 });

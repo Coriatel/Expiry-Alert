@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { parseTypedBarcode, pickLabel, type Gs1Label } from "@/lib/gs1";
+import {
+  hasConflictingLabels,
+  parseTypedBarcode,
+  pickLabel,
+  type Gs1Label,
+} from "@/lib/gs1";
 
 interface BarcodeScanDialogProps {
   open: boolean;
@@ -13,7 +18,8 @@ interface BarcodeScanDialogProps {
 
 const SCAN_INTERVAL_MS = 250;
 // A code with only a lot (Immucor REF/LOT) is used if no code with an expiry turns up by then,
-// and only once the same lot was read in two frames.
+// and only once the same lot was read in two frames with no more than a few misses in between.
+const PARTIAL_MAX_MISSES = 4;
 const PARTIAL_WAIT_MS = 2500;
 // Codes the whole-frame pass misses are often found in a crop: a Bio-Rad GS1-128 on a box front
 // and an Immucor vial held at arm's length were both read only this way. One crop per frame,
@@ -35,7 +41,9 @@ export function BarcodeScanDialog({
   const videoRef = useRef<HTMLVideoElement>(null);
   const onScannedRef = useRef(onScanned);
   onScannedRef.current = onScanned;
-  const [problem, setProblem] = useState<"camera" | "unreadable" | null>(null);
+  const [problem, setProblem] = useState<
+    "camera" | "unreadable" | "several" | null
+  >(null);
   const [typed, setTyped] = useState("");
   const [typedUnreadable, setTypedUnreadable] = useState(false);
 
@@ -110,6 +118,7 @@ export function BarcodeScanDialog({
         let partial: Gs1Label | null = null;
         let partialSince = 0;
         let partialSeen = 0;
+        let partialMisses = 0;
         const scanFrame = async () => {
           if (stopped) return;
           if (video.videoWidth > 0) {
@@ -144,13 +153,17 @@ export function BarcodeScanDialog({
               onScannedRef.current(label);
               return;
             }
-            if (label) {
+            if (label?.lot) {
               if (label.lot !== partial?.lot) {
                 partial = label;
                 partialSince = Date.now();
                 partialSeen = 0;
               }
               partialSeen += 1;
+              partialMisses = 0;
+            } else if (partial && ++partialMisses > PARTIAL_MAX_MISSES) {
+              partial = null;
+              partialSeen = 0;
             }
             if (
               partial &&
@@ -160,7 +173,8 @@ export function BarcodeScanDialog({
               onScannedRef.current(partial);
               return;
             }
-            if (results.length > 0 && !label) setProblem("unreadable");
+            if (results.length > 0 && !label)
+              setProblem(hasConflictingLabels(results) ? "several" : "unreadable");
           }
           timer = window.setTimeout(scanFrame, SCAN_INTERVAL_MS);
         };
@@ -190,6 +204,8 @@ export function BarcodeScanDialog({
           ? t("scan.cameraUnavailable")
           : problem === "unreadable"
             ? t("scan.noLotOrExpiry")
+            : problem === "several"
+              ? t("scan.severalLabels")
             : t("scan.hint")}
       </p>
       <form onSubmit={handleTyped} className="mt-4 border-t pt-4">

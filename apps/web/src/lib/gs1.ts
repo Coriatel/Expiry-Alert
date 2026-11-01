@@ -92,10 +92,12 @@ export function parseGs1Label(raw: string): Gs1Label | null {
 // with no expiry in it; "000234200243112062" would otherwise read as lot 000024, expiry 2020.
 // A misread code can still form a valid day of year; expiry dates outside this window are not
 // trusted ("535002200516517309", an Immucor REF/LOT code, would read as expiry 2020-01-02).
-// The window alone cannot catch a REF/LOT code whose REF ends in 3 (year 2030), hence the check below.
+// Reagents are shipped with at most about three years of shelf life. The vial layout and the
+// REF/LOT layout are both 18 digits and cannot be told apart in every case; the year window and
+// the "04" check below remove every confusion seen on real labels so far.
 function plausibleExpiryYear(year: number): boolean {
   const now = new Date().getUTCFullYear();
-  return year >= now - 3 && year <= now + 5;
+  return year >= now - 1 && year <= now + 3;
 }
 
 export function parseImmucorVial(raw: string): Gs1Label | null {
@@ -122,7 +124,7 @@ export function parseImmucorVial(raw: string): Gs1Label | null {
 // A bare 18 digits may be a vial, whose last six digits are not its lot.
 export function parseImmucorRefLot(raw: string): Gs1Label | null {
   const match =
-    /^\d{7}\d{5}(\d{6}-\d)$/.exec(raw) ?? /^000\d{4}\d{5}(\d{6})$/.exec(raw);
+    /^\d{7}\d{5}(\d{6}-\d)$/.exec(raw) ?? /^000\d{4}0\d{4}(\d{6})$/.exec(raw);
   return match ? { lot: match[1] } : null;
 }
 
@@ -137,7 +139,8 @@ const isUnmarkedGs1 = (text: string) =>
 // A frame can hold several codes; a GS1 one states lot and expiry outright, so it wins.
 // Immucor prints "(10)112062(17)261120" as plain Code 128 text, brackets included, so the
 // reader does not mark it GS1; the bracketed form is read as GS1 all the same.
-// A label with both lot and expiry beats one with only a lot.
+// A label with both lot and expiry beats one with only a lot. Two complete labels that disagree
+// (two products in the frame) give nothing: guessing between them could fill the wrong one.
 export function pickLabel(
   results: { text: string; contentType: string }[],
 ): Gs1Label | null {
@@ -150,7 +153,26 @@ export function pickLabel(
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorRefLot(r.text)),
   ].filter((label) => label !== null);
-  return parsed.find((label) => label.lot && label.expiryDate) ?? parsed[0] ?? null;
+  const complete = parsed.filter((label) => label.lot && label.expiryDate);
+  if (hasConflict(complete)) return null;
+  return complete[0] ?? parsed.find((label) => label.lot) ?? parsed[0] ?? null;
+}
+
+function hasConflict(labels: Gs1Label[]): boolean {
+  return new Set(labels.map((l) => `${l.lot}|${l.expiryDate}`)).size > 1;
+}
+
+export function hasConflictingLabels(
+  results: { text: string; contentType: string }[],
+): boolean {
+  return (
+    pickLabel(results) === null &&
+    hasConflict(
+      results
+        .map((r) => pickLabel([r]))
+        .filter((l): l is Gs1Label => !!l?.lot && !!l.expiryDate),
+    )
+  );
 }
 
 // Typed by hand or by a keyboard scanner: spaces between fields are dropped and there is no
