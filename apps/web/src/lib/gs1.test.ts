@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseGs1Label,
+  parseImmucorRefLot,
   parseImmucorVial,
   parseTypedBarcode,
   pickLabel,
@@ -173,11 +174,73 @@ describe("parseTypedBarcode", () => {
   });
 
   it("never reads an Immucor REF code as a vial", () => {
-    expect(parseTypedBarcode("000234200243112062")).toBeNull();
+    expect(parseTypedBarcode("000234200243112062")).toEqual({ lot: "112062" });
   });
 
   it("returns null for text with no lot or expiry", () => {
     expect(parseTypedBarcode("hello")).toBeNull();
     expect(parseTypedBarcode("")).toBeNull();
+  });
+});
+
+// Decoded from the owner's photos of 2026-11-01 (Ortho, Bio-Rad, Diagast, Immucor).
+describe("labels photographed 2026-11-01", () => {
+  const gs1 = (text: string) => ({ text, contentType: "GS1" });
+  const plain = (text: string) => ({ text, contentType: "Text" });
+
+  it("reads Ortho DataMatrix lots that contain letters", () => {
+    expect(pickLabel([gs1("(01)10758750003846(17)261130(10)8SS7238")])).toEqual({
+      gtin: "10758750003846",
+      expiryDate: "2026-11-30",
+      lot: "8SS7238",
+    });
+    expect(pickLabel([gs1("(01)10758750030743(17)271103(10)R3547")])?.lot).toBe("R3547");
+  });
+
+  it("ignores the production date (11) on Ortho BLISS", () => {
+    expect(
+      pickLabel([gs1("(01)10758750007493(17)271111(11)251112(10)280875")]),
+    ).toEqual({ gtin: "10758750007493", expiryDate: "2027-11-11", lot: "280875" });
+  });
+
+  it("reads a Bio-Rad GS1-128 box front", () => {
+    expect(
+      pickLabel([{ text: "(01)07611969069538(17)270731(10)1131084602", contentType: "GS1" }]),
+    ).toEqual({ gtin: "07611969069538", expiryDate: "2027-07-31", lot: "1131084602" });
+  });
+
+  it("reads an Immucor UDI printed as plain Code 128 with a group separator", () => {
+    expect(
+      pickLabel([
+        plain("040921001234704078-1"),
+        { text: "011088823400166910704078-1<GS>17270722", contentType: "Binary" },
+      ]),
+    ).toEqual({ gtin: "10888234001669", expiryDate: "2027-07-22", lot: "704078-1" });
+  });
+
+  it("takes only the lot from an Immucor REF/LOT code", () => {
+    expect(pickLabel([plain("041021000398104036-2")])).toEqual({ lot: "104036-2" });
+    expect(parseImmucorRefLot("000234200243112062")).toEqual({ lot: "112062" });
+  });
+
+  it("never reads an Immucor REF/LOT code as a vial with an old expiry", () => {
+    expect(parseImmucorVial("535002200516517309")).toBeNull();
+    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
+  });
+
+  it("prefers a code with an expiry over a lot-only code in the same frame", () => {
+    expect(
+      pickLabel([plain("041021000398104036-2"), gs1("(01)10888234001706(10)104036-2(17)270507")]),
+    ).toEqual({ gtin: "10888234001706", expiryDate: "2027-05-07", lot: "104036-2" });
+  });
+
+  it("still reads Immucor vials", () => {
+    expect(pickLabel([plain("954132272850535334")])).toEqual({ lot: "954285", expiryDate: "2027-05-12" });
+    expect(pickLabel([plain("936238272500527231")])).toEqual({ lot: "936250", expiryDate: "2027-08-26" });
+    expect(pickLabel([plain("964140272250672227")])).toEqual({ lot: "964225", expiryDate: "2027-05-20" });
+  });
+
+  it("reads a typed Immucor REF/LOT code", () => {
+    expect(parseTypedBarcode("0410210 00398 104036-2")).toEqual({ lot: "104036-2" });
   });
 });

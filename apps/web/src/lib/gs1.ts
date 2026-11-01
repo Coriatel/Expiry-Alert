@@ -23,7 +23,8 @@ const VARIABLE_LENGTH = new Set(["10", "21", "22"]);
 
 function readFields(raw: string): Map<string, string> {
   const fields = new Map<string, string>();
-  const text = raw.replace(/^\][A-Za-z]\d/, "");
+  // The reader prints a group separator inside non-GS1 Code 128 as the text "<GS>".
+  const text = raw.replace(/^\][A-Za-z]\d/, "").split("<GS>").join(GROUP_SEPARATOR);
 
   if (text.includes("(")) {
     for (const match of text.matchAll(/\((\d{2,4})\)([^(]*)/g)) {
@@ -89,6 +90,13 @@ export function parseGs1Label(raw: string): Gs1Label | null {
 // then 7 digits that differ per vial. The "L" printed after some lots is not encoded.
 // Immucor bags and boxes carry another plain 18-digit code - REF (000xxxx), 5 digits, LOT -
 // with no expiry in it; "000234200243112062" would otherwise read as lot 000024, expiry 2020.
+// A misread code can still form a valid day of year; expiry dates outside this window are not
+// trusted ("535002200516517309", an Immucor REF/LOT code, would read as expiry 2020-01-02).
+function plausibleExpiryYear(year: number): boolean {
+  const now = new Date().getUTCFullYear();
+  return year >= now - 3 && year <= now + 10;
+}
+
 export function parseImmucorVial(raw: string): Gs1Label | null {
   if (raw.startsWith("000")) return null;
   const match = /^(\d{3})(\d{3})(\d{2})(\d{3})\d{7}$/.exec(raw);
@@ -97,25 +105,41 @@ export function parseImmucorVial(raw: string): Gs1Label | null {
   const day = Number(dayOfYear);
   const date = new Date(Date.UTC(2000 + Number(year), 0, day));
   if (day < 1 || date.getUTCFullYear() !== 2000 + Number(year)) return null;
+  if (!plausibleExpiryYear(date.getUTCFullYear())) return null;
   return {
     lot: lotStart + lotEnd,
     expiryDate: date.toISOString().slice(0, 10),
   };
 }
 
+// Immucor boxes, blisters and bags also print REF (7 digits) + 5 digits + LOT as plain Code 128:
+// "041021000398104036-2" is REF 0410210, LOT 104036-2. It has no expiry, so it only gives the lot.
+export function parseImmucorRefLot(raw: string): Gs1Label | null {
+  const match = /^\d{7}\d{5}(\d{6}(?:-\d)?)$/.exec(raw);
+  return match ? { lot: match[1] } : null;
+}
+
+// Immucor also prints the UDI as plain Code 128 without the GS1 start marker:
+// "011088823400166910704078-1<GS>17270722". It is GS1 in all but name.
+const UNMARKED_GS1 = /^01\d{14}(10|17|21)/;
+
 // A frame can hold several codes; a GS1 one states lot and expiry outright, so it wins.
 // Immucor prints "(10)112062(17)261120" as plain Code 128 text, brackets included, so the
 // reader does not mark it GS1; the bracketed form is read as GS1 all the same.
+// A label with both lot and expiry beats one with only a lot.
 export function pickLabel(
   results: { text: string; contentType: string }[],
 ): Gs1Label | null {
   const isGs1 = (r: { text: string; contentType: string }) =>
-    r.contentType === "GS1" || /^\(\d{2,4}\)/.test(r.text);
+    r.contentType === "GS1" ||
+    /^\(\d{2,4}\)/.test(r.text) ||
+    UNMARKED_GS1.test(r.text);
   const parsed = [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),
-  ];
-  return parsed.find((label) => label !== null) ?? null;
+    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorRefLot(r.text)),
+  ].filter((label) => label !== null);
+  return parsed.find((label) => label.lot && label.expiryDate) ?? parsed[0] ?? null;
 }
 
 // Typed by hand or by a keyboard scanner: spaces between fields are dropped and there is no
@@ -123,5 +147,7 @@ export function pickLabel(
 export function parseTypedBarcode(typed: string): Gs1Label | null {
   const text = typed.replace(/\s+/g, "");
   if (!text) return null;
-  return parseImmucorVial(text) ?? parseGs1Label(text);
+  return (
+    parseImmucorVial(text) ?? parseGs1Label(text) ?? parseImmucorRefLot(text)
+  );
 }
