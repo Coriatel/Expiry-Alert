@@ -113,3 +113,16 @@ test("a barcode without lot and expiry says so and fills nothing", async () => {
     await expect(page.getByPlaceholder("מספר אצווה").first()).toHaveValue("");
   });
 });
+
+// A synthetic Immucor REF/LOT Code 128 ("041021000398104036-2"): it holds a lot but no expiry,
+// so the dialog waits briefly for a code with an expiry, then fills the lot alone.
+test("an Immucor REF/LOT code fills the lot only, after a short wait", async () => {
+  await withCamera("label-immucor-ref-lot.mjpeg", async (page) => {
+    await expect(page.getByPlaceholder("מספר אצווה").first()).toHaveValue(
+      "104036-2",
+      { timeout: 20_000 },
+    );
+    await expect(page.locator('input[type="date"]').first()).toHaveValue("");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
