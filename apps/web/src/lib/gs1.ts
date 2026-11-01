@@ -112,6 +112,9 @@ export function parseImmucorVial(raw: string): Gs1Label | null {
   const date = new Date(Date.UTC(2000 + Number(year), 0, day));
   if (day < 1 || date.getUTCFullYear() !== 2000 + Number(year)) return null;
   if (!plausibleExpiryYear(date.getUTCFullYear())) return null;
+  // A REF/LOT code read as a vial has a year ending in 0 (the 5-digit middle starts "0"), so such a
+  // year is trusted only when it is this year or next: "535002300516517309" is not a 2030 vial.
+  if (year[1] === "0" && date.getUTCFullYear() > new Date().getUTCFullYear() + 1) return null;
   return {
     lot: lotStart + lotEnd,
     expiryDate: date.toISOString().slice(0, 10),
@@ -155,6 +158,8 @@ export function pickLabel(
   ].filter((label) => label !== null);
   const complete = parsed.filter((label) => label.lot && label.expiryDate);
   if (hasConflict(complete)) return null;
+  const lots = new Set(parsed.filter((l) => l.lot).map((l) => l.lot));
+  if (complete.length === 0 && lots.size > 1) return null;
   return complete[0] ?? parsed.find((label) => label.lot) ?? parsed[0] ?? null;
 }
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   parseGs1Label,
   hasConflictingLabels,
@@ -290,5 +290,24 @@ describe("review round 2", () => {
     const code = gs1("(01)10758750003846(17)261130(10)8SS7238");
     expect(pickLabel([code, code])?.lot).toBe("8SS7238");
     expect(hasConflictingLabels([code, code])).toBe(false);
+  });
+});
+
+describe("review round 3", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+  afterEach(() => vi.useRealTimers());
+
+  it("does not read a 2030 vial from a REF/LOT code even in 2027", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-06-01T00:00:00Z"));
+    expect(parseImmucorVial("535002300516517309")).toBeNull();
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(parseImmucorVial("954001302850535334")?.expiryDate).toBe("2030-01-01");
+  });
+
+  it("gives nothing for two lot-only codes with different lots", () => {
+    expect(
+      pickLabel([plain("041021000398104036-2"), plain("041321000922205044-1")]),
+    ).toBeNull();
   });
 });
