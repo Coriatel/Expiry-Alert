@@ -409,10 +409,34 @@ describe("Immucor layout by known REF or reagent ID", () => {
   it("still reads an unknown-prefix vial that cannot be a REF/LOT code", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-01T00:00:00Z"));
-    expect(pickLabel([plain("112306260621234567")])).toEqual({
-      lot: "112062",
+    expect(pickLabel([plain("777306260621234567")])).toEqual({
+      lot: "777062",
       expiryDate: "2026-11-02",
     });
+  });
+});
+
+// Synthetic codes for further Immucor REFs and reagent IDs. REFs starting "000" already read the
+// same without the table (no vial starts "000"), so only one that changes the result is tested.
+describe("further Immucor REFs and reagent IDs", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+  afterEach(() => vi.useRealTimers());
+
+  it("reads the 2030 vial of a newly known reagent ID instead of abstaining", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+    expect(pickLabel([plain("345008309000123456")])).toEqual({
+      lot: "345900",
+      expiryDate: "2030-01-08",
+    });
+    expect(parseTypedBarcode("112008309000123456")).toEqual({
+      lot: "112900",
+      expiryDate: "2030-01-08",
+    });
+  });
+
+  it("reads the lot from a newly known REF code (Anti-Fya EU)", () => {
+    expect(pickLabel([plain("006643000516123456")])).toEqual({ lot: "123456" });
   });
 });
 

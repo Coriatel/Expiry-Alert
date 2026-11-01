@@ -134,13 +134,19 @@ export function parseImmucorRefLot(raw: string): Gs1Label | null {
 // The two layouts cannot be told apart from the digits, so the layout comes from product evidence
 // (owner's rule, 2026-11-01). Immucor REFs seen on real labels, plus the blood bank reagent REFs
 // in FDA GUDID (accessgudid.nlm.nih.gov, Immucor GTIN prefix 10888234). 5350022 is from a box.
+// The second group: further Immucor blood bank REFs from GUDID and the EU
+// IVDR certificates (transfusionandtransplant.werfen.com/en-ca/about/certifications). 0002410 is
+// the EU corQC Test System REF (seen on a real label; the US REF is 0002400).
 const KNOWN_IMMUCOR_REFS = new Set([
   "0002342", "0007056", "5350022",
   "0410203", "0410210", "0413203", "0413210", "0414210", "0420503", "0420403", "0420410",
   "0409203", "0409210", "0401510", "0409703", "0409710", "0401010",
+  "0002345", "0002224", "0002225", "0002377", "0002381", "0003032", "0002400", "0002410",
+  "0006406", "0006407", "0004816", "0066430", "0007591", "0004818", "0007594",
 ]);
-// Reagent IDs (first 3 digits) read from real Immucor vials.
-const KNOWN_VIAL_REAGENT_IDS = new Set(["954", "936", "964", "619", "344"]);
+// Reagent IDs (first 3 digits) read from real Immucor vials. 345 (GammaZyme-F ficin) and 112
+// (Referencells A2) are single-vial products whose printed 6-digit lots all start with them.
+const KNOWN_VIAL_REAGENT_IDS = new Set(["954", "936", "964", "619", "344", "345", "112"]);
 
 // A bare 18-digit REF/LOT reading: on every real REF/LOT code the 5-digit middle starts "0".
 const bareRefLot = (raw: string) => /^\d{7}0\d{4}(\d{6})$/.exec(raw)?.[1] ?? null;
