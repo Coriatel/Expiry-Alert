@@ -8,7 +8,7 @@ import { DateInput } from "@/components/ui/DateInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { BarcodeScanDialog } from "./BarcodeScanDialog";
-import type { Gs1Label } from "@/lib/gs1";
+import type { Gs1Label, KnownLots } from "@/lib/gs1";
 import { getSuppliers, type Supplier } from "@/lib/tauri";
 import { normalizeReagentCategory } from "@/lib/reagentCategory";
 import type { Reagent, ReagentFormData } from "@/types";
@@ -18,6 +18,7 @@ interface DuplicateReagentDialogProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: ReagentFormData, originalId: number) => Promise<void>;
+  knownLots?: KnownLots;
 }
 
 export function DuplicateReagentDialog({
@@ -25,6 +26,7 @@ export function DuplicateReagentDialog({
   open,
   onClose,
   onSave,
+  knownLots,
 }: DuplicateReagentDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -323,6 +325,7 @@ export function DuplicateReagentDialog({
         open={scanOpen}
         onClose={() => setScanOpen(false)}
         onScanned={handleScanned}
+        knownLots={knownLots}
       />
     </Dialog>
   );

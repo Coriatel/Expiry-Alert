@@ -223,6 +223,17 @@ export function Dashboard({ teamName }: DashboardProps) {
     }
   };
 
+  // The team's Immucor lots decide an Immucor code that reads two ways (see parseImmucorPlain).
+  const knownLots = useMemo(() => {
+    const lots = new Map<string, string[]>();
+    for (const r of reagents) {
+      const lot = r.lot_number?.trim();
+      if (!lot || r.manufacturer?.trim().toLowerCase() !== "immucor") continue;
+      lots.set(lot, [...(lots.get(lot) ?? []), r.expiry_date.slice(0, 10)]);
+    }
+    return lots;
+  }, [reagents]);
+
   // Filter & sort reagents
   const filteredReagents = useMemo(() => {
     let result = searchReagents(reagents, searchQuery);
@@ -766,6 +777,7 @@ export function Dashboard({ teamName }: DashboardProps) {
           <BulkAddForm
             onSave={handleBulkAdd}
             onCancel={() => setShowBulkAdd(false)}
+            knownLots={knownLots}
           />
         </div>
       )}
@@ -901,6 +913,7 @@ export function Dashboard({ teamName }: DashboardProps) {
         open={duplicatingReagent !== null}
         onClose={() => setDuplicatingReagent(null)}
         onSave={handleDuplicateSave}
+        knownLots={knownLots}
       />
 
       {/* Destruction Dialog */}

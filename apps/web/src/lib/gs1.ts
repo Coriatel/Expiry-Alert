@@ -155,16 +155,32 @@ function couldBeLiveVial(raw: string): boolean {
   return year >= new Date().getUTCFullYear() - 1;
 }
 
+// The team's Immucor lots, each with the expiry dates it was saved with.
+export type KnownLots = ReadonlyMap<string, readonly string[]>;
+
 // A known REF allows only the REF/LOT reading; a known reagent ID only the vial reading; if the
-// allowed reading fails, nothing. With no evidence, a code that reads both ways gives nothing.
-export function parseImmucorPlain(raw: string): Gs1Label | null {
+// allowed reading fails, nothing. With neither, a code that reads both ways is decided by the
+// team's own lots ("products repeat, lots repeat", owner 2026-11-01): if exactly one of the two
+// lots is already on the team's list (a vial lot with the same expiry), that reading; else nothing.
+export function parseImmucorPlain(
+  raw: string,
+  knownLots?: KnownLots,
+): Gs1Label | null {
   if (KNOWN_IMMUCOR_REFS.has(raw.slice(0, 7))) {
     const lot = bareRefLot(raw);
     return parseImmucorRefLot(raw) ?? (lot && !couldBeLiveVial(raw) ? { lot } : null);
   }
   if (KNOWN_VIAL_REAGENT_IDS.has(raw.slice(0, 3))) return parseImmucorVial(raw);
   const vial = parseImmucorVial(raw);
-  if (vial && bareRefLot(raw)) return null;
+  const refLot = bareRefLot(raw);
+  if (vial && refLot) {
+    // The vial reading also fills an expiry, so its lot must be known with that same expiry.
+    const vialSeen = knownLots?.get(vial.lot ?? "");
+    const refSeen = !!knownLots?.has(refLot);
+    if (refSeen && !vialSeen) return { lot: refLot };
+    if (!refSeen && vialSeen?.includes(vial.expiryDate ?? "")) return vial;
+    return null;
+  }
   return vial ?? parseImmucorRefLot(raw);
 }
 
@@ -184,10 +200,13 @@ const isUnmarkedGs1 = (text: string) =>
 const isGs1 = (r: { text: string; contentType: string }) =>
   r.contentType === "GS1" || /^\(\d{2,4}\)/.test(r.text) || isUnmarkedGs1(r.text);
 
-function parseAll(results: { text: string; contentType: string }[]): Gs1Label[] {
+function parseAll(
+  results: { text: string; contentType: string }[],
+  knownLots?: KnownLots,
+): Gs1Label[] {
   return [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
-    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorPlain(r.text)),
+    ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorPlain(r.text, knownLots)),
   ].filter((label) => label !== null);
 }
 
@@ -199,8 +218,9 @@ function hasConflict(labels: Gs1Label[]): boolean {
 
 export function pickLabel(
   results: { text: string; contentType: string }[],
+  knownLots?: KnownLots,
 ): Gs1Label | null {
-  const parsed = parseAll(results);
+  const parsed = parseAll(results, knownLots);
   if (hasConflict(parsed)) return null;
   return (
     parsed.find((label) => label.lot && label.expiryDate) ??
@@ -212,19 +232,23 @@ export function pickLabel(
 
 export function hasConflictingLabels(
   results: { text: string; contentType: string }[],
+  knownLots?: KnownLots,
 ): boolean {
-  return hasConflict(parseAll(results));
+  return hasConflict(parseAll(results, knownLots));
 }
 
 // Typed by hand or by a keyboard scanner: spaces between fields are dropped and there is no
 // reader to say which symbology it was, so a plain 18-digit Immucor code is tried first.
 // 18 bare digits are taken as Immucor only: a rejected vial read as GS1 would give a wrong lot
 // ("102132222850535334" -> lot 2132222850535334).
-export function parseTypedBarcode(typed: string): Gs1Label | null {
+export function parseTypedBarcode(
+  typed: string,
+  knownLots?: KnownLots,
+): Gs1Label | null {
   const text = typed.replace(/\s+/g, "");
   if (!text) return null;
   if (/^\d{18}$/.test(text))
-    return parseImmucorPlain(text);
+    return parseImmucorPlain(text, knownLots);
   return (
     parseImmucorVial(text) ?? parseGs1Label(text) ?? parseImmucorRefLot(text)
   );
