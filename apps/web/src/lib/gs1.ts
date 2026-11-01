@@ -92,13 +92,17 @@ export function parseGs1Label(raw: string): Gs1Label | null {
 // with no expiry in it; "000234200243112062" would otherwise read as lot 000024, expiry 2020.
 // A misread code can still form a valid day of year; expiry dates outside this window are not
 // trusted ("535002200516517309", an Immucor REF/LOT code, would read as expiry 2020-01-02).
+// The window alone cannot catch a REF/LOT code whose REF ends in 3 (year 2030), hence the check below.
 function plausibleExpiryYear(year: number): boolean {
   const now = new Date().getUTCFullYear();
-  return year >= now - 3 && year <= now + 10;
+  return year >= now - 3 && year <= now + 5;
 }
 
 export function parseImmucorVial(raw: string): Gs1Label | null {
   if (raw.startsWith("000")) return null;
+  // Immucor reagent REFs start "04" and the 5-digit middle starts "0", so a REF/LOT code read as a
+  // vial has a year ending in 0: "041021300398104036" would read as lot 041003, expiry 2030.
+  if (raw.startsWith("04") && raw[7] === "0") return null;
   const match = /^(\d{3})(\d{3})(\d{2})(\d{3})\d{7}$/.exec(raw);
   if (!match) return null;
   const [, lotStart, dayOfYear, year, lotEnd] = match;
@@ -114,14 +118,21 @@ export function parseImmucorVial(raw: string): Gs1Label | null {
 
 // Immucor boxes, blisters and bags also print REF (7 digits) + 5 digits + LOT as plain Code 128:
 // "041021000398104036-2" is REF 0410210, LOT 104036-2. It has no expiry, so it only gives the lot.
+// Only forms a vial can never take are accepted: the "-2" lot suffix, or the "000" REF of bags.
+// A bare 18 digits may be a vial, whose last six digits are not its lot.
 export function parseImmucorRefLot(raw: string): Gs1Label | null {
-  const match = /^\d{7}\d{5}(\d{6}(?:-\d)?)$/.exec(raw);
+  const match =
+    /^\d{7}\d{5}(\d{6}-\d)$/.exec(raw) ?? /^000\d{4}\d{5}(\d{6})$/.exec(raw);
   return match ? { lot: match[1] } : null;
 }
 
 // Immucor also prints the UDI as plain Code 128 without the GS1 start marker:
 // "011088823400166910704078-1<GS>17270722". It is GS1 in all but name.
-const UNMARKED_GS1 = /^01\d{14}(10|17|21)/;
+// Only with a group separator or an expiry straight after the GTIN, so a 20-character REF/LOT
+// code that happens to start "01" is not taken for one.
+const isUnmarkedGs1 = (text: string) =>
+  /^01\d{14}(10|17|21)/.test(text) &&
+  (text.includes("<GS>") || text.includes(GROUP_SEPARATOR) || /^01\d{14}17\d{6}/.test(text));
 
 // A frame can hold several codes; a GS1 one states lot and expiry outright, so it wins.
 // Immucor prints "(10)112062(17)261120" as plain Code 128 text, brackets included, so the
@@ -133,7 +144,7 @@ export function pickLabel(
   const isGs1 = (r: { text: string; contentType: string }) =>
     r.contentType === "GS1" ||
     /^\(\d{2,4}\)/.test(r.text) ||
-    UNMARKED_GS1.test(r.text);
+    isUnmarkedGs1(r.text);
   const parsed = [
     ...results.filter(isGs1).map((r) => parseGs1Label(r.text)),
     ...results.filter((r) => !isGs1(r)).map((r) => parseImmucorVial(r.text)),

@@ -225,7 +225,7 @@ describe("labels photographed 2026-11-01", () => {
 
   it("never reads an Immucor REF/LOT code as a vial with an old expiry", () => {
     expect(parseImmucorVial("535002200516517309")).toBeNull();
-    expect(pickLabel([plain("535002200516517309")])).toEqual({ lot: "517309" });
+    expect(pickLabel([plain("535002200516517309")])).toBeNull();
   });
 
   it("prefers a code with an expiry over a lot-only code in the same frame", () => {
@@ -242,5 +242,23 @@ describe("labels photographed 2026-11-01", () => {
 
   it("reads a typed Immucor REF/LOT code", () => {
     expect(parseTypedBarcode("0410210 00398 104036-2")).toEqual({ lot: "104036-2" });
+  });
+});
+
+// Review of #73: fall-through paths that could fill a wrong lot.
+describe("no wrong lot from look-alike codes", () => {
+  const plain = (text: string) => ({ text, contentType: "Text" });
+
+  it("does not take the last six digits of a rejected vial as its lot", () => {
+    expect(pickLabel([plain("954132222850535334")])).toBeNull(); // vial expired 2022
+    expect(pickLabel([plain("535002200516517309")])).toBeNull(); // REF/LOT, no "-" or "000"
+  });
+
+  it("does not read an Immucor REF/LOT code with a REF ending in 3 as a 2030 vial", () => {
+    expect(parseImmucorVial("041021300398104036")).toBeNull();
+  });
+
+  it("does not take a REF/LOT code that starts 01 for unmarked GS1", () => {
+    expect(pickLabel([plain("01021001001610104-2")])).toBeNull();
   });
 });

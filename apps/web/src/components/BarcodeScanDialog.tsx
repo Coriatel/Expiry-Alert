@@ -12,7 +12,8 @@ interface BarcodeScanDialogProps {
 }
 
 const SCAN_INTERVAL_MS = 250;
-// A code with only a lot (Immucor REF/LOT) is used if no code with an expiry turns up by then.
+// A code with only a lot (Immucor REF/LOT) is used if no code with an expiry turns up by then,
+// and only once the same lot was read in two frames.
 const PARTIAL_WAIT_MS = 2500;
 // Codes the whole-frame pass misses are often found in a crop: a Bio-Rad GS1-128 on a box front
 // and an Immucor vial held at arm's length were both read only this way. One crop per frame,
@@ -108,6 +109,7 @@ export function BarcodeScanDialog({
         let frame = 0;
         let partial: Gs1Label | null = null;
         let partialSince = 0;
+        let partialSeen = 0;
         const scanFrame = async () => {
           if (stopped) return;
           if (video.videoWidth > 0) {
@@ -142,11 +144,19 @@ export function BarcodeScanDialog({
               onScannedRef.current(label);
               return;
             }
-            if (label && !partial) {
-              partial = label;
-              partialSince = Date.now();
+            if (label) {
+              if (label.lot !== partial?.lot) {
+                partial = label;
+                partialSince = Date.now();
+                partialSeen = 0;
+              }
+              partialSeen += 1;
             }
-            if (partial && Date.now() - partialSince >= PARTIAL_WAIT_MS) {
+            if (
+              partial &&
+              partialSeen >= 2 &&
+              Date.now() - partialSince >= PARTIAL_WAIT_MS
+            ) {
               onScannedRef.current(partial);
               return;
             }
