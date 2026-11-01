@@ -155,13 +155,13 @@ function couldBeLiveVial(raw: string): boolean {
   return year >= new Date().getUTCFullYear() - 1;
 }
 
+// The team's Immucor lots, each with the expiry dates it was saved with.
+export type KnownLots = ReadonlyMap<string, readonly string[]>;
+
 // A known REF allows only the REF/LOT reading; a known reagent ID only the vial reading; if the
 // allowed reading fails, nothing. With neither, a code that reads both ways is decided by the
 // team's own lots ("products repeat, lots repeat", owner 2026-11-01): if exactly one of the two
 // lots is already on the team's list (a vial lot with the same expiry), that reading; else nothing.
-// The team's Immucor lots, each with the expiry dates it was saved with.
-export type KnownLots = ReadonlyMap<string, readonly string[]>;
-
 export function parseImmucorPlain(
   raw: string,
   knownLots?: KnownLots,
