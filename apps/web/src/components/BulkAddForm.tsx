@@ -20,6 +20,7 @@ import type { Gs1Label } from '@/lib/gs1';
 interface BulkAddFormProps {
   onSave: (reagents: ReagentFormData[]) => void;
   onCancel: () => void;
+  knownLots?: ReadonlySet<string>;
 }
 
 interface BulkRow extends ReagentFormData {
@@ -37,7 +38,7 @@ const emptyRow = (): BulkRow => ({
   description: '',
 });
 
-export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
+export function BulkAddForm({ onSave, onCancel, knownLots }: BulkAddFormProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<BulkRow[]>([emptyRow()]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -312,6 +313,7 @@ export function BulkAddForm({ onSave, onCancel }: BulkAddFormProps) {
         open={scanOpen}
         onClose={() => setScanOpen(false)}
         onScanned={handleScanned}
+        knownLots={knownLots}
       />
 
       <CreateCatalogItemDialog

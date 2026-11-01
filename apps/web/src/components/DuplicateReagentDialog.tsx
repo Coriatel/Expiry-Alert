@@ -18,6 +18,7 @@ interface DuplicateReagentDialogProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: ReagentFormData, originalId: number) => Promise<void>;
+  knownLots?: ReadonlySet<string>;
 }
 
 export function DuplicateReagentDialog({
@@ -25,6 +26,7 @@ export function DuplicateReagentDialog({
   open,
   onClose,
   onSave,
+  knownLots,
 }: DuplicateReagentDialogProps) {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -323,6 +325,7 @@ export function DuplicateReagentDialog({
         open={scanOpen}
         onClose={() => setScanOpen(false)}
         onScanned={handleScanned}
+        knownLots={knownLots}
       />
     </Dialog>
   );

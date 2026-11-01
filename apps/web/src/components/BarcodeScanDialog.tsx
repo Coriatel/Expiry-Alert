@@ -15,6 +15,8 @@ interface BarcodeScanDialogProps {
   open: boolean;
   onClose: () => void;
   onScanned: (label: Gs1Label) => void;
+  // Lots already on the team's list: they decide an Immucor code that reads two ways.
+  knownLots?: ReadonlySet<string>;
 }
 
 const SCAN_INTERVAL_MS = 250;
@@ -33,11 +35,14 @@ export function BarcodeScanDialog({
   open,
   onClose,
   onScanned,
+  knownLots,
 }: BarcodeScanDialogProps) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const onScannedRef = useRef(onScanned);
   onScannedRef.current = onScanned;
+  const knownLotsRef = useRef(knownLots);
+  knownLotsRef.current = knownLots;
   const [problem, setProblem] = useState<
     "camera" | "unreadable" | "several" | null
   >(null);
@@ -47,7 +52,7 @@ export function BarcodeScanDialog({
   // A keyboard scanner types into the focused field and presses Enter, so this form serves it too.
   const handleTyped = (e: React.FormEvent) => {
     e.preventDefault();
-    const label = parseTypedBarcode(typed);
+    const label = parseTypedBarcode(typed, knownLots);
     if (label) onScanned(label);
     else setTypedUnreadable(true);
   };
@@ -142,8 +147,9 @@ export function BarcodeScanDialog({
               )),
             ];
             if (stopped) return;
-            const label = pickLabel(results);
-            const conflict = !label && hasConflictingLabels(results);
+            const label = pickLabel(results, knownLotsRef.current);
+            const conflict =
+              !label && hasConflictingLabels(results, knownLotsRef.current);
             const step = confirmLabel(pending, label, conflict, Date.now());
             pending = step.pending;
             if (step.accepted) {
