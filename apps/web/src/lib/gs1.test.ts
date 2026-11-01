@@ -397,6 +397,18 @@ describe("confirmLabel", () => {
     );
   });
 
+  it("confirms an Immucor blister UDI read only in a crop beside its REF/LOT code", () => {
+    const blisterLot = { lot: "104036-2" };
+    const udi = { lot: "104036-2", expiryDate: "2027-05-07" };
+    const frames = [blisterLot, udi, blisterLot, blisterLot, blisterLot, udi];
+    expect(run(frames)).toEqual([null, null, null, null, null, udi]);
+    expect(run([...frames.slice(0, 5), blisterLot])).toEqual(Array(6).fill(null));
+  });
+
+  it("does not let a partial with another lot count toward a complete label", () => {
+    expect(run([complete, lotOnly, complete])).toEqual([null, null, null]);
+  });
+
   it("drops a pending lot when a frame has conflicting labels", () => {
     const frames = [lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, "conflict" as const, lotOnly];
     expect(run(frames).every((a) => a === null)).toBe(true);

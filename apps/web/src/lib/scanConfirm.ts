@@ -9,11 +9,19 @@ const MAX_MISSES = 4;
 const PARTIAL_WAIT_MS = 2500;
 
 export interface PendingLabel {
-  key: string;
+  lot?: string;
+  expiryDate?: string;
   since: number;
   seen: number;
   misses: number;
 }
+
+const isComplete = (l: { lot?: string; expiryDate?: string }) => !!l.lot && !!l.expiryDate;
+// A partial label that matches a complete one on every field it has, e.g. an Immucor blister's
+// REF/LOT code next to its UDI: the REF/LOT code is read every frame, the UDI often only in a crop.
+const agrees = (partial: Gs1Label, complete: PendingLabel | Gs1Label) =>
+  (!partial.lot || partial.lot === complete.lot) &&
+  (!partial.expiryDate || partial.expiryDate === complete.expiryDate);
 
 // Called once per frame with that frame's pickLabel result. A label is accepted only on a frame
 // that itself reads it, never from what earlier frames saw; labels that conflict drop it.
@@ -24,21 +32,30 @@ export function confirmLabel(
   now: number,
 ): { pending: PendingLabel | null; accepted: Gs1Label | null } {
   if (conflict) return { pending: null, accepted: null };
-  if (!label) {
+  // A matching partial does not reset a complete candidate: it counts as a frame without it.
+  if (!label || (pending && isComplete(pending) && !isComplete(label) && agrees(label, pending))) {
     const misses = (pending?.misses ?? 0) + 1;
     return {
       pending: pending && misses <= MAX_MISSES ? { ...pending, misses } : null,
       accepted: null,
     };
   }
-  const key = `${label.lot}|${label.expiryDate}`;
-  const next =
-    pending?.key === key
-      ? { ...pending, seen: pending.seen + 1, misses: 0 }
-      : { key, since: now, seen: 1, misses: 0 };
-  const complete = !!label.lot && !!label.expiryDate;
+  const same = pending?.lot === label.lot && pending?.expiryDate === label.expiryDate;
+  // A complete label that fills in a partial candidate replaces it but keeps its start time; it
+  // still needs a second sighting of its own.
+  const upgrade =
+    !!pending && !isComplete(pending) && isComplete(label) && agrees(pending, label);
+  const next: PendingLabel = same
+    ? { ...pending!, seen: pending!.seen + 1, misses: 0 }
+    : {
+        lot: label.lot,
+        expiryDate: label.expiryDate,
+        since: upgrade ? pending!.since : now,
+        seen: 1,
+        misses: 0,
+      };
   const accepted =
-    next.seen >= 2 && (complete || now - next.since >= PARTIAL_WAIT_MS)
+    next.seen >= 2 && (isComplete(label) || now - next.since >= PARTIAL_WAIT_MS)
       ? label
       : null;
   return { pending: next, accepted };
