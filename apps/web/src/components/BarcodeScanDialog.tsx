@@ -51,7 +51,12 @@ export function BarcodeScanDialog({
   >(null);
   const [typed, setTyped] = useState("");
   const [typedUnreadable, setTypedUnreadable] = useState(false);
-  const [choices, setChoices] = useState<Gs1Label[] | null>(null);
+  // Both readings of one code, with the digits shown so the person sees which label they belong to.
+  const [choices, setChoices] = useState<{
+    raw: string;
+    labels: Gs1Label[];
+    typed: boolean;
+  } | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const [torch, setTorch] = useState<boolean | null>(null);
   const [zoom, setZoom] = useState<{
@@ -73,12 +78,12 @@ export function BarcodeScanDialog({
   const toggleZoom = () => {
     if (!zoom) return;
     const on = !zoom.on;
-    const value = on ? Math.min(zoom.max, zoom.min * 2) : zoom.min;
+    const value = on ? Math.min(zoom.max, Math.max(zoom.min, 1) * 2) : zoom.min;
     trackRef.current
       ?.applyConstraints({
         advanced: [{ zoom: value } as MediaTrackConstraintSet],
       })
-      .then(() => setZoom({ ...zoom, on }))
+      .then(() => setZoom((current) => current && { ...current, on }))
       .catch(() => undefined);
   };
 
@@ -89,7 +94,13 @@ export function BarcodeScanDialog({
     if (label) onScanned(label);
     else {
       const alternatives = typedAlternatives(typed, knownLots);
-      setChoices(alternatives);
+      setChoices(
+        alternatives && {
+          raw: typed.replace(/\s+/g, ""),
+          labels: alternatives,
+          typed: true,
+        },
+      );
       setTypedUnreadable(!alternatives);
     }
   };
@@ -136,6 +147,7 @@ export function BarcodeScanDialog({
         }
         video.srcObject = stream;
         await video.play();
+        if (stopped) return;
 
         // Ask for continuous autofocus where the camera supports it; thin UDI bars blur otherwise.
         const [track] = stream.getVideoTracks();
@@ -211,12 +223,21 @@ export function BarcodeScanDialog({
               onScannedRef.current(step.accepted);
               return;
             }
-            // Kept once shown: the code leaves the frame as the hand moves to tap a choice.
-            const alternatives =
-              label || conflict
-                ? null
-                : pickAlternatives(results, knownLotsRef.current);
-            if (alternatives) setChoices(alternatives);
+            // Kept while the frame is empty (the code leaves it as the hand moves to tap a choice);
+            // any other code in view replaces or clears them. Typed choices are left alone.
+            if (results.length > 0) {
+              const alternatives =
+                label || conflict
+                  ? null
+                  : pickAlternatives(results, knownLotsRef.current);
+              setChoices((current) =>
+                current?.typed
+                  ? current
+                  : alternatives?.raw === current?.raw
+                    ? current
+                    : alternatives && { ...alternatives, typed: false },
+              );
+            }
             if (results.length > 0 && !label)
               setProblem(conflict ? "several" : "unreadable");
           }
@@ -280,8 +301,11 @@ export function BarcodeScanDialog({
       {choices && (
         <div className="mt-3" role="group" aria-label={t("scan.chooseTitle")}>
           <p className="text-sm font-medium mb-2">{t("scan.chooseTitle")}</p>
+          <p className="text-sm mb-2 font-mono" dir="ltr">
+            {choices.raw}
+          </p>
           <div className="flex flex-col gap-2">
-            {choices.map((choice) => (
+            {choices.labels.map((choice) => (
               <Button
                 key={`${choice.lot}|${choice.expiryDate ?? ""}`}
                 type="button"
@@ -316,6 +340,7 @@ export function BarcodeScanDialog({
             onChange={(e) => {
               setTyped(e.target.value);
               setTypedUnreadable(false);
+              setChoices((current) => (current?.typed ? null : current));
             }}
             placeholder="(17)261120(10)112062"
             className="flex-1 min-w-0"

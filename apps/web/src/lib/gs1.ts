@@ -210,14 +210,13 @@ export function immucorAlternatives(
 export function pickAlternatives(
   results: { text: string; contentType: string }[],
   knownLots?: KnownLots,
-): Gs1Label[] | null {
+): { raw: string; labels: Gs1Label[] } | null {
   if (parseAll(results, knownLots).length > 0) return null;
-  const sets = results
-    .filter((r) => !isGs1(r))
-    .map((r) => immucorAlternatives(r.text, knownLots))
-    .filter((a) => a !== null);
-  const distinct = new Set(sets.map((a) => a.map((l) => l.lot).join("|")));
-  return distinct.size === 1 ? sets[0] : null;
+  const codes = new Set(results.filter((r) => !isGs1(r)).map((r) => r.text));
+  if (codes.size !== 1) return null;
+  const [raw] = codes;
+  const labels = immucorAlternatives(raw, knownLots);
+  return labels ? { raw, labels } : null;
 }
 
 export function typedAlternatives(

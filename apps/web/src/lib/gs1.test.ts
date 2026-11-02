@@ -575,10 +575,10 @@ describe("two-reading choice", () => {
   afterEach(() => vi.useRealTimers());
 
   it("offers both readings of an unknown code that reads two ways", () => {
-    expect(pickAlternatives([plainCode("535002300516517309")])).toEqual([
-      { lot: "535051", expiryDate: "2030-01-02" },
-      { lot: "517309" },
-    ]);
+    expect(pickAlternatives([plainCode("535002300516517309")])).toEqual({
+      raw: "535002300516517309",
+      labels: [{ lot: "535051", expiryDate: "2030-01-02" }, { lot: "517309" }],
+    });
     expect(typedAlternatives("535002300516517309")).toHaveLength(2);
   });
 
@@ -608,6 +608,12 @@ describe("two-reading choice", () => {
         plainCode("535002300516517309"),
         plainCode("535002300516517310"),
       ]),
+    ).toBeNull();
+  });
+
+  it("offers nothing when the ambiguous code is in frame with another plain code", () => {
+    expect(
+      pickAlternatives([plainCode("535002300516517309"), plainCode("1234567")]),
     ).toBeNull();
   });
 });
