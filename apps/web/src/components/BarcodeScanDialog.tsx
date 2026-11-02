@@ -52,6 +52,35 @@ export function BarcodeScanDialog({
   const [typed, setTyped] = useState("");
   const [typedUnreadable, setTypedUnreadable] = useState(false);
   const [choices, setChoices] = useState<Gs1Label[] | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const [torch, setTorch] = useState<boolean | null>(null);
+  const [zoom, setZoom] = useState<{
+    min: number;
+    max: number;
+    on: boolean;
+  } | null>(null);
+
+  // Torch and zoom only where the camera reports them; a glossy or small label reads better with them.
+  const toggleTorch = () => {
+    const next = !torch;
+    trackRef.current
+      ?.applyConstraints({
+        advanced: [{ torch: next } as MediaTrackConstraintSet],
+      })
+      .then(() => setTorch(next))
+      .catch(() => undefined);
+  };
+  const toggleZoom = () => {
+    if (!zoom) return;
+    const on = !zoom.on;
+    const value = on ? Math.min(zoom.max, zoom.min * 2) : zoom.min;
+    trackRef.current
+      ?.applyConstraints({
+        advanced: [{ zoom: value } as MediaTrackConstraintSet],
+      })
+      .then(() => setZoom({ ...zoom, on }))
+      .catch(() => undefined);
+  };
 
   // A keyboard scanner types into the focused field and presses Enter, so this form serves it too.
   const handleTyped = (e: React.FormEvent) => {
@@ -74,6 +103,8 @@ export function BarcodeScanDialog({
     setTyped("");
     setTypedUnreadable(false);
     setChoices(null);
+    setTorch(null);
+    setZoom(null);
 
     (async () => {
       try {
@@ -108,20 +139,35 @@ export function BarcodeScanDialog({
 
         // Ask for continuous autofocus where the camera supports it; thin UDI bars blur otherwise.
         const [track] = stream.getVideoTracks();
+        trackRef.current = track ?? null;
+        const capabilities = track?.getCapabilities?.() as
+          { torch?: boolean; zoom?: { min: number; max: number } } | undefined;
+        if (capabilities?.torch) setTorch(false);
+        if (capabilities?.zoom && capabilities.zoom.max > capabilities.zoom.min)
+          setZoom({
+            min: capabilities.zoom.min,
+            max: capabilities.zoom.max,
+            on: false,
+          });
         if (
-          (track?.getCapabilities?.() as { focusMode?: string[] } | undefined)
-            ?.focusMode?.includes("continuous")
+          (
+            track?.getCapabilities?.() as { focusMode?: string[] } | undefined
+          )?.focusMode?.includes("continuous")
         ) {
           await track
             .applyConstraints({
-              advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+              advanced: [
+                { focusMode: "continuous" } as MediaTrackConstraintSet,
+              ],
             })
             .catch(() => undefined);
         }
 
         const canvas = document.createElement("canvas");
         const options = {
-          formats: ["DataMatrix", "Code128", "QRCode"] as ("DataMatrix" | "Code128" | "QRCode")[],
+          formats: ["DataMatrix", "Code128", "QRCode"] as (
+            "DataMatrix" | "Code128" | "QRCode"
+          )[],
           tryHarder: true,
           maxNumberOfSymbols: 4,
         };
@@ -165,11 +211,12 @@ export function BarcodeScanDialog({
               onScannedRef.current(step.accepted);
               return;
             }
-            setChoices(
+            // Kept once shown: the code leaves the frame as the hand moves to tap a choice.
+            const alternatives =
               label || conflict
                 ? null
-                : pickAlternatives(results, knownLotsRef.current),
-            );
+                : pickAlternatives(results, knownLotsRef.current);
+            if (alternatives) setChoices(alternatives);
             if (results.length > 0 && !label)
               setProblem(conflict ? "several" : "unreadable");
           }
@@ -185,6 +232,7 @@ export function BarcodeScanDialog({
       stopped = true;
       window.clearTimeout(timer);
       stream?.getTracks().forEach((track) => track.stop());
+      trackRef.current = null;
     };
   }, [open]);
 
@@ -196,6 +244,30 @@ export function BarcodeScanDialog({
         playsInline
         className="w-full rounded-md bg-black aspect-[4/3] object-cover"
       />
+      {(torch !== null || zoom) && (
+        <div className="mt-2 flex gap-2">
+          {torch !== null && (
+            <Button
+              type="button"
+              variant={torch ? "default" : "outline"}
+              onClick={toggleTorch}
+              aria-pressed={torch}
+            >
+              {t("scan.torch")}
+            </Button>
+          )}
+          {zoom && (
+            <Button
+              type="button"
+              variant={zoom.on ? "default" : "outline"}
+              onClick={toggleZoom}
+              aria-pressed={zoom.on}
+            >
+              {t("scan.zoom")}
+            </Button>
+          )}
+        </div>
+      )}
       <p className="mt-3 text-sm text-muted-foreground" role="status">
         {problem === "camera"
           ? t("scan.cameraUnavailable")
@@ -203,7 +275,7 @@ export function BarcodeScanDialog({
             ? t("scan.noLotOrExpiry")
             : problem === "several"
               ? t("scan.severalLabels")
-            : t("scan.hint")}
+              : t("scan.hint")}
       </p>
       {choices && (
         <div className="mt-3" role="group" aria-label={t("scan.chooseTitle")}>
@@ -229,7 +301,10 @@ export function BarcodeScanDialog({
         </div>
       )}
       <form onSubmit={handleTyped} className="mt-4 border-t pt-4">
-        <label htmlFor="typed-barcode" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="typed-barcode"
+          className="block text-sm font-medium mb-1"
+        >
           {t("scan.typedLabel")}
         </label>
         <div className="flex gap-2">
