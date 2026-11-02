@@ -211,7 +211,7 @@ export function pickAlternatives(
   results: { text: string; contentType: string }[],
   knownLots?: KnownLots,
 ): { raw: string; labels: Gs1Label[] } | null {
-  if (parseAll(results, knownLots).length > 0) return null;
+  if (results.some(isGs1) || parseAll(results, knownLots).length > 0) return null;
   const codes = new Set(results.filter((r) => !isGs1(r)).map((r) => r.text));
   if (codes.size !== 1) return null;
   const [raw] = codes;
