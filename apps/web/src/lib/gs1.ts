@@ -190,6 +190,43 @@ export function parseImmucorPlain(
   return vial ?? parseImmucorRefLot(raw);
 }
 
+// An unknown code that reads both as a vial and as REF/LOT, with nothing to decide between them:
+// both readings, for the person holding the label to choose (owner, 2026-11-02). The choice is
+// remembered by saving the reagent: its lot then decides the next scan (knownLots).
+export function immucorAlternatives(
+  raw: string,
+  knownLots?: KnownLots,
+): Gs1Label[] | null {
+  if (!/^\d{18}$/.test(raw)) return null;
+  if (KNOWN_IMMUCOR_REFS.has(raw.slice(0, 7))) return null;
+  if (KNOWN_VIAL_REAGENT_IDS.has(raw.slice(0, 3))) return null;
+  if (parseImmucorPlain(raw, knownLots)) return null;
+  const vial = parseImmucorVial(raw);
+  const refLot = bareRefLot(raw);
+  return vial && refLot ? [vial, { lot: refLot }] : null;
+}
+
+// Offered only when the frame holds nothing else that reads: a GS1 label or a decided code wins.
+export function pickAlternatives(
+  results: { text: string; contentType: string }[],
+  knownLots?: KnownLots,
+): Gs1Label[] | null {
+  if (parseAll(results, knownLots).length > 0) return null;
+  const sets = results
+    .filter((r) => !isGs1(r))
+    .map((r) => immucorAlternatives(r.text, knownLots))
+    .filter((a) => a !== null);
+  const distinct = new Set(sets.map((a) => a.map((l) => l.lot).join("|")));
+  return distinct.size === 1 ? sets[0] : null;
+}
+
+export function typedAlternatives(
+  typed: string,
+  knownLots?: KnownLots,
+): Gs1Label[] | null {
+  return immucorAlternatives(typed.replace(/\s+/g, ""), knownLots);
+}
+
 // Immucor also prints the UDI as plain Code 128 without the GS1 start marker:
 // "011088823400166910704078-1<GS>17270722". It is GS1 in all but name.
 // Only with a group separator or an expiry straight after the GTIN, so a 20-character REF/LOT

@@ -5,7 +5,9 @@ import {
   parseImmucorRefLot,
   parseImmucorVial,
   parseTypedBarcode,
+  pickAlternatives,
   pickLabel,
+  typedAlternatives,
 } from "./gs1";
 import { confirmLabel, type PendingLabel } from "./scanConfirm";
 
@@ -561,5 +563,51 @@ describe("confirmLabel", () => {
   it("drops a pending lot when a frame has conflicting labels", () => {
     const frames = [lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, lotOnly, "conflict" as const, lotOnly];
     expect(run(frames).every((a) => a === null)).toBe(true);
+  });
+});
+
+describe("two-reading choice", () => {
+  const plainCode = (text: string) => ({ text, contentType: "Text" });
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2029-06-01T00:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("offers both readings of an unknown code that reads two ways", () => {
+    expect(pickAlternatives([plainCode("535002300516517309")])).toEqual([
+      { lot: "535051", expiryDate: "2030-01-02" },
+      { lot: "517309" },
+    ]);
+    expect(typedAlternatives("535002300516517309")).toHaveLength(2);
+  });
+
+  it("offers nothing once the team's lots decide it", () => {
+    const known = new Map([["517309", ["2028-01-01"]]]);
+    expect(pickAlternatives([plainCode("535002300516517309")], known)).toBeNull();
+  });
+
+  it("offers nothing for a known REF, a known vial ID or a code that reads one way", () => {
+    expect(pickAlternatives([plainCode("535002200516517309")])).toBeNull();
+    expect(pickAlternatives([plainCode("954132222850535334")])).toBeNull();
+    expect(pickAlternatives([plainCode("777306290621234567")])).toBeNull();
+  });
+
+  it("offers nothing when a GS1 label is in the frame", () => {
+    expect(
+      pickAlternatives([
+        plainCode("535002300516517309"),
+        { text: "(10)112062(17)291120", contentType: "Text" },
+      ]),
+    ).toBeNull();
+  });
+
+  it("offers nothing when two different ambiguous codes are in the frame", () => {
+    expect(
+      pickAlternatives([
+        plainCode("535002300516517309"),
+        plainCode("535002300516517310"),
+      ]),
+    ).toBeNull();
   });
 });

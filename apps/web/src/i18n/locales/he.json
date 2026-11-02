@@ -651,6 +651,9 @@
     "cameraUnavailable": "לא ניתן לפתוח את המצלמה. אשר גישה למצלמה בדפדפן ונסה שוב.",
     "typedLabel": "או הקלד את מספרי הברקוד",
     "typedSubmit": "קרא",
+    "chooseTitle": "אפשר לקרוא את הקוד בשתי דרכים. בחר את מה שמתאים למדבקה:",
+    "choiceLotExpiry": "אצווה {{lot}}, תוקף {{expiry}}",
+    "choiceLotOnly": "אצווה {{lot}}, בלי תוקף",
     "typedUnreadable": "לא נמצאו בקוד מספר אצווה ותוקף. בדוק את הספרות או מלא ידנית."
   },
   "batchScope": {

@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/Input";
 import {
   hasConflictingLabels,
   parseTypedBarcode,
+  pickAlternatives,
   pickLabel,
+  typedAlternatives,
   type Gs1Label,
   type KnownLots,
 } from "@/lib/gs1";
@@ -49,13 +51,18 @@ export function BarcodeScanDialog({
   >(null);
   const [typed, setTyped] = useState("");
   const [typedUnreadable, setTypedUnreadable] = useState(false);
+  const [choices, setChoices] = useState<Gs1Label[] | null>(null);
 
   // A keyboard scanner types into the focused field and presses Enter, so this form serves it too.
   const handleTyped = (e: React.FormEvent) => {
     e.preventDefault();
     const label = parseTypedBarcode(typed, knownLots);
     if (label) onScanned(label);
-    else setTypedUnreadable(true);
+    else {
+      const alternatives = typedAlternatives(typed, knownLots);
+      setChoices(alternatives);
+      setTypedUnreadable(!alternatives);
+    }
   };
 
   useEffect(() => {
@@ -66,6 +73,7 @@ export function BarcodeScanDialog({
     setProblem(null);
     setTyped("");
     setTypedUnreadable(false);
+    setChoices(null);
 
     (async () => {
       try {
@@ -157,6 +165,11 @@ export function BarcodeScanDialog({
               onScannedRef.current(step.accepted);
               return;
             }
+            setChoices(
+              label || conflict
+                ? null
+                : pickAlternatives(results, knownLotsRef.current),
+            );
             if (results.length > 0 && !label)
               setProblem(conflict ? "several" : "unreadable");
           }
@@ -186,12 +199,35 @@ export function BarcodeScanDialog({
       <p className="mt-3 text-sm text-muted-foreground" role="status">
         {problem === "camera"
           ? t("scan.cameraUnavailable")
-          : problem === "unreadable"
+          : problem === "unreadable" && !choices
             ? t("scan.noLotOrExpiry")
             : problem === "several"
               ? t("scan.severalLabels")
             : t("scan.hint")}
       </p>
+      {choices && (
+        <div className="mt-3" role="group" aria-label={t("scan.chooseTitle")}>
+          <p className="text-sm font-medium mb-2">{t("scan.chooseTitle")}</p>
+          <div className="flex flex-col gap-2">
+            {choices.map((choice) => (
+              <Button
+                key={`${choice.lot}|${choice.expiryDate ?? ""}`}
+                type="button"
+                variant="outline"
+                onClick={() => onScanned(choice)}
+                className="justify-start"
+              >
+                {choice.expiryDate
+                  ? t("scan.choiceLotExpiry", {
+                      lot: choice.lot,
+                      expiry: choice.expiryDate,
+                    })
+                  : t("scan.choiceLotOnly", { lot: choice.lot })}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <form onSubmit={handleTyped} className="mt-4 border-t pt-4">
         <label htmlFor="typed-barcode" className="block text-sm font-medium mb-1">
           {t("scan.typedLabel")}
