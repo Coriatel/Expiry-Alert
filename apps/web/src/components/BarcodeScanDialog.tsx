@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/Input";
 import {
   hasConflictingLabels,
   parseTypedBarcode,
+  pickAlternatives,
   pickLabel,
+  typedAlternatives,
   type Gs1Label,
   type KnownLots,
 } from "@/lib/gs1";
@@ -49,13 +51,58 @@ export function BarcodeScanDialog({
   >(null);
   const [typed, setTyped] = useState("");
   const [typedUnreadable, setTypedUnreadable] = useState(false);
+  // Both readings of one code, with the digits shown so the person sees which label they belong to.
+  const [choices, setChoices] = useState<{
+    raw: string;
+    labels: Gs1Label[];
+    typed: boolean;
+  } | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const [torch, setTorch] = useState<boolean | null>(null);
+  const [zoom, setZoom] = useState<{
+    min: number;
+    max: number;
+    on: boolean;
+  } | null>(null);
+
+  // Torch and zoom only where the camera reports them; a glossy or small label reads better with them.
+  const toggleTorch = () => {
+    const next = !torch;
+    trackRef.current
+      ?.applyConstraints({
+        advanced: [{ torch: next } as MediaTrackConstraintSet],
+      })
+      .then(() => setTorch(next))
+      .catch(() => undefined);
+  };
+  const toggleZoom = () => {
+    if (!zoom) return;
+    const on = !zoom.on;
+    const value = on ? Math.min(zoom.max, Math.max(zoom.min, 1) * 2) : zoom.min;
+    trackRef.current
+      ?.applyConstraints({
+        advanced: [{ zoom: value } as MediaTrackConstraintSet],
+      })
+      .then(() => setZoom((current) => current && { ...current, on }))
+      .catch(() => undefined);
+  };
 
   // A keyboard scanner types into the focused field and presses Enter, so this form serves it too.
   const handleTyped = (e: React.FormEvent) => {
     e.preventDefault();
     const label = parseTypedBarcode(typed, knownLots);
     if (label) onScanned(label);
-    else setTypedUnreadable(true);
+    else {
+      const alternatives = typedAlternatives(typed, knownLots);
+      setChoices(
+        alternatives && {
+          raw: typed.replace(/\s+/g, ""),
+          labels: alternatives,
+          typed: true,
+        },
+      );
+      setTypedUnreadable(!alternatives);
+    }
   };
 
   useEffect(() => {
@@ -66,6 +113,9 @@ export function BarcodeScanDialog({
     setProblem(null);
     setTyped("");
     setTypedUnreadable(false);
+    setChoices(null);
+    setTorch(null);
+    setZoom(null);
 
     (async () => {
       try {
@@ -97,23 +147,39 @@ export function BarcodeScanDialog({
         }
         video.srcObject = stream;
         await video.play();
+        if (stopped) return;
 
         // Ask for continuous autofocus where the camera supports it; thin UDI bars blur otherwise.
         const [track] = stream.getVideoTracks();
+        trackRef.current = track ?? null;
+        const capabilities = track?.getCapabilities?.() as
+          { torch?: boolean; zoom?: { min: number; max: number } } | undefined;
+        if (capabilities?.torch) setTorch(false);
+        if (capabilities?.zoom && capabilities.zoom.max > capabilities.zoom.min)
+          setZoom({
+            min: capabilities.zoom.min,
+            max: capabilities.zoom.max,
+            on: false,
+          });
         if (
-          (track?.getCapabilities?.() as { focusMode?: string[] } | undefined)
-            ?.focusMode?.includes("continuous")
+          (
+            track?.getCapabilities?.() as { focusMode?: string[] } | undefined
+          )?.focusMode?.includes("continuous")
         ) {
           await track
             .applyConstraints({
-              advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+              advanced: [
+                { focusMode: "continuous" } as MediaTrackConstraintSet,
+              ],
             })
             .catch(() => undefined);
         }
 
         const canvas = document.createElement("canvas");
         const options = {
-          formats: ["DataMatrix", "Code128", "QRCode"] as ("DataMatrix" | "Code128" | "QRCode")[],
+          formats: ["DataMatrix", "Code128", "QRCode"] as (
+            "DataMatrix" | "Code128" | "QRCode"
+          )[],
           tryHarder: true,
           maxNumberOfSymbols: 4,
         };
@@ -157,6 +223,21 @@ export function BarcodeScanDialog({
               onScannedRef.current(step.accepted);
               return;
             }
+            // Kept while the frame is empty (the code leaves it as the hand moves to tap a choice);
+            // any other code in view replaces or clears them. Typed choices are left alone.
+            if (results.length > 0) {
+              const alternatives =
+                label || conflict
+                  ? null
+                  : pickAlternatives(results, knownLotsRef.current);
+              setChoices((current) =>
+                current?.typed
+                  ? current
+                  : alternatives?.raw === current?.raw
+                    ? current
+                    : alternatives && { ...alternatives, typed: false },
+              );
+            }
             if (results.length > 0 && !label)
               setProblem(conflict ? "several" : "unreadable");
           }
@@ -172,6 +253,7 @@ export function BarcodeScanDialog({
       stopped = true;
       window.clearTimeout(timer);
       stream?.getTracks().forEach((track) => track.stop());
+      trackRef.current = null;
     };
   }, [open]);
 
@@ -183,17 +265,70 @@ export function BarcodeScanDialog({
         playsInline
         className="w-full rounded-md bg-black aspect-[4/3] object-cover"
       />
+      {(torch !== null || zoom) && (
+        <div className="mt-2 flex gap-2">
+          {torch !== null && (
+            <Button
+              type="button"
+              variant={torch ? "default" : "outline"}
+              onClick={toggleTorch}
+              aria-pressed={torch}
+            >
+              {t("scan.torch")}
+            </Button>
+          )}
+          {zoom && (
+            <Button
+              type="button"
+              variant={zoom.on ? "default" : "outline"}
+              onClick={toggleZoom}
+              aria-pressed={zoom.on}
+            >
+              {t("scan.zoom")}
+            </Button>
+          )}
+        </div>
+      )}
       <p className="mt-3 text-sm text-muted-foreground" role="status">
         {problem === "camera"
           ? t("scan.cameraUnavailable")
-          : problem === "unreadable"
+          : problem === "unreadable" && !choices
             ? t("scan.noLotOrExpiry")
             : problem === "several"
               ? t("scan.severalLabels")
-            : t("scan.hint")}
+              : t("scan.hint")}
       </p>
+      {choices && (
+        <div className="mt-3" role="group" aria-label={t("scan.chooseTitle")}>
+          <p className="text-sm font-medium mb-2">{t("scan.chooseTitle")}</p>
+          <p className="text-sm mb-2 font-mono" dir="ltr">
+            {choices.raw}
+          </p>
+          <div className="flex flex-col gap-2">
+            {choices.labels.map((choice) => (
+              <Button
+                key={`${choice.lot}|${choice.expiryDate ?? ""}`}
+                type="button"
+                variant="outline"
+                onClick={() => onScanned(choice)}
+                className="justify-start"
+              >
+                {choice.expiryDate
+                  ? t("scan.choiceLotExpiry", {
+                      lot: choice.lot,
+                      expiry: choice.expiryDate,
+                    })
+                  : t("scan.choiceLotOnly", { lot: choice.lot })}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <form onSubmit={handleTyped} className="mt-4 border-t pt-4">
-        <label htmlFor="typed-barcode" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="typed-barcode"
+          className="block text-sm font-medium mb-1"
+        >
           {t("scan.typedLabel")}
         </label>
         <div className="flex gap-2">
@@ -205,6 +340,7 @@ export function BarcodeScanDialog({
             onChange={(e) => {
               setTyped(e.target.value);
               setTypedUnreadable(false);
+              setChoices((current) => (current?.typed ? null : current));
             }}
             placeholder="(17)261120(10)112062"
             className="flex-1 min-w-0"

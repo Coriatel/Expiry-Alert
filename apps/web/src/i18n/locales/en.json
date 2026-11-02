@@ -651,6 +651,11 @@
     "cameraUnavailable": "The camera could not be opened. Allow camera access in the browser and try again.",
     "typedLabel": "Or type the barcode digits",
     "typedSubmit": "Read",
+    "torch": "Light",
+    "zoom": "Zoom ×2",
+    "chooseTitle": "This code can be read two ways. Pick the one that matches the label:",
+    "choiceLotExpiry": "Lot {{lot}}, expiry {{expiry}}",
+    "choiceLotOnly": "Lot {{lot}}, no expiry",
     "typedUnreadable": "No lot number or expiry found in this code. Check the digits or fill in by hand."
   },
   "batchScope": {

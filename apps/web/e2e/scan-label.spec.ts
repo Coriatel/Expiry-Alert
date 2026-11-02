@@ -126,3 +126,20 @@ test("an Immucor REF/LOT code fills the lot only, after a short wait", async () 
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
+
+// A synthetic code no known REF or reagent ID decides: in 2029 it reads as a vial (lot 535051,
+// expiry 2030-01-02) and as REF/LOT (lot 517309). Both are offered and the one tapped is filled.
+test("a code that reads two ways offers both and fills the one chosen", async ({}, testInfo) => {
+  await withCamera("label-catalog-number.mjpeg", async (page) => {
+    await page.clock.setFixedTime(new Date("2029-06-01T00:00:00Z"));
+    await page.getByLabel("או הקלד את מספרי הברקוד").fill("535002300516517309");
+    await page.getByRole("button", { name: "קרא" }).click();
+    const vial = page.getByRole("button", { name: "אצווה 535051, תוקף 2030-01-02" });
+    await expect(vial).toBeVisible();
+    await expect(page.getByRole("button", { name: "אצווה 517309, בלי תוקף" })).toBeVisible();
+    await attachRenderedEvidence(page, testInfo, "scan-two-readings");
+    await vial.click();
+    await expect(page.getByPlaceholder("מספר אצווה").first()).toHaveValue("535051");
+    await expect(page.locator('input[type="date"]').first()).toHaveValue("2030-01-02");
+  });
+});
